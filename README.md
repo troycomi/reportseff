@@ -10,15 +10,17 @@ give the efficiency.  Initially I polled seff for each job, but that led
 to many slurm database calls and seff isn't on every slurm system.  With the
 current python implementation, all job information is obtained from a single
 sacct call and with click the output is colored to quickly see how things are
-running. (But color isn't displayed below due to markdown limitations)
+running. (But color isn't displayed below due to markdown limitations).
 
 ## Usage
 ### Installation
 `reportseff` runs on python >= 3.7.
 The only external dependency is click (>= 7.0).
-Calling `pip install git+https://github.com/troycomi/reportseff`
-will create command line bindings and
-install click.
+Calling
+```
+pip install git+https://github.com/troycomi/reportseff
+```
+will create command line bindings and install click.
 
 ### Sample Usage
 #### Single job
@@ -93,12 +95,12 @@ Jobs can be passed as arguments in the following ways:
 - Job ID such as 1234567.  If the id is part of an array job, only the element
 for that ID will be displayed.  If the id is the base part of an array job,
 all elements in the array will be displayed.
-- Array Job ID such as 1234567\_89.  Will display only the element specified
+- Array Job ID such as 1234567\_89.  Will display only the element specified.
 - Slurm output file.  Format must be BASE\_%A\_%a.  BASE is optional as is a
 '.out' suffix.  Unix glob expansions can also be used to filter which jobs
 are displayed.
 - From current directory.  If no argument is supplied, reportseff will attempt
-to find slurm output files in the current directory as described above
+to find slurm output files in the current directory as described above.
 
 ### Options
 - --directory: Override current directory to check for slurm outputs.  Will
