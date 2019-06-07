@@ -10,13 +10,14 @@ give the efficiency.  Initially I polled seff for each job, but that led
 to many slurm database calls and seff isn't on every slurm system.  With the
 current python implementation, all job information is obtained from a single
 sacct call and with click the output is colored to quickly see how things are
-running.
+running. (But color isn't displayed below due to markdown limitations)
 
 ## Usage
 ### Installation
 `reportseff` runs on python >= 3.7.
 The only external dependency is click (>= 7.0).
-Calling `pip install --editable .` will create command line bindings and
+Calling `pip install git+https://github.com/troycomi/reportseff`
+will create command line bindings and
 install click.
 
 ### Sample Usage
