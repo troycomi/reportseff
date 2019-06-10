@@ -18,9 +18,10 @@ class Job_Collection():
             'JobID',
             'State',
             'AllocCPUS',
-            'REQMEM',
             'TotalCPU',
             'Elapsed',
+            'Timelimit',
+            'REQMEM',
             'MaxRSS',
             'NNodes',
             'NTasks'
@@ -140,8 +141,8 @@ class Job_Collection():
     def get_output(self, change_sort: bool):
         max_width = max([len(job.name()) for job in self.jobs.values()]) + 3
         result = click.style(
-            ('{:^' + str(max_width) + '}{:^16}{:^12}{:^9}{:^9}\n').format(
-                'Name', 'State', 'Time', 'CPU', 'Memory'),
+            ('{:^' + str(max_width) + '}{:^16}{:^12}{:^9}{:^9}{:^9}\n').format(
+                'Name', 'State', 'Time', 'Used', 'CPU', 'Memory'),
             bold=True)
 
         for job in self.get_sorted_jobs(change_sort):

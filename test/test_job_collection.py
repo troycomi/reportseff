@@ -10,8 +10,8 @@ def jobs():
 
 def test_get_slurm_format(jobs):
     assert jobs.get_slurm_format() == (
-        'JobIDRaw,JobID,State,AllocCPUS,REQMEM,TotalCPU,Elapsed,MaxRSS,'
-        'NNodes,NTasks'
+        'JobIDRaw,JobID,State,AllocCPUS,TotalCPU,Elapsed,Timelimit,'
+        'REQMEM,MaxRSS,NNodes,NTasks'
     )
 
 
@@ -77,12 +77,12 @@ def test_process_line(jobs, mocker):
         '24371655': Job('24371655', '24371655', 'test_24371655')
     }
     mock_update = mocker.patch.object(Job, 'update')
-    jobs.process_line('24371655|24371655|COMPLETED|1|1Gn|'
-                      '01:29:47|01:29:56||1|')
-    jobs.process_line('24371655.batch|24371655.batch|COMPLETED|1|1Gn|'
-                      '01:29:47|01:29:56|495644K|1|1')
-    jobs.process_line('24371655.extern|24371655.extern|COMPLETED|1|1Gn|'
-                      '00:00:00|01:29:56|1372K|1|1')
+    jobs.process_line('24371655|24371655|COMPLETED|1|'
+                      '01:29:47|01:29:56|03:00:00|1Gn||1|')
+    jobs.process_line('24371655.batch|24371655.batch|COMPLETED|1|'
+                      '01:29:47|01:29:56||1Gn|495644K|1|1')
+    jobs.process_line('24371655.extern|24371655.extern|COMPLETED|1|'
+                      '00:00:00|01:29:56||1Gn|1372K|1|1')
 
     assert mock_update.call_args_list == [
         mocker.call({
@@ -93,6 +93,7 @@ def test_process_line(jobs, mocker):
             'REQMEM': '1Gn',
             'TotalCPU': '01:29:47',
             'Elapsed': '01:29:56',
+            'Timelimit': '03:00:00',
             'MaxRSS': '',
             'NNodes': '1',
             'NTasks': ''
@@ -105,6 +106,7 @@ def test_process_line(jobs, mocker):
             'REQMEM': '1Gn',
             'TotalCPU': '01:29:47',
             'Elapsed': '01:29:56',
+            'Timelimit': '',
             'MaxRSS': '495644K',
             'NNodes': '1',
             'NTasks': '1'
@@ -117,6 +119,7 @@ def test_process_line(jobs, mocker):
             'REQMEM': '1Gn',
             'TotalCPU': '00:00:00',
             'Elapsed': '01:29:56',
+            'Timelimit': '',
             'MaxRSS': '1372K',
             'NNodes': '1',
             'NTasks': '1'

@@ -41,6 +41,7 @@ class Job():
         self.stepmem = 0
         self.totalmem = None
         self.time = '---'
+        self.time_eff = '---'
         self.cpu = '---'
         self.mem = '---'
         self.state = None
@@ -67,9 +68,11 @@ class Job():
             self.time = entry['Elapsed']
             if self.state == 'RUNNING':
                 return
+            requested = _parse_slurm_timedelta(entry['Timelimit'])
             wall = _parse_slurm_timedelta(entry['Elapsed'])
             cpus = (_parse_slurm_timedelta(entry['TotalCPU']) /
                     int(entry['AllocCPUS']))
+            self.time_eff = round(wall / requested * 100, 1)
             if wall != 0:
                 self.cpu = round(cpus / wall * 100, 1)
             else:
@@ -97,43 +100,44 @@ class Job():
         if self.time == '---':
             result += '{:^12}'.format(self.time)
         else:
-            result += '{:>11} '.format(self.time)
+            result += '{:>12} '.format(self.time)
 
-        result += render_eff(self.cpu, 'cpu')
+        result += render_eff(self.time_eff, 'mid')
+        result += render_eff(self.cpu, 'high')
         if self.totalmem:
             value = round(self.stepmem/self.totalmem*100, 1)
         else:
             value = '---'
-        result += render_eff(value, 'mem')
+        result += render_eff(value, 'mid')
 
         result += '\n'
         return result
 
 
-def render_eff(value: float, color_type: str) -> str:
+def render_eff(value: float, target_type: str) -> str:
     '''
     Return a styled string for efficiency values
     '''
     color_maps = {
-        'mem': color_memory,
-        'cpu': color_cpu
+        'mid': color_mid,
+        'high': color_high
     }
-    if color_type not in color_maps:
-        raise ValueError(f'Unsupported color type: {color_type}')
+    if target_type not in color_maps:
+        raise ValueError(f'Unsupported target type: {target_type}')
     if value == '---':
         color = None
     elif value == -1:
         value = '---'
         color = 'red'
     else:
-        color = color_maps[color_type](value)
+        color = color_maps[target_type](value)
         value = f'{value}%'
     return click.style('{:^9}'.format(value), fg=color)
 
 
-def color_memory(value: float) -> str:
+def color_mid(value: float) -> str:
     '''
-    Convert the memory efficiency value to a color
+    Determine color for efficiency value where "mid" values are the target
     '''
     if value < 20 or value > 90:
         return 'red'
@@ -143,9 +147,9 @@ def color_memory(value: float) -> str:
         return None
 
 
-def color_cpu(value: float) -> str:
+def color_high(value: float) -> str:
     '''
-    Convert the cpu efficiency value to a color
+    Determine color for efficiency value where "high" values are the target
     '''
     if value < 20:
         return 'red'

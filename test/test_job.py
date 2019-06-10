@@ -29,12 +29,14 @@ def test_update_main_job():
         'REQMEM': '1Gn',
         'TotalCPU': '00:09:00',
         'Elapsed': '00:10:00',
+        'Timelimit': '00:20:00',
         'MaxRSS': '',
         'NNodes': '1',
         'NTasks': ''
     })
     assert job.state == 'COMPLETED'
     assert job.time == '00:10:00'
+    assert job.time_eff == 50.0
     assert job.cpu == 90.0
     assert job.totalmem == 1*1024**2
 
@@ -46,12 +48,14 @@ def test_update_main_job():
         'REQMEM': '1Gn',
         'TotalCPU': '00:09:00',
         'Elapsed': '00:10:00',
+        'Timelimit': '00:20:00',
         'MaxRSS': '',
         'NNodes': '1',
         'NTasks': ''
     })
     assert job.state == 'PENDING'
     assert job.time == '---'
+    assert job.time_eff == '---'
     assert job.cpu == '---'
     assert job.totalmem is None
 
@@ -63,12 +67,14 @@ def test_update_main_job():
         'REQMEM': '1Gn',
         'TotalCPU': '00:09:00',
         'Elapsed': '00:10:00',
+        'Timelimit': '00:20:00',
         'MaxRSS': '',
         'NNodes': '1',
         'NTasks': ''
     })
     assert job.state == 'RUNNING'
     assert job.time == '00:10:00'
+    assert job.time_eff == '---'
     assert job.cpu == '---'
     assert job.totalmem is None
 
@@ -100,48 +106,48 @@ def test_name(job):
 
 
 def test_render_eff():
-    assert job_module.render_eff(19, 'cpu') == \
+    assert job_module.render_eff(19, 'high') == \
         click.style('   19%   ', fg='red')
-    assert job_module.render_eff(20, 'cpu') == \
+    assert job_module.render_eff(20, 'high') == \
         click.style('   20%   ', fg=None)
-    assert job_module.render_eff(80, 'cpu') == \
+    assert job_module.render_eff(80, 'high') == \
         click.style('   80%   ', fg=None)
-    assert job_module.render_eff(81, 'cpu') == \
+    assert job_module.render_eff(81, 'high') == \
         click.style('   81%   ', fg='green')
 
-    assert job_module.render_eff(19, 'mem') == \
+    assert job_module.render_eff(19, 'mid') == \
         click.style('   19%   ', fg='red')
-    assert job_module.render_eff(20, 'mem') == \
+    assert job_module.render_eff(20, 'mid') == \
         click.style('   20%   ', fg=None)
-    assert job_module.render_eff(60, 'mem') == \
+    assert job_module.render_eff(60, 'mid') == \
         click.style('   60%   ', fg=None)
-    assert job_module.render_eff(61, 'mem') == \
+    assert job_module.render_eff(61, 'mid') == \
         click.style('   61%   ', fg='green')
-    assert job_module.render_eff(90, 'mem') == \
+    assert job_module.render_eff(90, 'mid') == \
         click.style('   90%   ', fg='green')
-    assert job_module.render_eff(91, 'mem') == \
+    assert job_module.render_eff(91, 'mid') == \
         click.style('   91%   ', fg='red')
 
     with pytest.raises(ValueError) as e:
         job_module.render_eff(99, 'test')
 
-    assert 'Unsupported color type: test' in str(e)
+    assert 'Unsupported target type: test' in str(e)
 
 
-def test_color_cpu():
-    assert job_module.color_cpu(19) == 'red'
-    assert job_module.color_cpu(20) is None
-    assert job_module.color_cpu(80) is None
-    assert job_module.color_cpu(81) == 'green'
+def test_color_high():
+    assert job_module.color_high(19) == 'red'
+    assert job_module.color_high(20) is None
+    assert job_module.color_high(80) is None
+    assert job_module.color_high(81) == 'green'
 
 
-def test_color_memory():
-    assert job_module.color_memory(19) == 'red'
-    assert job_module.color_memory(20) is None
-    assert job_module.color_memory(60) is None
-    assert job_module.color_memory(61) == 'green'
-    assert job_module.color_memory(90) == 'green'
-    assert job_module.color_memory(91) == 'red'
+def test_color_mid():
+    assert job_module.color_mid(19) == 'red'
+    assert job_module.color_mid(20) is None
+    assert job_module.color_mid(60) is None
+    assert job_module.color_mid(61) == 'green'
+    assert job_module.color_mid(90) == 'green'
+    assert job_module.color_mid(91) == 'red'
 
 
 def test_parse_slurm_timedelta():

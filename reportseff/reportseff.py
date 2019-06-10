@@ -49,7 +49,7 @@ def reportseff(modified_sort, color, directory, jobs, debug):
             job_collection.process_line(line)
         except Exception as e:
             print(f'SACCT:\n{lines[i-1]}\n->{line}')
-            raise e
+            raise(e)
 
     output, entries = job_collection.get_output(modified_sort)
 
