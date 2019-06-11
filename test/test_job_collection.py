@@ -60,7 +60,7 @@ def test_set_slurm_jobs(jobs):
     assert 'No valid slurm jobs provided!' in str(e)
 
     with pytest.raises(ValueError) as e:
-        jobs.set_slurm_jobs(('asdf', 'qwer', 'zxcv', 'asdf1-1-1'))
+        jobs.set_slurm_jobs(('asdf', 'qwer', 'zxcv', 'asdf1.1.1'))
     assert 'No valid slurm jobs provided!' in str(e)
 
     jobs.set_slurm_jobs(('asdf', '1', '1_1', 'asdf_1_2', '1_asdf_2'))
@@ -199,9 +199,6 @@ def test_process_seff_file(jobs):
 
     jobs.jobs = {}
     # slight mistakes
-    jobs.process_seff_file('base_name_4-1.out')
-    assert jobs.jobs == {}
-
     jobs.process_seff_file('base_name_4_1out')
     assert jobs.jobs == {}
 
@@ -214,6 +211,18 @@ def test_process_seff_file(jobs):
     assert jobs.jobs == {
         '1': Job('1', '1', 'base_name4_1.out'),
         '4_1': Job('4', '4_1', 'base_name_0_4_1.out'),
+    }
+
+    jobs.jobs = {}
+    # default slurm out files
+    jobs.process_seff_file('slurm-10.out')
+    assert jobs.jobs == {
+        '10': Job('10', '10', 'slurm-10.out')
+    }
+    jobs.process_seff_file('slurm-10_2.out')
+    assert jobs.jobs == {
+        '10': Job('10', '10', 'slurm-10.out'),
+        '10_2': Job('10', '10_2', 'slurm-10_2.out')
     }
 
 

@@ -27,7 +27,7 @@ class Job_Collection():
         ]
 
         self.job_file_regex = re.compile(
-            r'^.*?_(?P<jobid>(?P<job>[0-9]+)(_[0-9]+)?)(.out)?$')
+            r'^.*?[-_](?P<jobid>(?P<job>[0-9]+)(_[0-9]+)?)(.out)?$')
         self.job_regex = re.compile(
             r'^(?P<jobid>(?P<job>[0-9]+)(_[0-9]+)?)$')
 
@@ -86,11 +86,7 @@ class Job_Collection():
                 self.add_job(match.group('job'),
                              match.group('jobid'))
             else:
-                match = self.job_file_regex.match(job_id)
-                if match:
-                    self.add_job(match.group('job'),
-                                 match.group('jobid'),
-                                 os.path.basename(job_id))
+                self.process_seff_file(job_id)
 
         if len(self.jobs) == 0:
             raise ValueError('No valid slurm jobs provided!')
@@ -100,12 +96,10 @@ class Job_Collection():
         Try to parse out job information from the supplied filename
         '''
         match = self.job_file_regex.match(filename)
-        if not match:
-            return
-
-        self.add_job(match.group('job'),
-                     match.group('jobid'),
-                     filename)
+        if match:
+            self.add_job(match.group('job'),
+                         match.group('jobid'),
+                         os.path.basename(filename))
 
     def add_job(self, job: str, jobid: str, filename: str = None):
         '''

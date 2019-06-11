@@ -51,6 +51,9 @@ class Job():
 
         return self.__dict__ == other.__dict__
 
+    def __repr__(self):
+        return self.__dict__.__repr__()
+
     def update(self, entry: Dict):
         if '.' not in entry['JobID']:
             self.state = entry['State'].split()[0]
