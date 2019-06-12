@@ -1,7 +1,18 @@
-# Be good to your scheduler
+# Monitoring slurm efficiency with reportseff
 > Troy Comi
 
-## An introduction to scheduling efficiency
+## Motivation
+As I started using Snakemake, I had hundreds of jobs which I wanted to get
+performance information about. seff gave the efficiency information I wanted,
+but for only a single job at a time.  sacct handles multiple jobs, but couldn't
+give the efficiency.  With the current python implementation,
+all job information is obtained from a single
+sacct call and with click the output is colored to quickly see how things are
+running. (But color isn't displayed below due to markdown limitations).
+
+## Be good to your scheduler
+
+### An introduction to scheduling efficiency
 Have you ever hosted an event that had to provide food?  Perhaps you sent out
 RSVP's to estimate how many people would attend, guessed a handful of people
 would show up but not respond, and ordered some pizza.  If you ordered enough
@@ -16,6 +27,7 @@ single-core processes with an estimated memory usage of 4 GB.  The scheduler
 will allow only 32 jobs to run at once (128 GB / 4 GB) leaving half of the
 cores idling.  If I actually only use 1 GB of memory, 64 jobs could be running
 instead.
+
 **Good jobs use the resources they promise to.**
 
 In practice, many more details of the system and user are incorporated into
@@ -24,12 +36,13 @@ the scheduler has to dispatch the job.  The overhead associated with scheduling
 only makes sense if the job will run for longer than a few minutes. Instead of
 submitting 1000 jobs that perform 1 minute of work, group 100 subprocesses
 together as 10 jobs with 100 minutes of work.
+
 **Good jobs run long enough to matter.**
 
 If every job on a cluster is efficient and long-running, the scheduler can
 make accurate decisions on execution order and keep usage high.
 
-## Why it matters as a user?
+### Why it matters as a user?
 "But my qos only allows 2 jobs to run at once if the time
 is less than 2 hours!  Can't I say my 10 minute job will take 2 hours?" Yes,
 but it is *rude* to the scheduler.  If that doesn't sway you, improperly 
@@ -40,7 +53,7 @@ estimating resource usage can:
 - Make it harder to fit your job into the available cluster resources, 
 increasing the queue time.
 
-## Monitoring efficiency
+### Monitoring efficiency
 Before releasing a swarm of jobs, check the estimated vs predicted usage.
 Tune your parameters to improve efficiency. 
 

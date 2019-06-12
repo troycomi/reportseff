@@ -2,16 +2,6 @@
 
 > A python script for tabular display of slurm efficiency information
 
-## Motivation
-As I started using Snakemake, I had hundreds of jobs which I wanted to get
-performance information about. seff gave the efficiency information I wanted,
-but for only a single job at a time.  sacct handles multiple jobs, but couldn't
-give the efficiency.  Initially I polled seff for each job, but that led
-to many slurm database calls and seff isn't on every slurm system.  With the
-current python implementation, all job information is obtained from a single
-sacct call and with click the output is colored to quickly see how things are
-running. (But color isn't displayed below due to markdown limitations).
-
 ## Usage
 ### Installation
 `reportseff` runs on python >= 3.7.
