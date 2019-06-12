@@ -52,6 +52,10 @@ class Job():
 
         return self.__dict__ == other.__dict__
 
+    def __repr__(self):
+        return (f'Job(job={self.job}, jobid={self.jobid}, '
+                f'filename={self.filename})')
+
     def update(self, entry: Dict):
         if '.' not in entry['JobID']:
             self.state = entry['State'].split()[0]
@@ -73,10 +77,10 @@ class Job():
             cpus = (_parse_slurm_timedelta(entry['TotalCPU']) /
                     int(entry['AllocCPUS']))
             self.time_eff = round(wall / requested * 100, 1)
-            if wall != 0:
-                self.cpu = round(cpus / wall * 100, 1)
-            else:
+            if wall == 0:
                 self.cpu = -1
+            else:
+                self.cpu = round(cpus / wall * 100, 1)
             self.totalmem = parsemem(entry['REQMEM'],
                                      int(entry['NNodes']),
                                      int(entry['AllocCPUS']))
@@ -96,11 +100,11 @@ class Job():
 
         result = ('{:>' + str(max_width) + '}').format(self.name())
         result += click.style('{:^16}'.format(self.state),
-                              fg=state_colors[self.state])
+                              fg=state_colors.get(self.state, None))
         if self.time == '---':
             result += '{:^12}'.format(self.time)
         else:
-            result += '{:>12} '.format(self.time)
+            result += '{:>11} '.format(self.time)
 
         result += render_eff(self.time_eff, 'mid')
         result += render_eff(self.cpu, 'high')

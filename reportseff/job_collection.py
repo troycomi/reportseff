@@ -154,6 +154,9 @@ class Job_Collection():
         if change_sort and self.dir_name:
             def get_time(f):
                 f = f.filename
+                # handle None and ''
+                if not f:
+                    return 0
                 f = os.path.join(self.dir_name, f)
                 if os.path.exists(f):
                     return os.path.getmtime(f)

@@ -8,6 +8,25 @@ def job():
     return job_module.Job('job', 'jobid', 'filename')
 
 
+def test_eq():
+    job1 = job_module.Job('j1', 'j1', 'filename')
+    job2 = job_module.Job('j1', 'j1', 'filename')
+    assert job1 == job2
+
+    job2 = job_module.Job('j2', 'j1', 'filename')
+    assert job1 != job2
+    job2 = dict()
+    assert job1 != job2
+
+
+def test_repr():
+    job1 = job_module.Job('j1', 'jid1', 'filename')
+    assert repr(job1) == 'Job(job=j1, jobid=jid1, filename=filename)'
+
+    job2 = job_module.Job('j2', 'jid2', None)
+    assert repr(job2) == 'Job(job=j2, jobid=jid2, filename=None)'
+
+
 def test_job_init(job):
     assert job.job == 'job'
     assert job.jobid == 'jobid'
@@ -78,6 +97,25 @@ def test_update_main_job():
     assert job.cpu == '---'
     assert job.totalmem is None
 
+    job = job_module.Job('24371655', '24371655', None)
+    job.update({
+        'JobID': '24371655',
+        'State': 'CANCELLED',
+        'AllocCPUS': '1',
+        'REQMEM': '1Gn',
+        'TotalCPU': '00:09:00',
+        'Elapsed': '00:00:00',
+        'Timelimit': '00:20:00',
+        'MaxRSS': '',
+        'NNodes': '1',
+        'NTasks': ''
+    })
+    assert job.state == 'CANCELLED'
+    assert job.time == '00:00:00'
+    assert job.time_eff == 0.0
+    assert job.cpu == -1
+    assert job.totalmem == 1024**2
+
 
 def test_update_part_job():
     job = job_module.Job('24371655', '24371655', None)
@@ -103,6 +141,45 @@ def test_name(job):
     assert job.name() == 'filename'
     job = job_module.Job('job', 'jobid', None)
     assert job.name() == 'jobid'
+
+
+def test_render(job):
+    assert job.render(10) == ''
+
+    job.state = 'TEST'
+
+    assert job.render(10) == (
+        '{:>10}'.format('filename') +
+        click.style('{:^16}'.format('TEST'), fg=None) +
+        '{:^12}'.format('---') +
+        click.style('{:^9}'.format('---'), fg=None) +
+        click.style('{:^9}'.format('---'), fg=None) +
+        click.style('{:^9}'.format('---'), fg=None) +
+        '\n'
+    )
+
+    job.time = '00:00:10'
+    assert job.render(10) == (
+        '{:>10}'.format('filename') +
+        click.style('{:^16}'.format('TEST'), fg=None) +
+        '{:>11} '.format('00:00:10') +
+        click.style('{:^9}'.format('---'), fg=None) +
+        click.style('{:^9}'.format('---'), fg=None) +
+        click.style('{:^9}'.format('---'), fg=None) +
+        '\n'
+    )
+
+    job.totalmem = 100
+    job.stepmem = 13.45
+    assert job.render(10) == (
+        '{:>10}'.format('filename') +
+        click.style('{:^16}'.format('TEST'), fg=None) +
+        '{:>11} '.format('00:00:10') +
+        click.style('{:^9}'.format('---'), fg=None) +
+        click.style('{:^9}'.format('---'), fg=None) +
+        click.style('{:^9}'.format('13.4%'), fg='red') +
+        '\n'
+    )
 
 
 def test_render_eff():
@@ -132,6 +209,9 @@ def test_render_eff():
         job_module.render_eff(99, 'test')
 
     assert 'Unsupported target type: test' in str(e)
+
+    assert job_module.render_eff(-1, 'mid') == \
+        click.style('   ---   ', fg='red')
 
 
 def test_color_high():

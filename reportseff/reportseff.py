@@ -1,5 +1,6 @@
 import click
 import subprocess
+import sys
 from reportseff.job_collection import Job_Collection
 
 
@@ -22,7 +23,7 @@ def reportseff(modified_sort, color, directory, jobs, debug):
 
     except ValueError as e:
         click.secho(str(e), fg='red', err=True)
-        return
+        sys.exit(1)
 
     command_args = []
     command_args.append('sacct')
@@ -40,6 +41,8 @@ def reportseff(modified_sort, color, directory, jobs, debug):
 
     if result.returncode != 0:
         click.secho('Error running sacct!', fg='red', err=True)
+        sys.exit(1)
+
     if debug:
         click.echo(result.stdout, err=True)
 
@@ -48,7 +51,7 @@ def reportseff(modified_sort, color, directory, jobs, debug):
         try:
             job_collection.process_line(line)
         except Exception as e:
-            print(f'SACCT:\n{lines[i-1]}\n->{line}')
+            click.echo(f'SACCT:\n{line}', err=True)
             raise(e)
 
     output, entries = job_collection.get_output(modified_sort)

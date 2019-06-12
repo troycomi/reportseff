@@ -238,3 +238,49 @@ def test_add_job(jobs):
         'jid1': Job('j2', 'jid1', 'file'),
         'jid2': Job('j2', 'jid2', 'file')
     }
+
+
+def test_get_sorted_jobs(jobs, mocker):
+    jobs.add_job('j3', 'jid3')
+    jobs.add_job('j1', 'jid1')
+    jobs.add_job('j2', 'jid2')
+    jobs.add_job('j13', 'jid13')
+
+    assert jobs.get_sorted_jobs(False) == [
+        Job('j1', 'jid1', None),
+        Job('j2', 'jid2', None),
+        Job('j3', 'jid3', None),
+        Job('j13', 'jid13', None)
+    ]
+
+    jobs.jobs = {}
+    jobs.add_job('j3', 'jid3', 'file3')
+    jobs.add_job('j1', 'jid1', 'file12')
+    jobs.add_job('j2', 'jid2', 'file234')
+    jobs.add_job('j13', 'jid13')
+    jobs.add_job('j14', 'jid14', 'nothing')
+
+    # make all non-none files exist
+    mocker.patch('reportseff.job_collection.os.path.exists',
+                 side_effect=lambda x: x is not None and x != 'dir/nothing')
+    # replace mtime with the length of the filename
+    mocker.patch('reportseff.job_collection.os.path.getmtime',
+                 side_effect=lambda x: len(x))
+
+    # still uses other sorting, no dir_name set
+    assert jobs.get_sorted_jobs(True) == [
+        Job('j3', 'jid3', 'file3'),
+        Job('j13', 'jid13', None),
+        Job('j1', 'jid1', 'file12'),
+        Job('j2', 'jid2', 'file234'),
+        Job('j14', 'jid14', 'nothing'),
+    ]
+
+    jobs.dir_name = 'dir'
+    assert jobs.get_sorted_jobs(True) == [
+        Job('j2', 'jid2', 'file234'),
+        Job('j1', 'jid1', 'file12'),
+        Job('j3', 'jid3', 'file3'),
+        Job('j13', 'jid13', None),
+        Job('j14', 'jid14', 'nothing'),
+    ]
