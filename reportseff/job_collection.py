@@ -80,6 +80,9 @@ class Job_Collection():
         '''
         Set the collection jobs to the provided job ids
         '''
+        if len(jobs) == 1 and os.path.isdir(jobs[0]):
+            self.set_slurm_out_dir(jobs[0])
+            return
         for job_id in jobs:
             match = self.job_regex.match(job_id)
 

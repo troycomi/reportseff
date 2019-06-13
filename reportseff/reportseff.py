@@ -9,15 +9,15 @@ from reportseff.job_collection import Job_Collection
               help='If set, will sort outputs by modified time of files')
 @click.option('--color/--no-color', default=True,
               help='Force color output. No color will use click defaults')
-@click.option('--directory', default='')
 @click.option('--debug', default=False, is_flag=True,
               help='Print raw sacct information to stderr')
 @click.argument('jobs', nargs=-1)
-def reportseff(modified_sort, color, directory, jobs, debug):
+def reportseff(modified_sort, color, jobs, debug):
     job_collection = Job_Collection()
     try:
         if jobs == ():
-            job_collection.set_slurm_out_dir(directory)
+            # look in current directory for slurm outputs
+            job_collection.set_slurm_out_dir('')
         else:
             job_collection.set_slurm_jobs(jobs)
 

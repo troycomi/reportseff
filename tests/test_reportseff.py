@@ -23,7 +23,7 @@ def test_directory_input(mocker):
 
     mocker.patch.object(Job_Collection, 'set_slurm_out_dir', new=set_jobs)
     result = runner.invoke(reportseff.reportseff,
-                           '--no-color --directory dir')
+                           '--no-color')
 
     assert result.exit_code == 0
     # remove header
@@ -53,7 +53,7 @@ def test_directory_input_exception(mocker):
 
     mocker.patch.object(Job_Collection, 'set_slurm_out_dir', new=set_jobs)
     result = runner.invoke(reportseff.reportseff,
-                           '--no-color --directory dir')
+                           '--no-color')
 
     assert result.exit_code == 1
     assert 'Testing EXCEPTION' in result.output

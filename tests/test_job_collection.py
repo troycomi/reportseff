@@ -54,7 +54,7 @@ def test_set_slurm_out_dir_dir_handling(jobs, mocker):
     mock_exists.assert_called_once_with('/dir/path2/')
 
 
-def test_set_slurm_jobs(jobs):
+def test_set_slurm_jobs(jobs, mocker):
     with pytest.raises(ValueError) as e:
         jobs.set_slurm_jobs(())
     assert 'No valid slurm jobs provided!' in str(e)
@@ -70,6 +70,26 @@ def test_set_slurm_jobs(jobs):
         '1_2': Job('1', '1_2', 'asdf_1_2'),
         '2': Job('2', '2', '1_asdf_2'),
     }
+
+    # test if single arg is a dir check if
+    jobs.jobs = {}
+    mocker.patch('reportseff.job_collection.os.path.isdir',
+                 return_value=False)
+    with pytest.raises(ValueError) as e:
+        jobs.set_slurm_jobs(('dir',))
+    assert 'No valid slurm jobs provided!' in str(e)
+
+    jobs.set_slurm_jobs(('1',))
+    assert jobs.jobs == {
+        '1': Job('1', '1', None),
+    }
+
+    mocker.patch('reportseff.job_collection.os.path.isdir',
+                 return_value=True)
+    mock_set_out = mocker.patch.object(job_collection.Job_Collection,
+                                       'set_slurm_out_dir')
+    jobs.set_slurm_jobs(('dir',))
+    mock_set_out.assert_called_once_with('dir')
 
 
 def test_process_line(jobs, mocker):
