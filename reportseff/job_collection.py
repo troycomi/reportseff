@@ -1,19 +1,19 @@
 import re
 from typing import Dict, List
 from reportseff.job import Job
+from reportseff.output_renderer import Output_Renderer
 import os
 import click
 
 
 class Job_Collection():
     '''
-    A group of slurm jobs
+    A group of jobs
     '''
 
     def __init__(self):
-        # formatting options
-
-        self.slurm_format = [
+        # TODO probably take in output renderer, and db_inquirer
+        self.columns = [
             'JobIDRaw',
             'JobID',
             'State',
@@ -28,29 +28,30 @@ class Job_Collection():
         ]
 
         self.job_file_regex = re.compile(
-            r'^.*?_(?P<jobid>(?P<job>[0-9]+)(_[0-9]+)?)(.out)?$')
+            r'^.*?[_-](?P<jobid>(?P<job>[0-9]+)(_[0-9]+)?)(.out)?$')
         self.job_regex = re.compile(
             r'^(?P<jobid>(?P<job>[0-9]+)(_[0-9]+)?)$')
 
         self.jobs = {}  # type: Dict[str, Job]
+        self.renderer = None  # type: Output_Renderer
         self.dir_name = ''
 
-    def get_slurm_format(self) -> str:
+    def get_columns(self) -> str:
         '''
-        The string to pass to sacct to get formatting for correct parsing
+        The list of columns requested from inquirer
         '''
-        return ','.join(self.slurm_format)
+        return self.columns
 
-    def get_slurm_jobs(self) -> str:
+    def get_jobs(self) -> str:
         '''
-        Get the job ids to request from sacct as a comma separated list
+        List of jobs to get from inquirer
         '''
-        return ','.join(sorted(set([job.job for job in self.jobs.values()])))
+        return sorted(set([job.job for job in self.jobs.values()]))
 
-    def set_slurm_out_dir(self, directory: str):
+    def set_out_dir(self, directory: str):
         '''
-        Set this collection's directory to try parsing out jobs from slurm
-        outputs
+        Set this collection's directory to try parsing out jobs from
+        output files
         '''
         # set and validate working directory to full path
         if directory == '':
@@ -65,7 +66,6 @@ class Job_Collection():
         files = os.listdir(wd)
         files = list(filter(lambda x: os.path.isfile(os.path.join(wd, x)),
                             files))
-
         if len(files) == 0:
             raise ValueError(f'{wd} contains no files!')
 
@@ -73,15 +73,19 @@ class Job_Collection():
             self.process_seff_file(f)
 
         if len(self.jobs) == 0:
-            raise ValueError(f'{wd} contains no valid slurm outputs!')
+            raise ValueError(f'{wd} contains no valid output files!')
         self.dir_name = wd
 
-    def set_slurm_jobs(self, jobs: tuple):
+    def set_jobs(self, jobs: tuple):
         '''
         Set the collection jobs to the provided job ids
         '''
+        if jobs == ():
+            # look in current directory for slurm outputs
+            self.set_out_dir('')
+            return
         if len(jobs) == 1 and os.path.isdir(jobs[0]):
-            self.set_slurm_out_dir(jobs[0])
+            self.set_out_dir(jobs[0])
             return
         for job_id in jobs:
             match = self.job_regex.match(job_id)
@@ -97,7 +101,7 @@ class Job_Collection():
                                  os.path.basename(job_id))
 
         if len(self.jobs) == 0:
-            raise ValueError('No valid slurm jobs provided!')
+            raise ValueError('No valid jobs provided!')
 
     def process_seff_file(self, filename: str):
         '''
@@ -116,15 +120,14 @@ class Job_Collection():
         Add a job to the collection.
         job: the 'base' job number
         jobid: equal to the job unless it is an array job
-        filename: the filename of the slurm out file this job is derived from
+        filename: the filename of the out file this job is derived from
         '''
         self.jobs[jobid] = Job(job, jobid, filename)
 
-    def process_line(self, line: str):
+    def process_entry(self, entry: Dict):
         '''
         Update the jobs collection with information from the provided line
         '''
-        entry = dict(zip(self.slurm_format,  line.split('|')))
         job_id = entry['JobID'].split('.')[0]
         job_id_raw = entry['JobIDRaw'].split('.')[0]
         if job_id not in self.jobs:

@@ -1,7 +1,8 @@
 import click
-import subprocess
 import sys
+from shutil import which
 from reportseff.job_collection import Job_Collection
+from reportseff.db_inquirer import Sacct_Inquirer
 
 
 @click.command()
@@ -10,48 +11,41 @@ from reportseff.job_collection import Job_Collection
 @click.option('--color/--no-color', default=True,
               help='Force color output. No color will use click defaults')
 @click.option('--debug', default=False, is_flag=True,
-              help='Print raw sacct information to stderr')
+              help='Print raw db information to stderr')
 @click.argument('jobs', nargs=-1)
 def reportseff(modified_sort, color, jobs, debug):
     job_collection = Job_Collection()
+    if which('sacct') is not None:
+        inquirer = Sacct_Inquirer()
+    else:
+        click.secho('No supported scheduling systems found!',
+                    fg='red', err=True)
+        sys.exit(1)
     try:
-        if jobs == ():
-            # look in current directory for slurm outputs
-            job_collection.set_slurm_out_dir('')
-        else:
-            job_collection.set_slurm_jobs(jobs)
+        job_collection.set_jobs(jobs)
 
     except ValueError as e:
         click.secho(str(e), fg='red', err=True)
         sys.exit(1)
 
-    command_args = []
-    command_args.append('sacct')
-    command_args.append('-P')
-    command_args.append('-n')
-    command_args.append('--format=' + job_collection.get_slurm_format())
-    command_args.append('--jobs=' + job_collection.get_slurm_jobs())
-
-    result = subprocess.run(
-        args=command_args,
-        stdout=subprocess.PIPE,
-        encoding='utf8',
-        check=True,
-        universal_newlines=True)
-
-    if result.returncode != 0:
-        click.secho('Error running sacct!', fg='red', err=True)
+    try:
+        result = inquirer.get_db_output(
+            job_collection.get_columns(),
+            job_collection.get_jobs(),
+            debug)
+    except Exception as e:
+        click.secho(str(e), fg='red', err=True)
         sys.exit(1)
 
     if debug:
-        click.echo(result.stdout, err=True)
+        click.echo(result[1], err=True)
+        result = result[0]
 
-    lines = result.stdout.split('\n')
-    for i, line in enumerate(lines[:-1]):  # remove last, blank newline
+    for entry in result:
         try:
-            job_collection.process_line(line)
+            job_collection.process_entry(entry)
         except Exception as e:
-            click.echo(f'SACCT:\n{line}', err=True)
+            click.echo(entry, err=True)
             raise(e)
 
     output, entries = job_collection.get_output(modified_sort)

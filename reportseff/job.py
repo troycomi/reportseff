@@ -63,10 +63,6 @@ class Job():
         if self.state == 'PENDING':
             return
 
-        # # if job is cancelled prior to starting
-        # if self.state == 'CANCELLED' and 'Elapsed' not in entry:
-        #     return
-
         # master job id
         if self.jobid == entry['JobID']:
             self.time = entry['Elapsed']

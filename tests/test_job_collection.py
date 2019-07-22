@@ -8,25 +8,25 @@ def jobs():
     return job_collection.Job_Collection()
 
 
-def test_get_slurm_format(jobs):
-    assert jobs.get_slurm_format() == (
+def test_get_columns(jobs):
+    assert jobs.get_columns() == (
         'JobIDRaw,JobID,State,AllocCPUS,TotalCPU,Elapsed,Timelimit,'
         'REQMEM,MaxRSS,NNodes,NTasks'
-    )
+    ).split(',')
 
 
-def test_get_slurm_jobs(jobs):
-    assert jobs.get_slurm_jobs() == ''
+def test_get_jobs(jobs):
+    assert jobs.get_jobs() == []
 
     jobs.jobs = {
         '1_1': Job('1', '1_1', None),
         '1_2': Job('1', '1_2', None),
         '2_2': Job('2', '2_2', None),
     }
-    assert jobs.get_slurm_jobs() == '1,2'
+    assert jobs.get_jobs() == '1,2'.split(',')
 
 
-def test_set_slurm_out_dir_dir_handling(jobs, mocker):
+def test_set_out_dir_dir_handling(jobs, mocker):
     # dir handling
     mock_cwd = mocker.patch('reportseff.job_collection.os.getcwd',
                             return_value='/dir/path/')
@@ -36,7 +36,7 @@ def test_set_slurm_out_dir_dir_handling(jobs, mocker):
                                return_value=False)
 
     with pytest.raises(ValueError) as e:
-        jobs.set_slurm_out_dir('')
+        jobs.set_out_dir('')
     assert '/dir/path/ does not exist!' in str(e)
     mock_cwd.assert_called_once()
     mock_real.assert_not_called()
@@ -47,23 +47,19 @@ def test_set_slurm_out_dir_dir_handling(jobs, mocker):
     mock_exists.reset_mock()
 
     with pytest.raises(ValueError) as e:
-        jobs.set_slurm_out_dir('pwd')
+        jobs.set_out_dir('pwd')
     assert '/dir/path2/ does not exist!' in str(e)
     mock_cwd.assert_not_called()
     mock_real.assert_called_once_with('pwd')
     mock_exists.assert_called_once_with('/dir/path2/')
 
 
-def test_set_slurm_jobs(jobs, mocker):
+def test_set_jobs(jobs, mocker):
     with pytest.raises(ValueError) as e:
-        jobs.set_slurm_jobs(())
-    assert 'No valid slurm jobs provided!' in str(e)
+        jobs.set_jobs(('asdf', 'qwer', 'zxcv', 'asdf111'))
+    assert 'No valid jobs provided!' in str(e)
 
-    with pytest.raises(ValueError) as e:
-        jobs.set_slurm_jobs(('asdf', 'qwer', 'zxcv', 'asdf1-1-1'))
-    assert 'No valid slurm jobs provided!' in str(e)
-
-    jobs.set_slurm_jobs(('asdf', '1', '1_1', 'asdf_1_2', '1_asdf_2'))
+    jobs.set_jobs(('asdf', '1', '1_1', 'asdf_1_2', '1_asdf_2'))
     assert jobs.jobs == {
         '1': Job('1', '1', None),
         '1_1': Job('1', '1_1', None),
@@ -76,10 +72,10 @@ def test_set_slurm_jobs(jobs, mocker):
     mocker.patch('reportseff.job_collection.os.path.isdir',
                  return_value=False)
     with pytest.raises(ValueError) as e:
-        jobs.set_slurm_jobs(('dir',))
-    assert 'No valid slurm jobs provided!' in str(e)
+        jobs.set_jobs(('dir',))
+    assert 'No valid jobs provided!' in str(e)
 
-    jobs.set_slurm_jobs(('1',))
+    jobs.set_jobs(('1',))
     assert jobs.jobs == {
         '1': Job('1', '1', None),
     }
@@ -87,8 +83,13 @@ def test_set_slurm_jobs(jobs, mocker):
     mocker.patch('reportseff.job_collection.os.path.isdir',
                  return_value=True)
     mock_set_out = mocker.patch.object(job_collection.Job_Collection,
-                                       'set_slurm_out_dir')
-    jobs.set_slurm_jobs(('dir',))
+                                       'set_out_dir')
+
+    jobs.set_jobs(())
+    mock_set_out.assert_called_once_with('')
+
+    mock_set_out.reset_mock()
+    jobs.set_jobs(('dir',))
     mock_set_out.assert_called_once_with('dir')
 
 
@@ -97,12 +98,18 @@ def test_process_line(jobs, mocker):
         '24371655': Job('24371655', '24371655', 'test_24371655')
     }
     mock_update = mocker.patch.object(Job, 'update')
-    jobs.process_line('24371655|24371655|COMPLETED|1|'
-                      '01:29:47|01:29:56|03:00:00|1Gn||1|')
-    jobs.process_line('24371655.batch|24371655.batch|COMPLETED|1|'
-                      '01:29:47|01:29:56||1Gn|495644K|1|1')
-    jobs.process_line('24371655.extern|24371655.extern|COMPLETED|1|'
-                      '00:00:00|01:29:56||1Gn|1372K|1|1')
+    jobs.process_entry(
+        dict(zip(jobs.get_columns(),
+                 '24371655|24371655|COMPLETED|1|'
+                 '01:29:47|01:29:56|03:00:00|1Gn||1|'.split('|'))))
+    jobs.process_entry(
+        dict(zip(jobs.get_columns(),
+                 '24371655.batch|24371655.batch|COMPLETED|1|'
+                 '01:29:47|01:29:56||1Gn|495644K|1|1'.split('|'))))
+    jobs.process_entry(
+        dict(zip(jobs.get_columns(),
+                 '24371655.extern|24371655.extern|COMPLETED|1|'
+                 '00:00:00|01:29:56||1Gn|1372K|1|1'.split('|'))))
 
     assert mock_update.call_args_list == [
         mocker.call({
@@ -147,7 +154,7 @@ def test_process_line(jobs, mocker):
     ]
 
 
-def test_set_slurm_out_dir(jobs, mocker):
+def test_set_out_dir(jobs, mocker):
     mocker.patch('reportseff.job_collection.os.path.realpath',
                  side_effect=lambda x: f'/dir/path2/{x}')
     mocker.patch('reportseff.job_collection.os.path.exists',
@@ -158,14 +165,14 @@ def test_set_slurm_out_dir(jobs, mocker):
     mocker.patch('reportseff.job_collection.os.listdir',
                  return_value=[])
     with pytest.raises(ValueError) as e:
-        jobs.set_slurm_out_dir('test')
+        jobs.set_out_dir('test')
     assert '/dir/path2/test contains no files!' in str(e)
 
     mocker.patch('reportseff.job_collection.os.listdir',
                  return_value=['asdf'])
     with pytest.raises(ValueError) as e:
-        jobs.set_slurm_out_dir('test')
-    assert '/dir/path2/test contains no valid slurm outputs!' in str(e)
+        jobs.set_out_dir('test')
+    assert '/dir/path2/test contains no valid output files!' in str(e)
 
     mocker.patch('reportseff.job_collection.os.listdir',
                  return_value=['asdf',
@@ -173,7 +180,7 @@ def test_set_slurm_out_dir(jobs, mocker):
                                'base_1_1.out',
                                'base_2_1',  # overwritten
                                'base_2_1.out'])
-    jobs.set_slurm_out_dir('test')
+    jobs.set_out_dir('test')
 
     assert jobs.jobs == {
         '1': Job('1', '1', 'base_1'),
@@ -222,9 +229,6 @@ def test_process_seff_file(jobs):
 
     jobs.jobs = {}
     # slight mistakes
-    jobs.process_seff_file('base_name_4-1.out')
-    assert jobs.jobs == {}
-
     jobs.process_seff_file('base_name_4_1out')
     assert jobs.jobs == {}
 
@@ -237,6 +241,13 @@ def test_process_seff_file(jobs):
     assert jobs.jobs == {
         '1': Job('1', '1', 'base_name4_1.out'),
         '4_1': Job('4', '4_1', 'base_name_0_4_1.out'),
+    }
+
+    jobs.process_seff_file('slurm-24825624.out')
+    assert jobs.jobs == {
+        '1': Job('1', '1', 'base_name4_1.out'),
+        '4_1': Job('4', '4_1', 'base_name_0_4_1.out'),
+        '24825624': Job('24825624', '24825624', 'slurm-24825624.out')
     }
 
 
