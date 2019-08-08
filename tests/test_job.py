@@ -93,7 +93,7 @@ def test_update_main_job():
     })
     assert job.state == 'RUNNING'
     assert job.time == '00:10:00'
-    assert job.time_eff == '---'
+    assert job.time_eff == 50.0
     assert job.cpu == '---'
     assert job.totalmem is None
 

@@ -66,13 +66,13 @@ class Job():
         # master job id
         if self.jobid == entry['JobID']:
             self.time = entry['Elapsed']
-            if self.state == 'RUNNING':
-                return
             requested = _parse_slurm_timedelta(entry['Timelimit'])
             wall = _parse_slurm_timedelta(entry['Elapsed'])
+            self.time_eff = round(wall / requested * 100, 1)
+            if self.state == 'RUNNING':
+                return
             cpus = (_parse_slurm_timedelta(entry['TotalCPU']) /
                     int(entry['AllocCPUS']))
-            self.time_eff = round(wall / requested * 100, 1)
             if wall == 0:
                 self.cpu = -1
             else:
