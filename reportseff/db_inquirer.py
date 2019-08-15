@@ -69,7 +69,7 @@ class Sacct_Inquirer(Base_Inquirer):
 
         lines = result.stdout.split('\n')
         result = [dict(zip(columns, line.split('|')))
-                  for line in lines[:-1]]
+                  for line in lines if line]
 
         if debug:
             return result, '\n'.join(lines)

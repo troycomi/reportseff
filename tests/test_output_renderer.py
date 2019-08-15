@@ -1,6 +1,8 @@
 from reportseff import output_renderer
+from reportseff import job as job_module
 import pytest
 import click
+import re
 
 
 min_required = ('JobID,State,Elapsed,JobIDRaw,State,TotalCPU,AllocCPUS,'
@@ -101,6 +103,134 @@ def test_renderer_correct_columns(renderer):
         sorted('JobID JobIDRaw State'.split())
 
 
+def test_renderer_format_jobs():
+    renderer = output_renderer.Output_Renderer(
+        min_required,
+        'JobID,State,Elapsed,CPUEff,REQMEM,TimeEff')
+    jobs = []
+    job = job_module.Job('24371655', '24371655', None)
+    job.update({
+        'JobID': '24371655',
+        'State': 'COMPLETED',
+        'AllocCPUS': '1',
+        'REQMEM': '1Gn',
+        'TotalCPU': '00:09:00',
+        'Elapsed': '00:10:00',
+        'Timelimit': '00:20:00',
+        'MaxRSS': '',
+        'NNodes': '1',
+        'NTasks': ''
+    })
+    jobs.append(job)
+    job = job_module.Job('24371656', '24371656', None)
+    job.update({
+        'JobID': '24371656',
+        'State': 'PENDING',
+        'AllocCPUS': '1',
+        'REQMEM': '1Gn',
+        'TotalCPU': '00:09:00',
+        'Elapsed': '00:10:00',
+        'Timelimit': '00:20:00',
+        'MaxRSS': '',
+        'NNodes': '1',
+        'NTasks': ''
+    })
+    jobs.append(job)
+    job = job_module.Job('24371657', '24371657', None)
+    job.update({
+        'JobID': '24371657',
+        'State': 'RUNNING',
+        'AllocCPUS': '1',
+        'REQMEM': '1Gn',
+        'TotalCPU': '00:09:00',
+        'Elapsed': '00:10:00',
+        'Timelimit': '00:20:00',
+        'MaxRSS': '',
+        'NNodes': '1',
+        'NTasks': ''
+    })
+    jobs.append(job)
+    job = job_module.Job('24371658', '24371658', None)
+    job.update({
+        'JobID': '24371658',
+        'State': 'CANCELLED',
+        'AllocCPUS': '1',
+        'REQMEM': '1Gn',
+        'TotalCPU': '00:09:00',
+        'Elapsed': '00:00:00',
+        'Timelimit': '00:20:00',
+        'MaxRSS': '',
+        'NNodes': '1',
+        'NTasks': ''
+    })
+    jobs.append(job)
+    job = job_module.Job('24371659', '24371659', None)
+    job.update({
+        'JobID': '24371659',
+        'State': 'TIMEOUT',
+        'AllocCPUS': '1',
+        'REQMEM': '2Gn',
+        'TotalCPU': '00:04:00',
+        'Elapsed': '00:21:00',
+        'Timelimit': '00:20:00',
+        'MaxRSS': '',
+        'NNodes': '1',
+        'NTasks': ''
+    })
+    jobs.append(job)
+    job = job_module.Job('24371660', '24371660', None)
+    job.update({
+        'JobID': '24371660',
+        'State': 'OTHER',
+        'AllocCPUS': '1',
+        'REQMEM': '2Gn',
+        'TotalCPU': '00:09:00',
+        'Elapsed': '00:12:05',
+        'Timelimit': '00:20:00',
+        'MaxRSS': '',
+        'NNodes': '1',
+        'NTasks': ''
+    })
+    jobs.append(job)
+    result = renderer.format_jobs(jobs)
+    ansi_escape = re.compile(r'\x1B[@-_][0-?]*[ -/]*[@-~]')
+    # check removed codes
+    codes = ansi_escape.findall(result)
+    for i, c in enumerate(codes):
+        print(f'{i} -> {repr(c)}')
+    for code in codes[1::2]:  # normal
+        assert code == '\x1b[0m'
+    for code in codes[0:10:20]:
+        assert code == '\x1b[1m'  # bold
+    for i in (22, 24, 26, 28):
+        assert codes[i] == '\x1b[31m'  # red
+    for i in (12, 14, 30):
+        assert codes[i] == '\x1b[32m'  # green
+    for i in (20,):
+        assert codes[i] == '\x1b[33m'  # yellow
+    for i in (16,):
+        assert codes[i] == '\x1b[34m'  # blue
+    for i in (18,):
+        assert codes[i] == '\x1b[36m'  # cyan
+    # remove color codes
+    result = ansi_escape.sub('', result)
+    lines = result.split('\n')
+    assert lines[0].split() == \
+        'JobID State Elapsed CPUEff REQMEM TimeEff'.split()
+    assert lines[1].split() == \
+        '24371655 COMPLETED 00:10:00 90.0% 1Gn 50.0%'.split()
+    assert lines[2].split() == \
+        '24371656 PENDING --- --- --- ---'.split()
+    assert lines[3].split() == \
+        '24371657 RUNNING 00:10:00 --- 1Gn 50.0%'.split()
+    assert lines[4].split() == \
+        '24371658 CANCELLED 00:00:00 --- 1Gn 0.0%'.split()
+    assert lines[5].split() == \
+        '24371659 TIMEOUT 00:21:00 19.0% 2Gn 105.0%'.split()
+    assert lines[6].split() == \
+        '24371660 OTHER 00:12:05 74.5% 2Gn 60.4%'.split()
+
+
 def test_formatter_init():
     # empty
     result = output_renderer.Column_Formatter('')
@@ -137,7 +267,7 @@ def test_formatter_init():
         result = output_renderer.Column_Formatter('test%1<0')
     assert "Unable to parse format token 'test%1<0'" in str(e)
 
-    # with ignor other % things
+    # with ignore other % things
     result = output_renderer.Column_Formatter('test%<10%>5')
     assert result.title == 'test'
     assert result.alignment == '<'
@@ -176,18 +306,27 @@ def test_formatter_validate_title():
 
 
 def test_formatter_compute_width():
-    fmt = output_renderer.Column_Formatter('Name')
+    fmt = output_renderer.Column_Formatter('JobID')
     # matches title
-    fmt.compute_width('tes tin g'.split())
-    assert fmt.width == 4
+    jobs = [
+        job_module.Job(None, 'tes', None),
+        job_module.Job(None, 'tin', None),
+        job_module.Job(None, 'g', None),
+    ]
+    fmt.compute_width(jobs)
+    assert fmt.width == 7
 
     # already set
-    fmt.compute_width('aLongEntry andAnother'.split())
-    assert fmt.width == 4
+    jobs = [
+        job_module.Job(None, 'aLongEntry', None),
+        job_module.Job(None, 'addAnother', None),
+    ]
+    fmt.compute_width(jobs)
+    assert fmt.width == 7
 
-    fmt = output_renderer.Column_Formatter('Name')
-    fmt.compute_width('aLongEntry andAnother'.split())
-    assert fmt.width == 10
+    fmt = output_renderer.Column_Formatter('JobID')
+    fmt.compute_width(jobs)
+    assert fmt.width == 12
 
 
 def test_formatter_format_entry():

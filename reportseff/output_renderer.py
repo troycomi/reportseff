@@ -68,6 +68,7 @@ class Output_Renderer():
             name = title.split('%')[0]
             if name not in self.formatters:
                 self.formatters.insert(0, Column_Formatter(title))
+                self.formatters[0].validate_title([name])
 
     def correct_columns(self):
         '''
@@ -82,16 +83,23 @@ class Output_Renderer():
         result += self.required
 
         # remove duplicates
-        self.query_columns = list(set(result))
+        self.query_columns = list(sorted(set(result)))
 
     def format_jobs(self, jobs: List[Job]) -> str:
         '''
         Given list of jobs, build output table
         '''
-        result = '  '.join([fmt.format_title()
-                            for fmt in self.formatters])
+        for fmt in self.formatters:
+            fmt.compute_width(jobs)
 
-        # TODO finish
+        result = ' '.join([fmt.format_title()
+                           for fmt in self.formatters])
+
+        for job in jobs:
+            result += '\n'
+            result += ' '.join([fmt.format_job(job)
+                                for fmt in self.formatters])
+
         return result
 
 
@@ -116,9 +124,22 @@ class Column_Formatter():
                 except ValueError:
                     raise ValueError(f"Unable to parse format token '{token}'")
 
+        self.color_function = lambda x: (x, None)
+        fold_title = self.title.casefold()
+        if fold_title == 'state':
+            self.color_function = color_state
+        elif fold_title == 'cpueff':
+            self.color_function = lambda x: render_eff(x, 'high')
+        elif fold_title == 'timeeff' or fold_title == 'memeff':
+            self.color_function = lambda x: render_eff(x, 'mid')
+
     def __eq__(self, other):
         if isinstance(other, Column_Formatter):
-            return self.__dict__ == other.__dict__
+            for k in self.__dict__:
+                if k != 'color_function' and \
+                        self.__dict__[k] != other.__dict__[k]:
+                    return False
+            return True
         if isinstance(other, str):
             return self.title == other
         return False
@@ -142,7 +163,7 @@ class Column_Formatter():
 
         raise ValueError(f"'{self.title}' is not a valid title")
 
-    def compute_width(self, entries: List):
+    def compute_width(self, jobs: List):
         '''
         Determine the max width of all entries if the width attribute is unset.
         Includes title in determination
@@ -151,13 +172,30 @@ class Column_Formatter():
             return
 
         self.width = len(self.title)
-        for entry in entries:
-            width = len(entry)
-            self.width = self.width if self.width > width else width
+        for job in jobs:
+            entry = job.get_entry(self.title)
+            if isinstance(entry, str):
+                width = len(entry)
+            elif isinstance(entry, float):
+                width = 5
+            else:
+                print(entry, self.title)
+            try:
+                self.width = self.width if self.width > width else width
+            except UnboundLocalError:
+                print(entry, self.title)
+
+        self.width += 2  # add some boarder
 
     def format_title(self) -> str:
         result = self.format_entry(self.title)
         return click.style(result, bold=True)
+
+    def format_job(self, job: Job) -> str:
+        value = job.get_entry(self.title)
+        return self.format_entry(
+            *self.color_function(value)
+        )
 
     def format_entry(self, entry: str, color: str = None) -> str:
         '''
@@ -171,22 +209,63 @@ class Column_Formatter():
                              'with unset width!')
 
         entry = entry[:self.width]
-        result = ('{:' + self.alignment + str(self.width) + '}').format(entry)
+        result = (f'{{:{self.alignment}{self.width}}}').format(entry)
         if color:
             result = click.style(result, fg=color)
         return result
 
+
+def color_state(value) -> str:
+    state_colors = {
+        'FAILED': 'red',
+        'TIMEOUT': 'red',
+        'OUT_OF_MEMORY': 'red',
+        'RUNNING': 'cyan',
+        'CANCELLED': 'yellow',
+        'COMPLETED': 'green',
+        'PENDING': 'blue',
+    }
+    return value, state_colors.get(value, None)
+
+
+def render_eff(value: float, target_type: str) -> str:
     '''
-    TODO
-    constructor should take a list of comma separated values
-    each value is a format from `sacct --helpformat` with an optional
-    %width value
-    use those values to build sacct call, have sacct as member object here
-    (make sacct object as queue_inquirer)
-    add in custom values cpueff, memeff, timeeff
-    default width is 4 + max, centered
-    override alignment with < or >
-    custom values and defaults I already have can override those
-    job update then needs to handle the new dictionary values, use master
-    jobid values unless it is unset
+    Return a styled string for efficiency values
     '''
+    color_maps = {
+        'mid': color_mid,
+        'high': color_high
+    }
+    if value == '---':
+        color = None
+    elif value == -1:
+        value = '---'
+        color = 'red'
+    else:
+        color = color_maps[target_type](value)
+        value = f'{value}%'
+    return value, color
+
+
+def color_mid(value: float) -> str:
+    '''
+    Determine color for efficiency value where "mid" values are the target
+    '''
+    if value < 20 or value > 90:
+        return 'red'
+    elif value > 60:
+        return 'green'
+    else:
+        return None
+
+
+def color_high(value: float) -> str:
+    '''
+    Determine color for efficiency value where "high" values are the target
+    '''
+    if value < 20:
+        return 'red'
+    elif value > 80:
+        return 'green'
+    else:
+        return None

@@ -1,6 +1,5 @@
 from reportseff import job as job_module
 import pytest
-import click
 
 
 @pytest.fixture
@@ -113,7 +112,7 @@ def test_update_main_job():
     assert job.state == 'CANCELLED'
     assert job.time == '00:00:00'
     assert job.time_eff == 0.0
-    assert job.cpu == -1
+    assert job.cpu is None
     assert job.totalmem == 1024**2
 
 
@@ -143,91 +142,35 @@ def test_name(job):
     assert job.name() == 'jobid'
 
 
-def test_render(job):
-    assert job.render(10) == ''
-
+def test_get_entry(job):
     job.state = 'TEST'
+    assert job.get_entry('JobID') == 'filename'
+    assert job.get_entry('State') == 'TEST'
+    assert job.get_entry('MemEff') == '---'
+    assert job.get_entry('TimeEff') == '---'
+    assert job.get_entry('CPUEff') == '---'
+    assert job.get_entry('undefined') == '---'
 
-    assert job.render(10) == (
-        '{:>10}'.format('filename') +
-        click.style('{:^16}'.format('TEST'), fg=None) +
-        '{:^12}'.format('---') +
-        click.style('{:^9}'.format('---'), fg=None) +
-        click.style('{:^9}'.format('---'), fg=None) +
-        click.style('{:^9}'.format('---'), fg=None) +
-        '\n'
-    )
-
-    job.time = '00:00:10'
-    assert job.render(10) == (
-        '{:>10}'.format('filename') +
-        click.style('{:^16}'.format('TEST'), fg=None) +
-        '{:>11} '.format('00:00:10') +
-        click.style('{:^9}'.format('---'), fg=None) +
-        click.style('{:^9}'.format('---'), fg=None) +
-        click.style('{:^9}'.format('---'), fg=None) +
-        '\n'
-    )
-
-    job.totalmem = 100
-    job.stepmem = 13.45
-    assert job.render(10) == (
-        '{:>10}'.format('filename') +
-        click.style('{:^16}'.format('TEST'), fg=None) +
-        '{:>11} '.format('00:00:10') +
-        click.style('{:^9}'.format('---'), fg=None) +
-        click.style('{:^9}'.format('---'), fg=None) +
-        click.style('{:^9}'.format('13.4%'), fg='red') +
-        '\n'
-    )
-
-
-def test_render_eff():
-    assert job_module.render_eff(19, 'high') == \
-        click.style('   19%   ', fg='red')
-    assert job_module.render_eff(20, 'high') == \
-        click.style('   20%   ', fg=None)
-    assert job_module.render_eff(80, 'high') == \
-        click.style('   80%   ', fg=None)
-    assert job_module.render_eff(81, 'high') == \
-        click.style('   81%   ', fg='green')
-
-    assert job_module.render_eff(19, 'mid') == \
-        click.style('   19%   ', fg='red')
-    assert job_module.render_eff(20, 'mid') == \
-        click.style('   20%   ', fg=None)
-    assert job_module.render_eff(60, 'mid') == \
-        click.style('   60%   ', fg=None)
-    assert job_module.render_eff(61, 'mid') == \
-        click.style('   61%   ', fg='green')
-    assert job_module.render_eff(90, 'mid') == \
-        click.style('   90%   ', fg='green')
-    assert job_module.render_eff(91, 'mid') == \
-        click.style('   91%   ', fg='red')
-
-    with pytest.raises(ValueError) as e:
-        job_module.render_eff(99, 'test')
-
-    assert 'Unsupported target type: test' in str(e)
-
-    assert job_module.render_eff(-1, 'mid') == \
-        click.style('   ---   ', fg='red')
-
-
-def test_color_high():
-    assert job_module.color_high(19) == 'red'
-    assert job_module.color_high(20) is None
-    assert job_module.color_high(80) is None
-    assert job_module.color_high(81) == 'green'
-
-
-def test_color_mid():
-    assert job_module.color_mid(19) == 'red'
-    assert job_module.color_mid(20) is None
-    assert job_module.color_mid(60) is None
-    assert job_module.color_mid(61) == 'green'
-    assert job_module.color_mid(90) == 'green'
-    assert job_module.color_mid(91) == 'red'
+    job = job_module.Job('24371655', '24371655', None)
+    job.update({
+        'JobID': '24371655',
+        'State': 'CANCELLED',
+        'AllocCPUS': '1',
+        'REQMEM': '1Gn',
+        'TotalCPU': '00:09:00',
+        'Elapsed': '00:00:00',
+        'Timelimit': '00:20:00',
+        'MaxRSS': '',
+        'NNodes': '1',
+        'NTasks': ''
+    })
+    assert job.get_entry('JobID') == '24371655'
+    assert job.get_entry('State') == 'CANCELLED'
+    assert job.get_entry('MemEff') == 0.0
+    assert job.get_entry('TimeEff') == 0.0
+    assert job.get_entry('CPUEff') == '---'
+    assert job.get_entry('undefined') == '---'
+    assert job.get_entry('Elapsed') == '00:00:00'
 
 
 def test_parse_slurm_timedelta():

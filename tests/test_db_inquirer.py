@@ -120,3 +120,29 @@ def test_sacct_get_db_output(sacct, mocker):
         'c1j2|c2j2\n'
         'c1j3|c2j3\n'
     )
+
+
+def test_sacct_get_db_output_no_newline(sacct, mocker):
+    mock_sacct = mocker.MagicMock()
+    mock_sacct.returncode = 0
+    mock_sacct.stdout = (
+        '16|00:00:00|23000233|23000233||1|4000Mc|CANCELLED by 129319|'
+        '6-00:00:00|00:00:00'
+    )
+    mock_sub = mocker.patch('reportseff.db_inquirer.subprocess.run',
+                            return_value=mock_sacct)
+    result, debug = sacct.get_db_output(
+        ['AllocCPUS', 'Elapsed', 'JobID', 'JobIDRaw', 'MaxRSS', 'NNodes',
+         'REQMEM', 'State', 'Timelimit', 'TotalCPU'], ['23000233'], True)
+    assert result == [
+        {'AllocCPUS': '16', 'Elapsed': '00:00:00', 'JobID': '23000233',
+         'JobIDRaw': '23000233', 'MaxRSS': '', 'NNodes': '1',
+         'REQMEM': '4000Mc', 'State': 'CANCELLED by 129319',
+         'Timelimit': '6-00:00:00', 'TotalCPU': '00:00:00'}
+    ]
+    mock_sub.assert_called_once()
+
+    assert debug == (
+        '16|00:00:00|23000233|23000233||1|4000Mc|CANCELLED by 129319|'
+        '6-00:00:00|00:00:00'
+    )

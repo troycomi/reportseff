@@ -1,5 +1,4 @@
 import re
-import click
 from typing import Dict
 from datetime import timedelta
 
@@ -45,6 +44,7 @@ class Job():
         self.cpu = '---'
         self.mem = '---'
         self.state = None
+        self.other_entries = {}
 
     def __eq__(self, other):
         if not isinstance(other, Job):
@@ -65,24 +65,34 @@ class Job():
 
         # master job id
         if self.jobid == entry['JobID']:
-            self.time = entry['Elapsed']
-            requested = _parse_slurm_timedelta(entry['Timelimit'])
-            wall = _parse_slurm_timedelta(entry['Elapsed'])
+            self.other_entries = entry
+            self.time = entry['Elapsed'] if 'Elapsed' in entry else None
+            requested = _parse_slurm_timedelta(entry['Timelimit']) \
+                if 'Timelimit' in entry else 1
+            wall = _parse_slurm_timedelta(entry['Elapsed']) \
+                if 'Elapsed' in entry else 0
             self.time_eff = round(wall / requested * 100, 1)
             if self.state == 'RUNNING':
                 return
             cpus = (_parse_slurm_timedelta(entry['TotalCPU']) /
-                    int(entry['AllocCPUS']))
+                    int(entry['AllocCPUS'])) \
+                if 'TotalCPU' in entry and 'AllocCPUS' in entry else 0
             if wall == 0:
-                self.cpu = -1
+                self.cpu = None
             else:
                 self.cpu = round(cpus / wall * 100, 1)
             self.totalmem = parsemem(entry['REQMEM'],
                                      int(entry['NNodes']),
-                                     int(entry['AllocCPUS']))
+                                     int(entry['AllocCPUS'])) \
+                if 'REQMEM' in entry and 'NNodes' in entry \
+                and 'AllocCPUS' in entry else None
 
         elif self.state != 'RUNNING':
-            self.stepmem += parsememstep(entry['MaxRSS'])
+            for k, v in entry.items():
+                if k not in self.other_entries or not self.other_entries[k]:
+                    self.other_entries[k] = v
+            self.stepmem += parsememstep(entry['MaxRSS']) \
+                if 'MaxRSS' in entry else 0
 
     def name(self):
         if self.filename:
@@ -90,73 +100,23 @@ class Job():
         else:
             return self.jobid
 
-    def render(self, max_width: int) -> str:
-        if self.state is None:
-            return ''
-
-        result = ('{:>' + str(max_width) + '}').format(self.name())
-        result += click.style('{:^16}'.format(self.state),
-                              fg=state_colors.get(self.state, None))
-        if self.time == '---':
-            result += '{:^12}'.format(self.time)
+    def get_entry(self, key):
+        if key == 'JobID':
+            return self.name()
+        if key == 'State':
+            return self.state
+        if key == 'MemEff':
+            if self.totalmem:
+                value = round(self.stepmem/self.totalmem*100, 1)
+            else:
+                value = '---'
+            return value
+        if key == 'TimeEff':
+            return self.time_eff
+        if key == 'CPUEff':
+            return self.cpu if self.cpu else '---'
         else:
-            result += '{:>11} '.format(self.time)
-
-        result += render_eff(self.time_eff, 'mid')
-        result += render_eff(self.cpu, 'high')
-        if self.totalmem:
-            value = round(self.stepmem/self.totalmem*100, 1)
-        else:
-            value = '---'
-        result += render_eff(value, 'mid')
-
-        result += '\n'
-        return result
-
-
-def render_eff(value: float, target_type: str) -> str:
-    '''
-    Return a styled string for efficiency values
-    '''
-    color_maps = {
-        'mid': color_mid,
-        'high': color_high
-    }
-    if target_type not in color_maps:
-        raise ValueError(f'Unsupported target type: {target_type}')
-    if value == '---':
-        color = None
-    elif value == -1:
-        value = '---'
-        color = 'red'
-    else:
-        color = color_maps[target_type](value)
-        value = f'{value}%'
-    return click.style('{:^9}'.format(value), fg=color)
-
-
-def color_mid(value: float) -> str:
-    '''
-    Determine color for efficiency value where "mid" values are the target
-    '''
-    if value < 20 or value > 90:
-        return 'red'
-    elif value > 60:
-        return 'green'
-    else:
-        return None
-
-
-def color_high(value: float) -> str:
-    '''
-    Determine color for efficiency value where "high" values are the target
-    '''
-    if value < 20:
-        return 'red'
-    elif value > 80:
-        return 'green'
-    else:
-        return None
+            return self.other_entries.get(key, '---')
 
 
 def _parse_slurm_timedelta(delta: str) -> int:
