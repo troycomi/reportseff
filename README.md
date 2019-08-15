@@ -91,10 +91,10 @@ all elements in the array will be displayed.
 are displayed.
 - From current directory.  If no argument is supplied, reportseff will attempt
 to find slurm output files in the current directory as described above.
+- Supplying a directory as a single argument will override the current
+directory to check for slurm outputs.
 
 ### Options
-- --directory: Override current directory to check for slurm outputs.  Will
-preempt any supplied arguments.
 - --color/--no-color: Force color output or not.  By default, will force color
 output.  With the no-color flag, click will strip color codes for everything
 besides stdout.

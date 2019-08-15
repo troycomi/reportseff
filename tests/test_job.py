@@ -1,11 +1,29 @@
 from reportseff import job as job_module
 import pytest
-import click
 
 
 @pytest.fixture
 def job():
     return job_module.Job('job', 'jobid', 'filename')
+
+
+def test_eq():
+    job1 = job_module.Job('j1', 'j1', 'filename')
+    job2 = job_module.Job('j1', 'j1', 'filename')
+    assert job1 == job2
+
+    job2 = job_module.Job('j2', 'j1', 'filename')
+    assert job1 != job2
+    job2 = dict()
+    assert job1 != job2
+
+
+def test_repr():
+    job1 = job_module.Job('j1', 'jid1', 'filename')
+    assert repr(job1) == 'Job(job=j1, jobid=jid1, filename=filename)'
+
+    job2 = job_module.Job('j2', 'jid2', None)
+    assert repr(job2) == 'Job(job=j2, jobid=jid2, filename=None)'
 
 
 def test_job_init(job):
@@ -29,12 +47,14 @@ def test_update_main_job():
         'REQMEM': '1Gn',
         'TotalCPU': '00:09:00',
         'Elapsed': '00:10:00',
+        'Timelimit': '00:20:00',
         'MaxRSS': '',
         'NNodes': '1',
         'NTasks': ''
     })
     assert job.state == 'COMPLETED'
     assert job.time == '00:10:00'
+    assert job.time_eff == 50.0
     assert job.cpu == 90.0
     assert job.totalmem == 1*1024**2
 
@@ -46,12 +66,14 @@ def test_update_main_job():
         'REQMEM': '1Gn',
         'TotalCPU': '00:09:00',
         'Elapsed': '00:10:00',
+        'Timelimit': '00:20:00',
         'MaxRSS': '',
         'NNodes': '1',
         'NTasks': ''
     })
     assert job.state == 'PENDING'
     assert job.time == '---'
+    assert job.time_eff == '---'
     assert job.cpu == '---'
     assert job.totalmem is None
 
@@ -63,14 +85,35 @@ def test_update_main_job():
         'REQMEM': '1Gn',
         'TotalCPU': '00:09:00',
         'Elapsed': '00:10:00',
+        'Timelimit': '00:20:00',
         'MaxRSS': '',
         'NNodes': '1',
         'NTasks': ''
     })
     assert job.state == 'RUNNING'
     assert job.time == '00:10:00'
+    assert job.time_eff == 50.0
     assert job.cpu == '---'
     assert job.totalmem is None
+
+    job = job_module.Job('24371655', '24371655', None)
+    job.update({
+        'JobID': '24371655',
+        'State': 'CANCELLED',
+        'AllocCPUS': '1',
+        'REQMEM': '1Gn',
+        'TotalCPU': '00:09:00',
+        'Elapsed': '00:00:00',
+        'Timelimit': '00:20:00',
+        'MaxRSS': '',
+        'NNodes': '1',
+        'NTasks': ''
+    })
+    assert job.state == 'CANCELLED'
+    assert job.time == '00:00:00'
+    assert job.time_eff == 0.0
+    assert job.cpu is None
+    assert job.totalmem == 1024**2
 
 
 def test_update_part_job():
@@ -99,49 +142,35 @@ def test_name(job):
     assert job.name() == 'jobid'
 
 
-def test_render_eff():
-    assert job_module.render_eff(19, 'cpu') == \
-        click.style('   19%   ', fg='red')
-    assert job_module.render_eff(20, 'cpu') == \
-        click.style('   20%   ', fg=None)
-    assert job_module.render_eff(80, 'cpu') == \
-        click.style('   80%   ', fg=None)
-    assert job_module.render_eff(81, 'cpu') == \
-        click.style('   81%   ', fg='green')
+def test_get_entry(job):
+    job.state = 'TEST'
+    assert job.get_entry('JobID') == 'filename'
+    assert job.get_entry('State') == 'TEST'
+    assert job.get_entry('MemEff') == '---'
+    assert job.get_entry('TimeEff') == '---'
+    assert job.get_entry('CPUEff') == '---'
+    assert job.get_entry('undefined') == '---'
 
-    assert job_module.render_eff(19, 'mem') == \
-        click.style('   19%   ', fg='red')
-    assert job_module.render_eff(20, 'mem') == \
-        click.style('   20%   ', fg=None)
-    assert job_module.render_eff(60, 'mem') == \
-        click.style('   60%   ', fg=None)
-    assert job_module.render_eff(61, 'mem') == \
-        click.style('   61%   ', fg='green')
-    assert job_module.render_eff(90, 'mem') == \
-        click.style('   90%   ', fg='green')
-    assert job_module.render_eff(91, 'mem') == \
-        click.style('   91%   ', fg='red')
-
-    with pytest.raises(ValueError) as e:
-        job_module.render_eff(99, 'test')
-
-    assert 'Unsupported color type: test' in str(e)
-
-
-def test_color_cpu():
-    assert job_module.color_cpu(19) == 'red'
-    assert job_module.color_cpu(20) is None
-    assert job_module.color_cpu(80) is None
-    assert job_module.color_cpu(81) == 'green'
-
-
-def test_color_memory():
-    assert job_module.color_memory(19) == 'red'
-    assert job_module.color_memory(20) is None
-    assert job_module.color_memory(60) is None
-    assert job_module.color_memory(61) == 'green'
-    assert job_module.color_memory(90) == 'green'
-    assert job_module.color_memory(91) == 'red'
+    job = job_module.Job('24371655', '24371655', None)
+    job.update({
+        'JobID': '24371655',
+        'State': 'CANCELLED',
+        'AllocCPUS': '1',
+        'REQMEM': '1Gn',
+        'TotalCPU': '00:09:00',
+        'Elapsed': '00:00:00',
+        'Timelimit': '00:20:00',
+        'MaxRSS': '',
+        'NNodes': '1',
+        'NTasks': ''
+    })
+    assert job.get_entry('JobID') == '24371655'
+    assert job.get_entry('State') == 'CANCELLED'
+    assert job.get_entry('MemEff') == 0.0
+    assert job.get_entry('TimeEff') == 0.0
+    assert job.get_entry('CPUEff') == '---'
+    assert job.get_entry('undefined') == '---'
+    assert job.get_entry('Elapsed') == '00:00:00'
 
 
 def test_parse_slurm_timedelta():

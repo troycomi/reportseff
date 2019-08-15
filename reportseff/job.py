@@ -1,5 +1,4 @@
 import re
-import click
 from typing import Dict
 from datetime import timedelta
 
@@ -41,9 +40,11 @@ class Job():
         self.stepmem = 0
         self.totalmem = None
         self.time = '---'
+        self.time_eff = '---'
         self.cpu = '---'
         self.mem = '---'
         self.state = None
+        self.other_entries = {}
 
     def __eq__(self, other):
         if not isinstance(other, Job):
@@ -52,7 +53,8 @@ class Job():
         return self.__dict__ == other.__dict__
 
     def __repr__(self):
-        return self.__dict__.__repr__()
+        return (f'Job(job={self.job}, jobid={self.jobid}, '
+                f'filename={self.filename})')
 
     def update(self, entry: Dict):
         if '.' not in entry['JobID']:
@@ -61,28 +63,36 @@ class Job():
         if self.state == 'PENDING':
             return
 
-        # # if job is cancelled prior to starting
-        # if self.state == 'CANCELLED' and 'Elapsed' not in entry:
-        #     return
-
         # master job id
         if self.jobid == entry['JobID']:
-            self.time = entry['Elapsed']
+            self.other_entries = entry
+            self.time = entry['Elapsed'] if 'Elapsed' in entry else None
+            requested = _parse_slurm_timedelta(entry['Timelimit']) \
+                if 'Timelimit' in entry else 1
+            wall = _parse_slurm_timedelta(entry['Elapsed']) \
+                if 'Elapsed' in entry else 0
+            self.time_eff = round(wall / requested * 100, 1)
             if self.state == 'RUNNING':
                 return
-            wall = _parse_slurm_timedelta(entry['Elapsed'])
             cpus = (_parse_slurm_timedelta(entry['TotalCPU']) /
-                    int(entry['AllocCPUS']))
-            if wall != 0:
-                self.cpu = round(cpus / wall * 100, 1)
+                    int(entry['AllocCPUS'])) \
+                if 'TotalCPU' in entry and 'AllocCPUS' in entry else 0
+            if wall == 0:
+                self.cpu = None
             else:
-                self.cpu = -1
+                self.cpu = round(cpus / wall * 100, 1)
             self.totalmem = parsemem(entry['REQMEM'],
                                      int(entry['NNodes']),
-                                     int(entry['AllocCPUS']))
+                                     int(entry['AllocCPUS'])) \
+                if 'REQMEM' in entry and 'NNodes' in entry \
+                and 'AllocCPUS' in entry else None
 
         elif self.state != 'RUNNING':
-            self.stepmem += parsememstep(entry['MaxRSS'])
+            for k, v in entry.items():
+                if k not in self.other_entries or not self.other_entries[k]:
+                    self.other_entries[k] = v
+            self.stepmem += parsememstep(entry['MaxRSS']) \
+                if 'MaxRSS' in entry else 0
 
     def name(self):
         if self.filename:
@@ -90,72 +100,23 @@ class Job():
         else:
             return self.jobid
 
-    def render(self, max_width: int) -> str:
-        if self.state is None:
-            return ''
-
-        result = ('{:>' + str(max_width) + '}').format(self.name())
-        result += click.style('{:^16}'.format(self.state),
-                              fg=state_colors[self.state])
-        if self.time == '---':
-            result += '{:^12}'.format(self.time)
+    def get_entry(self, key):
+        if key == 'JobID':
+            return self.name()
+        if key == 'State':
+            return self.state
+        if key == 'MemEff':
+            if self.totalmem:
+                value = round(self.stepmem/self.totalmem*100, 1)
+            else:
+                value = '---'
+            return value
+        if key == 'TimeEff':
+            return self.time_eff
+        if key == 'CPUEff':
+            return self.cpu if self.cpu else '---'
         else:
-            result += '{:>11} '.format(self.time)
-
-        result += render_eff(self.cpu, 'cpu')
-        if self.totalmem:
-            value = round(self.stepmem/self.totalmem*100, 1)
-        else:
-            value = '---'
-        result += render_eff(value, 'mem')
-
-        result += '\n'
-        return result
-
-
-def render_eff(value: float, color_type: str) -> str:
-    '''
-    Return a styled string for efficiency values
-    '''
-    color_maps = {
-        'mem': color_memory,
-        'cpu': color_cpu
-    }
-    if color_type not in color_maps:
-        raise ValueError(f'Unsupported color type: {color_type}')
-    if value == '---':
-        color = None
-    elif value == -1:
-        value = '---'
-        color = 'red'
-    else:
-        color = color_maps[color_type](value)
-        value = f'{value}%'
-    return click.style('{:^9}'.format(value), fg=color)
-
-
-def color_memory(value: float) -> str:
-    '''
-    Convert the memory efficiency value to a color
-    '''
-    if value < 20 or value > 90:
-        return 'red'
-    elif value > 60:
-        return 'green'
-    else:
-        return None
-
-
-def color_cpu(value: float) -> str:
-    '''
-    Convert the cpu efficiency value to a color
-    '''
-    if value < 20:
-        return 'red'
-    elif value > 80:
-        return 'green'
-    else:
-        return None
+            return self.other_entries.get(key, '---')
 
 
 def _parse_slurm_timedelta(delta: str) -> int:

@@ -1,6 +1,9 @@
 import click
-import subprocess
+import sys
+from shutil import which
 from reportseff.job_collection import Job_Collection
+from reportseff.db_inquirer import Sacct_Inquirer
+from reportseff.output_renderer import Output_Renderer
 
 
 @click.command()
@@ -8,50 +11,64 @@ from reportseff.job_collection import Job_Collection
               help='If set, will sort outputs by modified time of files')
 @click.option('--color/--no-color', default=True,
               help='Force color output. No color will use click defaults')
-@click.option('--directory', default='')
+@click.option('--format', 'format_str',
+              default='JobID%>,State,Elapsed%>,CPUEff,MemEff',
+              help='Comma-separated list of columns to include.  Options '
+              'are any valide sacct input along with CPUEff, MemEff, and '
+              'TimeEff.  A width and alignment may optionally be provided '
+              'after "%", e.g. JobID%>15 aligns job id right with max '
+              'width of 15 characters.')
 @click.option('--debug', default=False, is_flag=True,
-              help='Print raw sacct information to stderr')
+              help='Print raw db query to stderr')
+@click.option('--user', default='',
+              help='Ignore jobs, return all jobs in last month from user')
 @click.argument('jobs', nargs=-1)
-def reportseff(modified_sort, color, directory, jobs, debug):
+def reportseff(modified_sort, color, format_str, debug, user, jobs,):
     job_collection = Job_Collection()
+    if which('sacct') is not None:
+        inquirer = Sacct_Inquirer()
+        renderer = Output_Renderer(inquirer.get_valid_formats(),
+                                   format_str)
+    else:
+        click.secho('No supported scheduling systems found!',
+                    fg='red', err=True)
+        sys.exit(1)
     try:
-        if jobs == ():
-            job_collection.set_slurm_out_dir(directory)
+        if user:
+            # TODO add test and implement methods
+            inquirer.set_user(user)
         else:
-            job_collection.set_slurm_jobs(jobs)
+            job_collection.set_jobs(jobs)
 
     except ValueError as e:
         click.secho(str(e), fg='red', err=True)
-        return
+        sys.exit(1)
 
-    command_args = []
-    command_args.append('sacct')
-    command_args.append('-P')
-    command_args.append('-n')
-    command_args.append('--format=' + job_collection.get_slurm_format())
-    command_args.append('--jobs=' + job_collection.get_slurm_jobs())
+    try:
+        result = inquirer.get_db_output(
+            renderer.query_columns,
+            job_collection.get_jobs(),
+            debug)
+    except Exception as e:
+        click.secho(str(e), fg='red', err=True)
+        sys.exit(1)
 
-    result = subprocess.run(
-        args=command_args,
-        stdout=subprocess.PIPE,
-        encoding='utf8',
-        check=True,
-        universal_newlines=True)
-
-    if result.returncode != 0:
-        click.secho('Error running sacct!', fg='red', err=True)
     if debug:
-        click.echo(result.stdout, err=True)
+        click.echo(result[1], err=True)
+        result = result[0]
 
-    lines = result.stdout.split('\n')
-    for i, line in enumerate(lines[:-1]):  # remove last, blank newline
+    for entry in result:
         try:
-            job_collection.process_line(line)
+            job_collection.process_entry(entry,
+                                         user_provided=(user != ''))
         except Exception as e:
-            print(f'SACCT:\n{lines[i-1]}\n->{line}')
-            raise e
+            click.echo(f'Error processing entry: {entry}', err=True)
+            raise(e)
 
-    output, entries = job_collection.get_output(modified_sort)
+    jobs = job_collection.get_sorted_jobs(modified_sort)
+    jobs = [j for j in jobs if j.state]
+    entries = len(jobs)
+    output = renderer.format_jobs(jobs)
 
     if entries > 20:
         click.echo_via_pager(output, color=color)
