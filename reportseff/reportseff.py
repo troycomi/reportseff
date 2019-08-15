@@ -22,6 +22,7 @@ from reportseff.output_renderer import Output_Renderer
               help='Print raw db query to stderr')
 @click.option('--user', default='',
               help='Ignore jobs, return all jobs in last month from user')
+@click.version_option()
 @click.argument('jobs', nargs=-1)
 def reportseff(modified_sort, color, format_str, debug, user, jobs,):
     job_collection = Job_Collection()
