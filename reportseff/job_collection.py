@@ -138,17 +138,18 @@ class Job_Collection():
         self.jobs[job_id].update(entry)
 
     def get_sorted_jobs(self, change_sort: bool) -> List:
-        if change_sort and self.dir_name:
+        if change_sort:
             def get_time(f):
+                # handle None and '', use numeric representation of name
+                idnum = float(re.sub('[^0-9.]', '',
+                                     f.jobid.replace('_', '.')))
                 f = f.filename
-                # handle None and ''
-                if not f:
-                    return 0
-                f = os.path.join(self.dir_name, f)
-                if os.path.exists(f):
+                if f and self.dir_name:
+                    f = os.path.join(self.dir_name, f)
+                if f and os.path.exists(f):
                     return os.path.getmtime(f)
                 else:
-                    return 0
+                    return idnum
 
             return sorted(self.jobs.values(),
                           key=get_time, reverse=True)

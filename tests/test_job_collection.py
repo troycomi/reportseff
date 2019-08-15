@@ -300,18 +300,18 @@ def test_get_sorted_jobs(jobs, mocker):
 
     # still uses other sorting, no dir_name set
     assert jobs.get_sorted_jobs(True) == [
-        Job('j3', 'jid3', 'file3'),
         Job('j13', 'jid13', None),
-        Job('j1', 'jid1', 'file12'),
         Job('j2', 'jid2', 'file234'),
         Job('j14', 'jid14', 'nothing'),
+        Job('j1', 'jid1', 'file12'),
+        Job('j3', 'jid3', 'file3'),
     ]
 
-    jobs.dir_name = 'dir'
+    jobs.dir_name = 'dir'  # now dir/nothing doesn't exist
     assert jobs.get_sorted_jobs(True) == [
+        Job('j14', 'jid14', 'nothing'),
+        Job('j13', 'jid13', None),
         Job('j2', 'jid2', 'file234'),
         Job('j1', 'jid1', 'file12'),
         Job('j3', 'jid3', 'file3'),
-        Job('j13', 'jid13', None),
-        Job('j14', 'jid14', 'nothing'),
     ]
