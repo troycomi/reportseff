@@ -176,14 +176,7 @@ class Column_Formatter():
             entry = job.get_entry(self.title)
             if isinstance(entry, str):
                 width = len(entry)
-            elif isinstance(entry, float):
-                width = 5
-            else:
-                print(entry, self.title)
-            try:
                 self.width = self.width if self.width > width else width
-            except UnboundLocalError:
-                print(entry, self.title)
 
         self.width += 2  # add some boarder
 
@@ -238,9 +231,6 @@ def render_eff(value: float, target_type: str) -> str:
     }
     if value == '---':
         color = None
-    elif value == -1:
-        value = '---'
-        color = 'red'
     else:
         color = color_maps[target_type](value)
         value = f'{value}%'

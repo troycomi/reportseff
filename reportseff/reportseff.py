@@ -19,9 +19,11 @@ from reportseff.output_renderer import Output_Renderer
               'after "%", e.g. JobID%>15 aligns job id right with max '
               'width of 15 characters.')
 @click.option('--debug', default=False, is_flag=True,
-              help='Print raw db information to stderr')
+              help='Print raw db query to stderr')
+@click.option('--user', default='',
+              help='Ignore jobs, return all jobs in last month from user')
 @click.argument('jobs', nargs=-1)
-def reportseff(modified_sort, color, format_str, debug, jobs,):
+def reportseff(modified_sort, color, format_str, debug, user, jobs,):
     job_collection = Job_Collection()
     if which('sacct') is not None:
         inquirer = Sacct_Inquirer()
@@ -32,7 +34,11 @@ def reportseff(modified_sort, color, format_str, debug, jobs,):
                     fg='red', err=True)
         sys.exit(1)
     try:
-        job_collection.set_jobs(jobs)
+        if user:
+            # TODO add test and implement methods
+            inquirer.set_user(user)
+        else:
+            job_collection.set_jobs(jobs)
 
     except ValueError as e:
         click.secho(str(e), fg='red', err=True)
@@ -53,7 +59,8 @@ def reportseff(modified_sort, color, format_str, debug, jobs,):
 
     for entry in result:
         try:
-            job_collection.process_entry(entry)
+            job_collection.process_entry(entry,
+                                         user_provided=(user != ''))
         except Exception as e:
             click.echo(f'Error processing entry: {entry}', err=True)
             raise(e)

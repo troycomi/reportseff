@@ -1,5 +1,6 @@
 from reportseff import db_inquirer
 import pytest
+import datetime
 
 
 @pytest.fixture
@@ -9,6 +10,7 @@ def sacct():
 
 def test_sacct_init(sacct):
     assert sacct.default_args == ['sacct', '-P', '-n']
+    assert sacct.user is None
 
 
 def test_sacct_get_valid_formats(sacct, mocker):
@@ -145,4 +147,53 @@ def test_sacct_get_db_output_no_newline(sacct, mocker):
     assert debug == (
         '16|00:00:00|23000233|23000233||1|4000Mc|CANCELLED by 129319|'
         '6-00:00:00|00:00:00'
+    )
+
+
+def test_sacct_set_user(sacct):
+    sacct.set_user('user')
+    assert sacct.user == 'user'
+
+
+def test_sacct_get_db_output_user(sacct, mocker):
+    mock_sacct = mocker.MagicMock()
+    mock_sacct.returncode = 1
+
+    mocker.patch('reportseff.db_inquirer.subprocess.run',
+                 return_value=mock_sacct)
+    mock_date = mocker.MagicMock()
+    mock_date.today.return_value = datetime.date(2018, 1, 20)
+    mock_date.side_effect = lambda *args, **kw: datetime.date(*args, **kw)
+    mocker.patch('reportseff.db_inquirer.datetime.date', mock_date)
+    with pytest.raises(Exception) as e:
+        sacct.get_db_output('c1 c2'.split(), 'j1 j2 j3'.split())
+    assert 'Error running sacct!' in str(e)
+
+    mock_sacct = mocker.MagicMock()
+    mock_sacct.returncode = 0
+    mock_sacct.stdout = (
+        'c1j1|c2j1\n'
+        'c1j2|c2j2\n'
+        'c1j3|c2j3\n'
+    )
+    mock_sub = mocker.patch('reportseff.db_inquirer.subprocess.run',
+                            return_value=mock_sacct)
+    sacct.set_user('user')
+    result = sacct.get_db_output('c1 c2'.split(), {})
+    assert result == [
+        {'c1': 'c1j1', 'c2': 'c2j1'},
+        {'c1': 'c1j2', 'c2': 'c2j2'},
+        {'c1': 'c1j3', 'c2': 'c2j3'},
+    ]
+    mock_sub.assert_called_once_with(
+        args=('sacct -P -n --format=c1,c2 --user=user '
+              '--starttime=011318').split(),
+        stdout=mocker.ANY, encoding=mocker.ANY,
+        check=mocker.ANY, universal_newlines=mocker.ANY)
+
+    _, debug = sacct.get_db_output('c1 c2'.split(), 'j1 j2 j3'.split(), True)
+    assert debug == (
+        'c1j1|c2j1\n'
+        'c1j2|c2j2\n'
+        'c1j3|c2j3\n'
     )

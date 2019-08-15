@@ -205,6 +205,39 @@ def test_simple_job(mocker, mock_inquirer):
     ]
 
 
+def test_simple_user(mocker, mock_inquirer):
+    mocker.patch('reportseff.reportseff.which', return_value=True)
+    runner = CliRunner()
+    sub_result = mocker.MagicMock()
+    sub_result.returncode = 0
+    sub_result.stdout = (
+        '1|01:27:42|24418435|24418435||1|1Gn|'
+        'COMPLETED|01:27:29\n'
+        '1|01:27:42|24418435.batch|24418435.batch|499092K|1|1Gn|'
+        'COMPLETED|01:27:29\n'
+        '1|01:27:42|24418435.extern|24418435.extern|1376K|1|1Gn|'
+        'COMPLETED|00:00:00\n'
+        '1|21:14:48|25569410|25569410||1|4000Mc|COMPLETED|19:28:36\n'
+        '1|21:14:49|25569410.extern|25569410.extern|1548K|1|4000Mc|'
+        'COMPLETED|00:00:00\n'
+        '1|21:14:43|25569410.0|25569410.0|62328K|1|4000Mc|COMPLETED|19:28:36\n'
+    )
+    mocker.patch('reportseff.db_inquirer.subprocess.run',
+                 return_value=sub_result)
+    result = runner.invoke(reportseff.reportseff,
+                           '--no-color --user test')
+
+    assert result.exit_code == 0
+    # remove header
+    output = result.output.split('\n')[1:]
+    assert output[0].split() == [
+        '24418435', 'COMPLETED', '01:27:42', '99.8%', '47.7%'
+    ]
+    assert output[1].split() == [
+        '25569410', 'COMPLETED', '21:14:48', '91.7%', '1.6%'
+    ]
+
+
 def test_array_job_raw_id(mocker, mock_inquirer):
     mocker.patch('reportseff.reportseff.which', return_value=True)
     runner = CliRunner()

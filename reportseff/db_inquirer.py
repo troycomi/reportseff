@@ -1,6 +1,7 @@
 import subprocess
 from abc import ABC, abstractmethod
 from typing import List, Dict
+import datetime
 
 
 class Base_Inquirer(ABC):
@@ -26,6 +27,12 @@ class Base_Inquirer(ABC):
         Output order is not garunteed to match the jobs list
         '''
 
+    @abstractmethod
+    def set_user(self, user: str):
+        '''
+        Set the collection of jobs based on the provided user
+        '''
+
 
 class Sacct_Inquirer(Base_Inquirer):
     '''
@@ -33,6 +40,7 @@ class Sacct_Inquirer(Base_Inquirer):
     '''
     def __init__(self):
         self.default_args = 'sacct -P -n'.split()
+        self.user = None
 
     def get_valid_formats(self):
         command_args = 'sacct --helpformat'.split()
@@ -54,9 +62,18 @@ class Sacct_Inquirer(Base_Inquirer):
         the second element of tuple
         '''
         args = self.default_args + [
-            '--format=' + ','.join(columns),
-            '--jobs=' + ','.join(jobs)
+            '--format=' + ','.join(columns)
         ]
+
+        if self.user:
+            start_date = datetime.date.today() - datetime.timedelta(days=7)
+            args += [
+                f'--user={self.user}',
+                f'--starttime={start_date.strftime("%m%d%y")}'  # MMDDYY
+            ]
+        else:
+            args += ['--jobs=' + ','.join(jobs)]
+
         result = subprocess.run(
             args=args,
             stdout=subprocess.PIPE,
@@ -75,3 +92,9 @@ class Sacct_Inquirer(Base_Inquirer):
             return result, '\n'.join(lines)
 
         return result
+
+    def set_user(self, user: str):
+        '''
+        Set the collection of jobs based on the provided user
+        '''
+        self.user = user

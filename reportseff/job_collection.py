@@ -3,7 +3,6 @@ from typing import Dict, List
 from reportseff.job import Job
 from reportseff.output_renderer import Output_Renderer
 import os
-import click
 
 
 class Job_Collection():
@@ -124,7 +123,7 @@ class Job_Collection():
         '''
         self.jobs[jobid] = Job(job, jobid, filename)
 
-    def process_entry(self, entry: Dict):
+    def process_entry(self, entry: Dict, user_provided: bool = False):
         '''
         Update the jobs collection with information from the provided line
         '''
@@ -133,7 +132,7 @@ class Job_Collection():
         if job_id not in self.jobs:
             match = self.job_regex.match(job_id)
             # job is in jobs
-            if match and match.group('job') in self.jobs:
+            if match and match.group('job') in self.jobs or user_provided:
                 self.add_job(match.group('job'), job_id)
             # check if the job_id is an array job
             elif job_id_raw in self.jobs:
@@ -143,18 +142,6 @@ class Job_Collection():
                 return
 
         self.jobs[job_id].update(entry)
-
-    def get_output(self, change_sort: bool):
-        max_width = max([len(job.name()) for job in self.jobs.values()]) + 3
-        result = click.style(
-            ('{:^' + str(max_width) + '}{:^16}{:^12}{:^9}{:^9}{:^9}\n').format(
-                'Name', 'State', 'Time', 'Used', 'CPU', 'Memory'),
-            bold=True)
-
-        for job in self.get_sorted_jobs(change_sort):
-            result += job.render(max_width)
-
-        return result, len(self.jobs)
 
     def get_sorted_jobs(self, change_sort: bool) -> List:
         if change_sort and self.dir_name:
