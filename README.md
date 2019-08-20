@@ -1,3 +1,6 @@
+[![Build Status](https://travis-ci.com/troycomi/reportseff.svg?branch=master)](https://travis-ci.com/troycomi/reportseff)
+[![codecov](https://codecov.io/gh/troycomi/reportseff/branch/master/graph/badge.svg)](https://codecov.io/gh/troycomi/reportseff)
+
 # reportseff
 
 > A python script for tabular display of slurm efficiency information
