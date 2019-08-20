@@ -29,7 +29,7 @@ class Job_Collection():
         self.job_file_regex = re.compile(
             r'^.*?[_-](?P<jobid>(?P<job>[0-9]+)(_[0-9]+)?)(.out)?$')
         self.job_regex = re.compile(
-            r'^(?P<jobid>(?P<job>[0-9]+)(_[0-9]+)?)$')
+            r'^(?P<jobid>(?P<job>[0-9]+)(_[][\-0-9]+)?)$')
 
         self.jobs = {}  # type: Dict[str, Job]
         self.renderer = None  # type: Output_Renderer
@@ -126,7 +126,7 @@ class Job_Collection():
         if job_id not in self.jobs:
             match = self.job_regex.match(job_id)
             # job is in jobs
-            if match and match.group('job') in self.jobs or user_provided:
+            if match and (match.group('job') in self.jobs or user_provided):
                 self.add_job(match.group('job'), job_id)
             # check if the job_id is an array job
             elif job_id_raw in self.jobs:

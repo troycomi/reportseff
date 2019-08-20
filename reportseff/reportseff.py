@@ -20,7 +20,7 @@ from reportseff.output_renderer import Output_Renderer
               'width of 15 characters. Generally NAME[%[ALIGNMENT][WIDTH]]')
 @click.option('--debug', default=False, is_flag=True,
               help='Print raw db query to stderr')
-@click.option('--user', default='',
+@click.option('-u', '--user', default='',
               help='Ignore jobs, return all jobs in last month from user')
 @click.version_option()
 @click.argument('jobs', nargs=-1)

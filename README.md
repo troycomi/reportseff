@@ -108,9 +108,9 @@ be any valid column name to sacct and the custom efficiency values: TimeEff,
 cpuEff, MemEff.  Can also optionally set alignment (<, ^, >) and maximum width.
 Default is center-aligned with a width of the maximum column entry.  For
 example, --width jobid%>,state%10,memeff%<5 produces 3 columns with:
- - JobId aligned right, width set automatically
- - State with width 10 (center aligned by default)
- - MemEff aligned left, width 5
+  - JobId aligned right, width set automatically
+  - State with width 10 (center aligned by default)
+  - MemEff aligned left, width 5
 
 ## Acknowledgements
 The code for calling sacct and parsing the returning information was taken

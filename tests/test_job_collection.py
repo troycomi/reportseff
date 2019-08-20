@@ -315,3 +315,16 @@ def test_get_sorted_jobs(jobs, mocker):
         Job('j1', 'jid1', 'file12'),
         Job('j3', 'jid3', 'file3'),
     ]
+
+
+def test_process_entry_array_user(jobs):
+    jobs.process_entry(
+        {'AllocCPUS': '1', 'Elapsed': '00:00:00',
+         'JobID': '14729857_[737-999]', 'JobIDRaw': '14729857',
+         'MaxRSS': '', 'NNodes': '1', 'REQMEM': '50Gn', 'State': 'PENDING',
+         'TotalCPU': '00:00:00'}, user_provided=True)
+    expected_job = Job('14729857', '14729857_[737-999]', None)
+    expected_job.state = 'PENDING'
+    assert jobs.jobs == {
+        '14729857_[737-999]': expected_job
+    }
