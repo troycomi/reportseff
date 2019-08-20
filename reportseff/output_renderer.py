@@ -107,7 +107,7 @@ class Column_Formatter():
     def __init__(self, token):
         '''
         Build column entry from format string of the form
-        NAME[%[ALIGNMENT]WIDTH]
+        NAME[%[ALIGNMENT][WIDTH]]
         '''
         tokens = token.split('%')
         self.title = tokens[0]

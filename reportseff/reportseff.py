@@ -17,7 +17,7 @@ from reportseff.output_renderer import Output_Renderer
               'are any valide sacct input along with CPUEff, MemEff, and '
               'TimeEff.  A width and alignment may optionally be provided '
               'after "%", e.g. JobID%>15 aligns job id right with max '
-              'width of 15 characters.')
+              'width of 15 characters. Generally NAME[%[ALIGNMENT][WIDTH]]')
 @click.option('--debug', default=False, is_flag=True,
               help='Print raw db query to stderr')
 @click.option('--user', default='',
