@@ -106,7 +106,7 @@ class Job_Collection():
         if match:
             self.add_job(match.group('job'),
                          match.group('jobid'),
-                         os.path.basename(filename))
+                         filename)
 
     def add_job(self, job: str, jobid: str, filename: str = None):
         '''

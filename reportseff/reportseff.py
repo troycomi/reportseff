@@ -24,7 +24,17 @@ from reportseff.output_renderer import Output_Renderer
               help='Ignore jobs, return all jobs in last month from user')
 @click.version_option()
 @click.argument('jobs', nargs=-1)
-def reportseff(modified_sort, color, format_str, debug, user, jobs,):
+def reportseff(modified_sort, color, format_str, debug, user, jobs):
+    output, entries = get_jobs(jobs, format_str, user, debug, modified_sort)
+
+    if entries > 20:
+        click.echo_via_pager(output, color=color)
+    else:
+        click.echo(output, color=color)
+
+
+def get_jobs(jobs, format_str='', user='', debug=False,
+             modified_sort=False):
     job_collection = Job_Collection()
     if which('sacct') is not None:
         inquirer = Sacct_Inquirer()
@@ -68,10 +78,5 @@ def reportseff(modified_sort, color, format_str, debug, user, jobs,):
 
     jobs = job_collection.get_sorted_jobs(modified_sort)
     jobs = [j for j in jobs if j.state]
-    entries = len(jobs)
-    output = renderer.format_jobs(jobs)
 
-    if entries > 20:
-        click.echo_via_pager(output, color=color)
-    else:
-        click.echo(output, color=color)
+    return renderer.format_jobs(jobs), len(jobs)
