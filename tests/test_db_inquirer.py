@@ -1,6 +1,7 @@
 from reportseff import db_inquirer
 import pytest
 import datetime
+import click
 
 
 @pytest.fixture
@@ -196,4 +197,81 @@ def test_sacct_get_db_output_user(sacct, mocker):
         'c1j1|c2j1\n'
         'c1j2|c2j2\n'
         'c1j3|c2j3\n'
+    )
+
+
+def test_sacct_set_state(sacct, capsys):
+    # decodes properly, to upper
+    sacct.set_state('BF,ca,cD,Dl,F,NF,OOM,PD,PR,R,RQ,RS,RV,S,TO')
+    assert sacct.state == {
+        'BOOT_FAIL',
+        'CANCELLED',
+        'COMPLETED',
+        'DEADLINE',
+        'FAILED',
+        'NODE_FAIL',
+        'OUT_OF_MEMORY',
+        'PENDING',
+        'PREEMPTED',
+        'RUNNING',
+        'REQUEUED',
+        'RESIZING',
+        'REVOKED',
+        'SUSPENDED',
+        'TIMEOUT',
+    }
+
+    # sets to upper and removes duplicates
+    sacct.set_state('TiMeOuT,running,FAILED,failed')
+    assert sacct.state == {'TIMEOUT', 'RUNNING', 'FAILED'}
+
+    # sets while warning of missing
+    sacct.set_state('unknown,r,F')
+    assert sacct.state == {'RUNNING', 'FAILED'}
+    assert capsys.readouterr().err == 'Unknown state UNKNOWN\n'
+
+
+def test_sacct_get_db_output_user_state(sacct, mocker):
+    mock_sacct = mocker.MagicMock()
+    mock_sacct.returncode = 1
+
+    mocker.patch('reportseff.db_inquirer.subprocess.run',
+                 return_value=mock_sacct)
+    mock_date = mocker.MagicMock()
+    mock_date.today.return_value = datetime.date(2018, 1, 20)
+    mock_date.side_effect = lambda *args, **kw: datetime.date(*args, **kw)
+    mocker.patch('reportseff.db_inquirer.datetime.date', mock_date)
+    with pytest.raises(Exception) as e:
+        sacct.get_db_output('c1 c2'.split(), 'j1 j2 j3'.split())
+    assert 'Error running sacct!' in str(e)
+
+    mock_sacct = mocker.MagicMock()
+    mock_sacct.returncode = 0
+    mock_sacct.stdout = (
+        'c1j1|c2j1|RUNNING\n'
+        'c1j2|c2j2|RUNNING\n'
+        'c1j3|c2j3|COMPLETED\n'
+    )
+    mock_sub = mocker.patch('reportseff.db_inquirer.subprocess.run',
+                            return_value=mock_sacct)
+    sacct.set_user('user')
+    sacct.set_state('R')
+    result = sacct.get_db_output('c1 c2 State'.split(), {})
+    assert result == [
+        {'c1': 'c1j1', 'c2': 'c2j1', 'State': 'RUNNING'},
+        {'c1': 'c1j2', 'c2': 'c2j2', 'State': 'RUNNING'},
+    ]
+    mock_sub.assert_called_once_with(
+        args=('sacct -P -n --format=c1,c2,State --user=user '
+              '--starttime=011318').split(),
+        stdout=mocker.ANY, encoding=mocker.ANY,
+        check=mocker.ANY, universal_newlines=mocker.ANY)
+
+    # debug is not affected by state
+    _, debug = sacct.get_db_output('c1 c2 State'.split(),
+                                   'j1 j2 j3'.split(), True)
+    assert debug == (
+        'c1j1|c2j1|RUNNING\n'
+        'c1j2|c2j2|RUNNING\n'
+        'c1j3|c2j3|COMPLETED\n'
     )

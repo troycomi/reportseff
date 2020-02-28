@@ -21,11 +21,15 @@ from reportseff.output_renderer import Output_Renderer
 @click.option('--debug', default=False, is_flag=True,
               help='Print raw db query to stderr')
 @click.option('-u', '--user', default='',
-              help='Ignore jobs, return all jobs in last month from user')
+              help='Ignore jobs, return all jobs in last week from user')
+@click.option('-s', '--state', default='',
+              help='Only include jobs with the specified state')
 @click.version_option()
 @click.argument('jobs', nargs=-1)
-def reportseff(modified_sort, color, format_str, debug, user, jobs):
-    output, entries = get_jobs(jobs, format_str, user, debug, modified_sort)
+def reportseff(modified_sort, color, format_str, debug,
+               user, jobs, state):
+    output, entries = get_jobs(jobs, format_str, user,
+                               debug, modified_sort, state)
 
     if entries > 20:
         click.echo_via_pager(output, color=color)
@@ -34,7 +38,7 @@ def reportseff(modified_sort, color, format_str, debug, user, jobs):
 
 
 def get_jobs(jobs, format_str='', user='', debug=False,
-             modified_sort=False):
+             modified_sort=False, state=''):
     job_collection = Job_Collection()
     if which('sacct') is not None:
         inquirer = Sacct_Inquirer()
@@ -44,9 +48,12 @@ def get_jobs(jobs, format_str='', user='', debug=False,
         click.secho('No supported scheduling systems found!',
                     fg='red', err=True)
         sys.exit(1)
+
+    if state:
+        inquirer.set_state(state)
+
     try:
         if user:
-            # TODO add test and implement methods
             inquirer.set_user(user)
         else:
             job_collection.set_jobs(jobs)

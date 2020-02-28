@@ -2,6 +2,7 @@ import subprocess
 from abc import ABC, abstractmethod
 from typing import List, Dict
 import datetime
+import click
 
 
 class Base_Inquirer(ABC):
@@ -33,6 +34,12 @@ class Base_Inquirer(ABC):
         Set the collection of jobs based on the provided user
         '''
 
+    @abstractmethod
+    def set_state(self, state: str):
+        '''
+        Set the state to filter output jobs with
+        '''
+
 
 class Sacct_Inquirer(Base_Inquirer):
     '''
@@ -41,6 +48,7 @@ class Sacct_Inquirer(Base_Inquirer):
     def __init__(self):
         self.default_args = 'sacct -P -n'.split()
         self.user = None
+        self.state = None
 
     def get_valid_formats(self):
         command_args = 'sacct --helpformat'.split()
@@ -88,6 +96,10 @@ class Sacct_Inquirer(Base_Inquirer):
         result = [dict(zip(columns, line.split('|')))
                   for line in lines if line]
 
+        if self.state:
+            result = [r for r in result
+                      if r['State'] in self.state]
+
         if debug:
             return result, '\n'.join(lines)
 
@@ -98,3 +110,40 @@ class Sacct_Inquirer(Base_Inquirer):
         Set the collection of jobs based on the provided user
         '''
         self.user = user
+
+    def set_state(self, state: str):
+        '''
+        state is a comma separated string with codes and states
+        Need to convert codes to states and set to upper
+        Add states to list for searching later
+        '''
+        codes_to_states = {
+            'BF': 'BOOT_FAIL',
+            'CA': 'CANCELLED',
+            'CD': 'COMPLETED',
+            'DL': 'DEADLINE',
+            'F': 'FAILED',
+            'NF': 'NODE_FAIL',
+            'OOM': 'OUT_OF_MEMORY',
+            'PD': 'PENDING',
+            'PR': 'PREEMPTED',
+            'R': 'RUNNING',
+            'RQ': 'REQUEUED',
+            'RS': 'RESIZING',
+            'RV': 'REVOKED',
+            'S': 'SUSPENDED',
+            'TO': 'TIMEOUT',
+        }
+        possible_states = codes_to_states.values()
+        self.state = set()
+        for st in state.split(','):
+            st = st.upper()
+            if st in codes_to_states:
+                st = codes_to_states[st]
+            self.state.add(st)
+
+        for st in self.state:
+            if st not in possible_states:
+                click.secho(f'Unknown state {st}', fg='yellow', err=True)
+
+        self.state = {st for st in self.state if st in possible_states}
