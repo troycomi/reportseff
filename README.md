@@ -99,18 +99,21 @@ directory to check for slurm outputs.
 
 ### Options
 - --color/--no-color: Force color output or not.  By default, will force color
-output.  With the no-color flag, click will strip color codes for everything
-besides stdout.
+  output.  With the no-color flag, click will strip color codes for everything
+  besides stdout.
 - --modified-sort: Instead of sorting by filename/jobid, sort by last 
-modification time of the slurm output file.
+  modification time of the slurm output file.
 - --debug: Write sacct result to stderr.
 - --user: Ignore job arguments and instead query sacct with provided user.
-Returns all jobs from the last week.
+  Returns all jobs from the last week.
+- --state: Output only jobs with states matching one of the provided options.
+  Accepts comma separated values of job codes (e.g. 'R') or full names
+  (e.g. RUNNING).  Case insensitive.
 - --format: Provide a comma separated list of columns to produce.  Values can
-be any valid column name to sacct and the custom efficiency values: TimeEff,
-cpuEff, MemEff.  Can also optionally set alignment (<, ^, >) and maximum width.
-Default is center-aligned with a width of the maximum column entry.  For
-example, `--format 'jobid%>,state%10,memeff%<5'` produces 3 columns with:
+  be any valid column name to sacct and the custom efficiency values: TimeEff,
+  cpuEff, MemEff.  Can also optionally set alignment (<, ^, >) and maximum width.
+  Default is center-aligned with a width of the maximum column entry.  For
+  example, `--format 'jobid%>,state%10,memeff%<5'` produces 3 columns with:
   - JobId aligned right, width set automatically
   - State with width 10 (center aligned by default)
   - MemEff aligned left, width 5

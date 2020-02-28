@@ -1,7 +1,6 @@
 from reportseff import db_inquirer
 import pytest
 import datetime
-import click
 
 
 @pytest.fixture
