@@ -49,6 +49,7 @@ class Sacct_Inquirer(Base_Inquirer):
         self.default_args = 'sacct -P -n'.split()
         self.user = None
         self.state = None
+        self.since = None
 
     def get_valid_formats(self):
         command_args = 'sacct --helpformat'.split()
@@ -74,13 +75,17 @@ class Sacct_Inquirer(Base_Inquirer):
         ]
 
         if self.user:
-            start_date = datetime.date.today() - datetime.timedelta(days=7)
+            if not self.since:
+                start_date = datetime.date.today() - datetime.timedelta(days=7)
+                self.since = start_date.strftime("%m%d%y")  # MMDDYY
             args += [
                 f'--user={self.user}',
-                f'--starttime={start_date.strftime("%m%d%y")}'  # MMDDYY
+                f'--starttime={self.since}'
             ]
         else:
             args += ['--jobs=' + ','.join(jobs)]
+            if self.since:
+                args += [f'--starttime={self.since}']
 
         result = subprocess.run(
             args=args,
@@ -135,15 +140,63 @@ class Sacct_Inquirer(Base_Inquirer):
             'TO': 'TIMEOUT',
         }
         possible_states = codes_to_states.values()
-        self.state = set()
+        self.state = []
         for st in state.split(','):
             st = st.upper()
             if st in codes_to_states:
                 st = codes_to_states[st]
-            self.state.add(st)
+            if st not in self.state:
+                self.state.append(st)
 
         for st in self.state:
             if st not in possible_states:
                 click.secho(f'Unknown state {st}', fg='yellow', err=True)
 
         self.state = {st for st in self.state if st in possible_states}
+        # add a single value if it's empty here
+        if not self.state:
+            click.secho('No valid states provided', fg='yellow', err=True)
+            self.state.add(None)
+
+    def set_since(self, since: str):
+        '''
+        since is either a comma separated string with codes ints or
+        an sacct time.  The list will have '='
+        Need to convert codes to datetimes
+        '''
+        if '=' in since:  # handle custom format
+            abbrev_to_key = {
+                'w': 'weeks', 'W': 'weeks',
+                'd': 'days', 'D': 'days',
+                'h': 'hours', 'H': 'hours',
+                'm': 'minutes', 'M': 'minutes',
+            }
+            valid_args = ['weeks', 'days', 'hours', 'minutes']
+            date_args = {}
+
+            args = since.split(',')
+            for arg in args:
+                toks = arg.split('=')
+
+                # lines don't have an equal
+                if len(toks) < 2:
+                    continue
+
+                # convert key to name
+                if toks[0] in abbrev_to_key:
+                    toks[0] = abbrev_to_key[toks[0]]
+
+                toks[0] = toks[0].lower()
+
+                if toks[0] in valid_args:
+                    try:
+                        date_args[toks[0]] = int(toks[1])
+                    except ValueError:
+                        continue
+
+            start_date = datetime.datetime.today()
+            start_date -= datetime.timedelta(**date_args)
+            self.since = start_date.strftime("%Y-%m-%dT%H:%M")  # MMDDYY
+
+        else:
+            self.since = since

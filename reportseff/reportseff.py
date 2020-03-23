@@ -17,19 +17,31 @@ from reportseff.output_renderer import Output_Renderer
               'are any valide sacct input along with CPUEff, MemEff, and '
               'TimeEff.  A width and alignment may optionally be provided '
               'after "%", e.g. JobID%>15 aligns job id right with max '
-              'width of 15 characters. Generally NAME[%[ALIGNMENT][WIDTH]]')
+              'width of 15 characters. Generally NAME[%[ALIGNMENT][WIDTH]].  '
+              'Prefix with a + to add to the defaults.')
 @click.option('--debug', default=False, is_flag=True,
               help='Print raw db query to stderr')
 @click.option('-u', '--user', default='',
               help='Ignore jobs, return all jobs in last week from user')
 @click.option('-s', '--state', default='',
               help='Only include jobs with the specified state')
+@click.option('-S', '--since', default='',
+              help='Only include jobs before this time.  Can be valid sacct '
+              'or as a comma separated list of time deltas, e.g. d=2,h=1 '
+              'means 2 days, 1 hour before current time.  Weeks, days, '
+              'hours, and minutes can use case-insensitive abbreviations. '
+              'Minutes is the minimum resolution, while weeks is the coarsest.'
+              )
 @click.version_option()
 @click.argument('jobs', nargs=-1)
 def reportseff(modified_sort, color, format_str, debug,
-               user, jobs, state):
+               user, jobs, state, since):
+
+    if format_str.startswith('+'):
+        format_str = 'JobID%>,State,Elapsed%>,CPUEff,MemEff,' + format_str[1:]
+
     output, entries = get_jobs(jobs, format_str, user,
-                               debug, modified_sort, state)
+                               debug, modified_sort, state, since)
 
     if entries > 20:
         click.echo_via_pager(output, color=color)
@@ -38,7 +50,7 @@ def reportseff(modified_sort, color, format_str, debug,
 
 
 def get_jobs(jobs, format_str='', user='', debug=False,
-             modified_sort=False, state=''):
+             modified_sort=False, state='', since=''):
     job_collection = Job_Collection()
     if which('sacct') is not None:
         inquirer = Sacct_Inquirer()
@@ -51,6 +63,9 @@ def get_jobs(jobs, format_str='', user='', debug=False,
 
     if state:
         inquirer.set_state(state)
+
+    if since:
+        inquirer.set_since(since)
 
     try:
         if user:

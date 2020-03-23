@@ -89,7 +89,6 @@ def test_debug_option(mocker, mock_inquirer):
                            '"JobID,State,Elapsed,TimeEff,CPUEff,MemEff" '
                            '--no-color --debug 23000233')
 
-    print(result.output)
     assert result.exit_code == 0
     # remove header
     output = result.output.split('\n')
@@ -122,7 +121,6 @@ def test_process_failure(mocker, mock_inquirer):
     assert result.exit_code != 0
     # remove header
     output = result.output.split('\n')
-    print(output)
     assert output[0] == 'Error processing entry: ' + (
         "{'AllocCPUS': '16', 'Elapsed': '00:00:00', 'JobID': '23000233', "
         "'JobIDRaw': '23000233', 'MaxRSS': '', 'NNodes': '1', "
@@ -151,7 +149,6 @@ def test_short_output(mocker, mock_inquirer):
     result = runner.invoke(reportseff.reportseff,
                            '--no-color 23000233')
 
-    print(result.output)
     assert result.exit_code == 0
     mock_click.assert_called_once_with('output', color=False)
 
@@ -236,6 +233,127 @@ def test_simple_user(mocker, mock_inquirer):
     assert output[1].split() == [
         '25569410', 'COMPLETED', '21:14:48', '91.7%', '1.6%'
     ]
+
+
+def test_format_add(mocker, mock_inquirer):
+    mocker.patch('reportseff.reportseff.which', return_value=True)
+    runner = CliRunner()
+    mock_jobs = mocker.patch('reportseff.reportseff.get_jobs',
+                             return_value=('Testing', 1))
+    result = runner.invoke(reportseff.reportseff,
+                           '--no-color --format=test')
+
+    assert result.exit_code == 0
+    mock_jobs.call_args[1] == 'test'
+
+    # test adding onto end
+    result = runner.invoke(reportseff.reportseff,
+                           '--no-color --format=+test')
+
+    assert result.exit_code == 0
+    mock_jobs.call_args[1] == 'JobID%>,State,Elapsed%>,CPUEff,MemEff,test'
+
+
+def test_since(mocker, mock_inquirer):
+    mocker.patch('reportseff.reportseff.which', return_value=True)
+    runner = CliRunner()
+    sub_result = mocker.MagicMock()
+    sub_result.returncode = 0
+    sub_result.stdout = (
+        '1|01:27:42|24418435|24418435||1|1Gn|'
+        'COMPLETED|01:27:29\n'
+        '1|01:27:42|24418435.batch|24418435.batch|499092K|1|1Gn|'
+        'COMPLETED|01:27:29\n'
+        '1|01:27:42|24418435.extern|24418435.extern|1376K|1|1Gn|'
+        'COMPLETED|00:00:00\n'
+        '1|21:14:48|25569410|25569410||1|4000Mc|COMPLETED|19:28:36\n'
+        '1|21:14:49|25569410.extern|25569410.extern|1548K|1|4000Mc|'
+        'COMPLETED|00:00:00\n'
+        '1|21:14:43|25569410.0|25569410.0|62328K|1|4000Mc|COMPLETED|19:28:36\n'
+    )
+    mocker.patch('reportseff.db_inquirer.subprocess.run',
+                 return_value=sub_result)
+    result = runner.invoke(reportseff.reportseff,
+                           '--no-color --since 200406 24418435 25569410')
+
+    assert result.exit_code == 0
+    # remove header
+    output = result.output.split('\n')[1:]
+    assert output[0].split() == [
+        '24418435', 'COMPLETED', '01:27:42', '99.8%', '47.7%'
+    ]
+    assert output[1].split() == [
+        '25569410', 'COMPLETED', '21:14:48', '91.7%', '1.6%'
+    ]
+
+
+def test_simple_state(mocker, mock_inquirer):
+    mocker.patch('reportseff.reportseff.which', return_value=True)
+    runner = CliRunner()
+    sub_result = mocker.MagicMock()
+    sub_result.returncode = 0
+    sub_result.stdout = (
+        '1|01:27:42|24418435|24418435||1|1Gn|'
+        'COMPLETED|01:27:29\n'
+        '1|01:27:42|24418435.batch|24418435.batch|499092K|1|1Gn|'
+        'COMPLETED|01:27:29\n'
+        '1|01:27:42|24418435.extern|24418435.extern|1376K|1|1Gn|'
+        'COMPLETED|00:00:00\n'
+        '1|21:14:48|25569410|25569410||1|4000Mc|RUNNING|19:28:36\n'
+        '1|21:14:49|25569410.extern|25569410.extern|1548K|1|4000Mc|'
+        'RUNNING|00:00:00\n'
+        '1|21:14:43|25569410.0|25569410.0|62328K|1|4000Mc|RUNNING|19:28:36\n'
+    )
+    mocker.patch('reportseff.db_inquirer.subprocess.run',
+                 return_value=sub_result)
+    result = runner.invoke(reportseff.reportseff,
+                           '--no-color --state completed '
+                           '25569410 24418435'
+                           )
+
+    assert result.exit_code == 0
+    # remove header
+    output = result.output.split('\n')[1:]
+    assert output[0].split() == [
+        '24418435', 'COMPLETED', '01:27:42', '99.8%', '47.7%'
+    ]
+    # other is suppressed by state filter
+    assert output[1].split() == []
+
+
+def test_no_state(mocker, mock_inquirer):
+    mocker.patch('reportseff.reportseff.which', return_value=True)
+    runner = CliRunner()
+    sub_result = mocker.MagicMock()
+    sub_result.returncode = 0
+    sub_result.stdout = (
+        '1|01:27:42|24418435|24418435||1|1Gn|'
+        'COMPLETED|01:27:29\n'
+        '1|01:27:42|24418435.batch|24418435.batch|499092K|1|1Gn|'
+        'COMPLETED|01:27:29\n'
+        '1|01:27:42|24418435.extern|24418435.extern|1376K|1|1Gn|'
+        'COMPLETED|00:00:00\n'
+        '1|21:14:48|25569410|25569410||1|4000Mc|RUNNING|19:28:36\n'
+        '1|21:14:49|25569410.extern|25569410.extern|1548K|1|4000Mc|'
+        'RUNNING|00:00:00\n'
+        '1|21:14:43|25569410.0|25569410.0|62328K|1|4000Mc|RUNNING|19:28:36\n'
+    )
+    mocker.patch('reportseff.db_inquirer.subprocess.run',
+                 return_value=sub_result)
+    result = runner.invoke(reportseff.reportseff,
+                           '--no-color --state ZZ '
+                           '25569410 24418435'
+                           )
+
+    assert result.exit_code == 0
+    # remove header
+    output = result.output.split('\n')
+    assert output[0] == 'Unknown state ZZ'
+    assert output[1] == 'No valid states provided'
+    assert output[2].split() == [
+        'JobID', 'State', 'Elapsed', 'CPUEff', 'MemEff'
+    ]
+    assert output[3] == ''
 
 
 def test_array_job_raw_id(mocker, mock_inquirer):
@@ -324,7 +442,6 @@ def test_array_job_base(mocker, mock_inquirer):
 
     assert result.exit_code == 0
     # remove header
-    print(result.output)
     output = result.output.split('\n')[1:-1]
     assert output[0].split() == [
         '24220929_421', 'COMPLETED', '00:09:34', '99.0%', '34.6%'
@@ -333,8 +450,6 @@ def test_array_job_base(mocker, mock_inquirer):
         '24220929_431', 'PENDING', '---', '---', '---'
     ]
     assert len(output) == 2
-    # TODO have it handle array sub ids (like 242_421) as single entries
-    # though sacct gives all, but have it handle the base name (242) like all
 
 
 def test_sacct_error(mocker, mock_inquirer):

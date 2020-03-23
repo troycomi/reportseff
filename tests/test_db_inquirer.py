@@ -199,6 +199,36 @@ def test_sacct_get_db_output_user(sacct, mocker):
     )
 
 
+def test_sacct_get_db_output_since(sacct, mocker):
+    mock_sacct = mocker.MagicMock()
+    mock_sacct.returncode = 0
+    mock_sacct.stdout = (
+        'c1j1|c2j1\n'
+        'c1j2|c2j2\n'
+        'c1j3|c2j3\n'
+    )
+    mock_sub = mocker.patch('reportseff.db_inquirer.subprocess.run',
+                            return_value=mock_sacct)
+    sacct.set_since('time')
+    result = sacct.get_db_output('c1 c2'.split(), {})
+    assert result == [
+        {'c1': 'c1j1', 'c2': 'c2j1'},
+        {'c1': 'c1j2', 'c2': 'c2j2'},
+        {'c1': 'c1j3', 'c2': 'c2j3'},
+    ]
+    mock_sub.assert_called_once_with(
+        args=('sacct -P -n --format=c1,c2 --jobs= --starttime=time ').split(),
+        stdout=mocker.ANY, encoding=mocker.ANY,
+        check=mocker.ANY, universal_newlines=mocker.ANY)
+
+    _, debug = sacct.get_db_output('c1 c2'.split(), 'j1 j2 j3'.split(), True)
+    assert debug == (
+        'c1j1|c2j1\n'
+        'c1j2|c2j2\n'
+        'c1j3|c2j3\n'
+    )
+
+
 def test_sacct_set_state(sacct, capsys):
     # decodes properly, to upper
     sacct.set_state('BF,ca,cD,Dl,F,NF,OOM,PD,PR,R,RQ,RS,RV,S,TO')
@@ -228,6 +258,92 @@ def test_sacct_set_state(sacct, capsys):
     sacct.set_state('unknown,r,F')
     assert sacct.state == {'RUNNING', 'FAILED'}
     assert capsys.readouterr().err == 'Unknown state UNKNOWN\n'
+
+    sacct.set_state('unknown,z')
+    assert sacct.state == {None}
+    assert capsys.readouterr().err == (
+        'Unknown state UNKNOWN\n'
+        'Unknown state Z\n'
+        'No valid states provided\n')
+
+    # remove duplicate unknowns
+    sacct.set_state('unknown,z,z,z')
+    assert sacct.state == {None}
+    assert capsys.readouterr().err == (
+        'Unknown state UNKNOWN\n'
+        'Unknown state Z\n'
+        'No valid states provided\n')
+
+
+def test_sacct_set_since(sacct, mocker):
+    # no equal sign, retain argument
+    sacct.set_since('022399')
+    assert sacct.since == '022399'
+    # also no error checking
+    sacct.set_since('asdf')
+    assert sacct.since == 'asdf'
+
+    # has an equal sign, handles year, month, day, hour, minute
+    mock_date = mocker.MagicMock()
+    mock_date.today.return_value = datetime.datetime(2018, 1, 20, 10, 15, 20)
+    mock_date.side_effect = lambda *args, **kw: datetime.date(*args, **kw)
+    mocker.patch('reportseff.db_inquirer.datetime.datetime', mock_date)
+
+    sacct.set_since('w=2')
+    assert sacct.since == '2018-01-06T10:15'
+
+    sacct.set_since('W=2')
+    assert sacct.since == '2018-01-06T10:15'
+
+    sacct.set_since('weeks=2')
+    assert sacct.since == '2018-01-06T10:15'
+
+    sacct.set_since('d=2')
+    assert sacct.since == '2018-01-18T10:15'
+
+    sacct.set_since('D=2')
+    assert sacct.since == '2018-01-18T10:15'
+
+    sacct.set_since('days=2')
+    assert sacct.since == '2018-01-18T10:15'
+
+    sacct.set_since('H=-4')
+    assert sacct.since == '2018-01-20T14:15'
+
+    sacct.set_since('h=4')
+    assert sacct.since == '2018-01-20T06:15'
+
+    sacct.set_since('hours=4')
+    assert sacct.since == '2018-01-20T06:15'
+
+    sacct.set_since('M=3')
+    assert sacct.since == '2018-01-20T10:12'
+
+    sacct.set_since('m=3')
+    assert sacct.since == '2018-01-20T10:12'
+
+    sacct.set_since('minutes=3')
+    assert sacct.since == '2018-01-20T10:12'
+
+    # unknown code, don't add
+    sacct.set_since('z=3')
+    assert sacct.since == '2018-01-20T10:15'
+
+    # can't parse arg to int, don't add
+    sacct.set_since('M=z')
+    assert sacct.since == '2018-01-20T10:15'
+
+    # can't parse args without =, ignore
+    sacct.set_since('a,M=3,z')
+    assert sacct.since == '2018-01-20T10:12'
+
+    # handle multiple
+    sacct.set_since('w=2,d=1,h=3,m=4,z,H=a')
+    assert sacct.since == '2018-01-05T07:11'
+
+    # last repeat wins
+    sacct.set_since('m=300,mInUtes=3')
+    assert sacct.since == '2018-01-20T10:12'
 
 
 def test_sacct_get_db_output_user_state(sacct, mocker):
