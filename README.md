@@ -20,8 +20,8 @@ will create command line bindings and install click.
 Calling reportseff with a single jobid will provide equivalent information to
 seff for that job.  `reportseff 24371789` and `reportseff map_fastq_24371789`
 produce the following output:
-<pre>
-<b>   Name         State          Time       CPU    Memory  </b>
+<pre><b>
+      JobID      State          Elapsed   CPUEff   MemEff  </b>
    24371789    COMPLETED       03:08:03   71.2%    45.7%  
 </pre>
 
@@ -29,16 +29,16 @@ produce the following output:
 Providing either the raw job id or the array job id will get efficiency 
 information for a single element of the array job.  `reportseff 24220929_421` 
 and `reportseff 24221219` generate:
-<pre>
-<b>     Name           State          Time       CPU    Memory  </b>
+<pre><b>
+          JobID      State          Elapsed    CPUEff   MemEff  </b>
    24220929_421    COMPLETED       00:09:34    99.0%    34.6%  
 </pre>
 
 #### Array job group
 If the base job id of an array is provided, all elements of the array will
 be added to the output. `reportseff 24220929`
-<pre>
-<b>     Name           State          Time       CPU    Memory  </b>
+<pre><b>
+          JobID      State          Elapsed    CPUEff   MemEff  </b>
      24220929_1    COMPLETED       00:10:43    99.2%    33.4%  
     24220929_11    COMPLETED       00:10:10    99.2%    37.5%  
     24220929_21    COMPLETED       00:09:25    98.8%    36.1%  
@@ -57,8 +57,8 @@ be added to the output. `reportseff 24220929`
 Because slurm output files can act as job id inputs, the following can
 get all seff information for a given job name:
 
-<pre>slurm_out  ❯❯❯ reportseff split_ubam_24\*
-<b>         Name              State          Time       CPU    Memory  </b>
+<pre>slurm_out  ❯❯❯ reportseff split_ubam_24\*<b>
+                 JobID      State          Elapsed   CPUEff   MemEff  </b>
    split_ubam_24342816    COMPLETED       23:30:32   99.9%    4.5%   
    split_ubam_24342914    COMPLETED       22:40:51   99.9%    4.6%   
    split_ubam_24393599    COMPLETED       23:43:36   99.4%    4.4%   
@@ -71,7 +71,8 @@ get all seff information for a given job name:
 Without arguments, reportseff will try to find slurm output files in the
 current directory.  Combine with `watch` to monitor job progress:
 `watch -cn 300 reportseff --modified-sort`
-<pre><b>          Name                State          Time       CPU    Memory  </b>
+<pre><b>
+                    JobID           State          Elapsed   CPUEff   MemEff  </b>
       split_ubam_24418960          RUNNING        02:56:14    ---      ---
    fastq_to_ubam_24419971          RUNNING        01:29:29    ---      ---
       split_ubam_24419972          RUNNING        01:29:29    ---      ---
@@ -110,7 +111,8 @@ directory to check for slurm outputs.
 - --state: Output only jobs with states matching one of the provided options.
   Accepts comma separated values of job codes (e.g. 'R') or full names
   (e.g. RUNNING).  Case insensitive.
-- --format: Provide a comma separated list of columns to produce.  Values can
+- --format: Provide a comma separated list of columns to produce. Prefixing the
+  argument with `+` adds the specified values to the defaults.  Values can
   be any valid column name to sacct and the custom efficiency values: TimeEff,
   cpuEff, MemEff.  Can also optionally set alignment (<, ^, >) and maximum width.
   Default is center-aligned with a width of the maximum column entry.  For
@@ -118,6 +120,9 @@ directory to check for slurm outputs.
   - JobId aligned right, width set automatically
   - State with width 10 (center aligned by default)
   - MemEff aligned left, width 5
+- --since: Limit results to those occurring after the specified time.  Accepts
+  sacct formats and a comma separated list of key/value pairs.  To get jobs in
+  the last hour and a half, can pass `h=1,m=30`.
 
 ## Acknowledgements
 The code for calling sacct and parsing the returning information was taken
