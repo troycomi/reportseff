@@ -18,7 +18,9 @@ from reportseff.output_renderer import Output_Renderer
               'TimeEff.  A width and alignment may optionally be provided '
               'after "%", e.g. JobID%>15 aligns job id right with max '
               'width of 15 characters. Generally NAME[%[ALIGNMENT][WIDTH]].  '
-              'Prefix with a + to add to the defaults.')
+              'Prefix with a + to add to the defaults. '
+              'A single format token will suppress the header line.'
+              )
 @click.option('--debug', default=False, is_flag=True,
               help='Print raw db query to stderr')
 @click.option('-u', '--user', default='',

@@ -28,17 +28,12 @@ def test_renderer_init(renderer):
         'NNodes MaxRSS').split())
 
     renderer = output_renderer.Output_Renderer(min_required, '')
-    assert renderer.formatters == [
-        output_renderer.Column_Formatter('JobID%>'),
-        output_renderer.Column_Formatter('State'),
-    ]
+    assert renderer.formatters == []
     assert sorted(renderer.query_columns) == sorted((
         'JobID JobIDRaw State').split())
 
     renderer = output_renderer.Output_Renderer(min_required, 'TotalCPU%<5')
     assert renderer.formatters == [
-        output_renderer.Column_Formatter('JobID%>'),
-        output_renderer.Column_Formatter('State'),
         output_renderer.Column_Formatter('TotalCPU%<5'),
     ]
     assert sorted(renderer.query_columns) == sorted((
@@ -64,24 +59,6 @@ def test_renderer_validate_formatters(renderer):
     assert renderer.validate_formatters(['JobID']) == \
         'JobID JobID JobID'.split()
     assert renderer.formatters == 'JobID JobID JobID'.split()
-
-
-def test_renderer_add_included(renderer):
-    renderer.formatters = []
-    renderer.add_included()
-    assert renderer.formatters == [
-        output_renderer.Column_Formatter('JobID%>'),
-        output_renderer.Column_Formatter('State'),
-    ]
-
-    # won't overwrite formatting, state comes first
-    renderer.formatters = renderer.build_formatters('JobID,Test%<10')
-    renderer.add_included()
-    assert renderer.formatters == [
-        output_renderer.Column_Formatter('State'),
-        output_renderer.Column_Formatter('JobID'),
-        output_renderer.Column_Formatter('Test%<10'),
-    ]
 
 
 def test_renderer_correct_columns(renderer):

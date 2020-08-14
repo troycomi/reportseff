@@ -10,11 +10,6 @@ class Output_Renderer():
         '''
         Initialize renderer with format string and list of valid titles
         '''
-        # values always included in output
-        self.always_included = [
-            'JobID%>',
-            'State'
-        ]
         # values required for proper parsing, need not be included in output
         self.required = [
             'JobID',
@@ -35,9 +30,6 @@ class Output_Renderer():
         valid_titles += self.derived.keys()
         self.query_columns = self.validate_formatters(valid_titles)
 
-        # make sure always included formatters are in list
-        self.add_included()
-
         # build columns for sacct call
         self.correct_columns()
 
@@ -57,18 +49,6 @@ class Output_Renderer():
         '''
         return [fmt.validate_title(valid_titles)
                 for fmt in self.formatters]
-
-    def add_included(self):
-        '''
-        If the always included columns are not in formatters, prepend them
-        '''
-        # reverse so inserted in same order
-        for title in reversed(self.always_included):
-            # remove any format information when testing membership
-            name = title.split('%')[0]
-            if name not in self.formatters:
-                self.formatters.insert(0, Column_Formatter(title))
-                self.formatters[0].validate_title([name])
 
     def correct_columns(self):
         '''
@@ -92,13 +72,20 @@ class Output_Renderer():
         for fmt in self.formatters:
             fmt.compute_width(jobs)
 
-        result = ' '.join([fmt.format_title()
-                           for fmt in self.formatters])
-
-        for job in jobs:
-            result += '\n'
-            result += ' '.join([fmt.format_job(job)
+        result = ''
+        if len(self.formatters) > 1:
+            result += ' '.join([fmt.format_title()
                                 for fmt in self.formatters])
+            if len(jobs) != 0:
+                result += '\n'
+
+        else:
+            self.formatters[0].alignment = '<'
+
+        result += '\n'.join(
+            ' '.join([fmt.format_job(job) for fmt in self.formatters])
+            for job in jobs
+        )
 
         return result
 
