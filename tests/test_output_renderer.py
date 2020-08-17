@@ -308,9 +308,8 @@ def test_formatter_compute_width():
 
 def test_formatter_format_entry():
     fmt = output_renderer.Column_Formatter('Name')
-    with pytest.raises(ValueError) as e:
-        fmt.format_title()
-    assert 'Attempting to format Name with unset width!' in str(e)
+    # no width causes just the name to be printed
+    assert fmt.format_title() == click.style('Name', bold=True)
 
     fmt.width = 8
     assert fmt.format_title() == click.style('  Name  ', bold=True)

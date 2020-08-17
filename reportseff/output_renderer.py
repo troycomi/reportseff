@@ -69,11 +69,11 @@ class Output_Renderer():
         '''
         Given list of jobs, build output table
         '''
-        for fmt in self.formatters:
-            fmt.compute_width(jobs)
-
         result = ''
         if len(self.formatters) > 1:
+            for fmt in self.formatters:
+                fmt.compute_width(jobs)
+
             result += ' '.join([fmt.format_title()
                                 for fmt in self.formatters])
             if len(jobs) != 0:
@@ -185,11 +185,11 @@ class Column_Formatter():
         If the entry is longer than self.width, truncate the end
         '''
         if self.width is None:
-            raise ValueError(f'Attempting to format {self.title} '
-                             'with unset width!')
+            result = entry
+        else:
+            entry = entry[:self.width]
+            result = (f'{{:{self.alignment}{self.width}}}').format(entry)
 
-        entry = entry[:self.width]
-        result = (f'{{:{self.alignment}{self.width}}}').format(entry)
         if color:
             result = click.style(result, fg=color)
         return result
