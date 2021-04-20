@@ -150,7 +150,10 @@ def parsemem(mem: str, nodes: int, cpus: int):
     multiple = mem[-2]
     alloc = mem[-1]
 
-    mem = float(mem[:-2]) * multiple_map[multiple]
+    if mem[-2:-1].isdigit():
+      mem=0.
+    else:
+      mem = float(mem[:-2]) * multiple_map[multiple]
 
     if alloc == 'n':
         return mem * nodes
