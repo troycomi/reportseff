@@ -73,17 +73,22 @@ class Output_Renderer():
             fmt.compute_width(jobs)
 
         result = ''
-        if len(self.formatters) > 1:
+        if len(self.formatters) == 0:
+            return result
+
+        if len(self.formatters) == 1:
+            # if only one formatter is present, override the alignment
+            self.formatters[0].alignment = '<'
+            # skip adding the title
+
+        else:
             result += ' '.join([fmt.format_title()
                                 for fmt in self.formatters])
             if len(jobs) != 0:
                 result += '\n'
 
-        else:
-            self.formatters[0].alignment = '<'
-
         result += '\n'.join(
-            ' '.join([fmt.format_job(job) for fmt in self.formatters])
+            ' '.join([fmt.format_job(job) for fmt in self.formatters]).rstrip()
             for job in jobs
         )
 

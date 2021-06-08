@@ -15,75 +15,9 @@ def renderer():
     return output_renderer.Output_Renderer(min_required)
 
 
-def test_renderer_init(renderer):
-    assert renderer.formatters == [
-        output_renderer.Column_Formatter('JobID%>'),
-        output_renderer.Column_Formatter('State'),
-        output_renderer.Column_Formatter('Elapsed%>'),
-        output_renderer.Column_Formatter('CPUEff'),
-        output_renderer.Column_Formatter('MemEff'),
-    ]
-    assert sorted(renderer.query_columns) == sorted((
-        'JobID JobIDRaw State Elapsed TotalCPU AllocCPUS REQMEM '
-        'NNodes MaxRSS').split())
-
-    renderer = output_renderer.Output_Renderer(min_required, '')
-    assert renderer.formatters == []
-    assert sorted(renderer.query_columns) == sorted((
-        'JobID JobIDRaw State').split())
-
-    renderer = output_renderer.Output_Renderer(min_required, 'TotalCPU%<5')
-    assert renderer.formatters == [
-        output_renderer.Column_Formatter('TotalCPU%<5'),
-    ]
-    assert sorted(renderer.query_columns) == sorted((
-        'JobID JobIDRaw State TotalCPU').split())
-
-
-def test_renderer_build_formatters(renderer):
-    assert renderer.build_formatters('Name,Name%>,Name%10,Name%<10') == [
-        output_renderer.Column_Formatter('Name'),
-        output_renderer.Column_Formatter('Name%>'),
-        output_renderer.Column_Formatter('Name%10'),
-        output_renderer.Column_Formatter('Name%<10'),
-    ]
-
-    assert renderer.build_formatters('jobid,state,elapsed') == [
-        'jobid', 'state', 'elapsed']
-
-    assert renderer.build_formatters('') == []
-
-
-def test_renderer_validate_formatters(renderer):
-    renderer.formatters = renderer.build_formatters('JobID,JOBid,jObId')
-    assert renderer.validate_formatters(['JobID']) == \
-        'JobID JobID JobID'.split()
-    assert renderer.formatters == 'JobID JobID JobID'.split()
-
-
-def test_renderer_correct_columns(renderer):
-    renderer.query_columns = ['JobID']
-    renderer.correct_columns()
-    assert sorted(renderer.query_columns) == \
-        sorted('JobID JobIDRaw State'.split())
-
-    renderer.query_columns = 'JobID CPUEff MemEff TimeEff'.split()
-    renderer.correct_columns()
-    assert sorted(renderer.query_columns) == sorted((
-        'JobID TotalCPU Elapsed REQMEM'
-        ' JobIDRaw State'
-        ' NNodes AllocCPUS MaxRSS Timelimit').split())
-
-    renderer.query_columns = 'JobID JobID JobID'.split()
-    renderer.correct_columns()
-    assert sorted(renderer.query_columns) == \
-        sorted('JobID JobIDRaw State'.split())
-
-
-def test_renderer_format_jobs():
-    renderer = output_renderer.Output_Renderer(
-        min_required,
-        'JobID,State,Elapsed,CPUEff,REQMEM,TimeEff')
+@pytest.fixture
+def some_jobs():
+    '''a few test jobs for generating an output table'''
     jobs = []
     job = job_module.Job('24371655', '24371655', None)
     job.update({
@@ -169,7 +103,79 @@ def test_renderer_format_jobs():
         'NTasks': ''
     })
     jobs.append(job)
-    result = renderer.format_jobs(jobs)
+    return jobs
+
+
+def test_renderer_init(renderer):
+    assert renderer.formatters == [
+        output_renderer.Column_Formatter('JobID%>'),
+        output_renderer.Column_Formatter('State'),
+        output_renderer.Column_Formatter('Elapsed%>'),
+        output_renderer.Column_Formatter('CPUEff'),
+        output_renderer.Column_Formatter('MemEff'),
+    ]
+    assert sorted(renderer.query_columns) == sorted((
+        'JobID JobIDRaw State Elapsed TotalCPU AllocCPUS REQMEM '
+        'NNodes MaxRSS').split())
+
+    renderer = output_renderer.Output_Renderer(min_required, '')
+    assert renderer.formatters == []
+    assert sorted(renderer.query_columns) == sorted((
+        'JobID JobIDRaw State').split())
+
+    renderer = output_renderer.Output_Renderer(min_required, 'TotalCPU%<5')
+    assert renderer.formatters == [
+        output_renderer.Column_Formatter('TotalCPU%<5'),
+    ]
+    assert sorted(renderer.query_columns) == sorted((
+        'JobID JobIDRaw State TotalCPU').split())
+
+
+def test_renderer_build_formatters(renderer):
+    assert renderer.build_formatters('Name,Name%>,Name%10,Name%<10') == [
+        output_renderer.Column_Formatter('Name'),
+        output_renderer.Column_Formatter('Name%>'),
+        output_renderer.Column_Formatter('Name%10'),
+        output_renderer.Column_Formatter('Name%<10'),
+    ]
+
+    assert renderer.build_formatters('jobid,state,elapsed') == [
+        'jobid', 'state', 'elapsed']
+
+    assert renderer.build_formatters('') == []
+
+
+def test_renderer_validate_formatters(renderer):
+    renderer.formatters = renderer.build_formatters('JobID,JOBid,jObId')
+    assert renderer.validate_formatters(['JobID']) == \
+        'JobID JobID JobID'.split()
+    assert renderer.formatters == 'JobID JobID JobID'.split()
+
+
+def test_renderer_correct_columns(renderer):
+    renderer.query_columns = ['JobID']
+    renderer.correct_columns()
+    assert sorted(renderer.query_columns) == \
+        sorted('JobID JobIDRaw State'.split())
+
+    renderer.query_columns = 'JobID CPUEff MemEff TimeEff'.split()
+    renderer.correct_columns()
+    assert sorted(renderer.query_columns) == sorted((
+        'JobID TotalCPU Elapsed REQMEM'
+        ' JobIDRaw State'
+        ' NNodes AllocCPUS MaxRSS Timelimit').split())
+
+    renderer.query_columns = 'JobID JobID JobID'.split()
+    renderer.correct_columns()
+    assert sorted(renderer.query_columns) == \
+        sorted('JobID JobIDRaw State'.split())
+
+
+def test_renderer_format_jobs(some_jobs):
+    renderer = output_renderer.Output_Renderer(
+        min_required,
+        'JobID,State,Elapsed,CPUEff,REQMEM,TimeEff')
+    result = renderer.format_jobs(some_jobs)
     ansi_escape = re.compile(r'\x1B[@-_][0-?]*[ -/]*[@-~]')
     # check removed codes
     codes = ansi_escape.findall(result)
@@ -206,6 +212,35 @@ def test_renderer_format_jobs():
         '24371659 TIMEOUT 00:21:00 19.0% 2Gn 105.0%'.split()
     assert lines[6].split() == \
         '24371660 OTHER 00:12:05 74.5% 2Gn 60.4%'.split()
+
+
+def test_format_jobs_empty(some_jobs):
+    renderer = output_renderer.Output_Renderer(
+        min_required,
+        '')
+    result = renderer.format_jobs(some_jobs)
+    assert result == ''
+
+
+def test_format_jobs_single_str(some_jobs):
+    renderer = output_renderer.Output_Renderer(
+        min_required,
+        'JobID%>')
+    assert len(renderer.formatters) == 1
+    assert renderer.formatters[0].alignment == '>'
+
+    result = renderer.format_jobs(some_jobs).split('\n')
+
+    # alignment is switched
+    assert renderer.formatters[0].alignment == '<'
+    assert result == [
+        '24371655',
+        '24371656',
+        '24371657',
+        '24371658',
+        '24371659',
+        '24371660',
+    ]
 
 
 def test_formatter_init():

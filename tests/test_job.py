@@ -136,6 +136,23 @@ def test_update_part_job():
     assert job.stepmem == 495644
 
 
+def test_parse_bug():
+    job = job_module.Job('24371655', '24371655', None)
+    job.update({
+        'AllocCPUS': '1',
+        'Elapsed': '00:00:19',
+        'JobID': '34853801.extern',
+        'JobIDRaw': '34853801.extern',
+        'JobName': 'extern',
+        'MaxRSS': '0',
+        'NNodes': '1',
+        'REQMEM': '4Gn',
+        'State': 'COMPLETED',
+        'Timelimit': '',
+        'TotalCPU': '00:00:00',
+    })
+
+
 def test_name(job):
     assert job.name() == 'filename'
     job = job_module.Job('job', 'jobid', None)

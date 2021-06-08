@@ -146,6 +146,17 @@ directory to check for slurm outputs.
   sacct formats and a comma separated list of key/value pairs.  To get jobs in
   the last hour and a half, can pass `h=1,m=30`.
 
+## Contributions
+Bug reports, pull requests, and any feedback are welcome!  Prior to submitting
+a pull request, be sure any new features have been tested and all unit tests
+are passing.  In the cloned repo, the test environment can be setup with:
+```
+conda create -n reportseff-dev
+conda activate reportseff-dev
+conda install -y -c conda-forge click pytest pytest-cov pytest-mock pytest-flake8
+pytest --flake8 --cov
+```
+
 ## Acknowledgements
 The code for calling sacct and parsing the returning information was taken
 from [Slurmee](https://github.com/PrincetonUniversity/slurmee).
