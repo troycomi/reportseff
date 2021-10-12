@@ -160,7 +160,7 @@ def parsemem(mem: str, nodes: int, cpus: int):
 
 def parsememstep(mem: str):
     try:
-        if mem == '':
+        if mem == '' or mem == '0':
             return 0
         multiple = mem[-1]
 
