@@ -79,6 +79,9 @@ class Output_Renderer():
             # skip adding the title
 
         else:
+            for fmt in self.formatters:
+                fmt.compute_width(jobs)
+
             result += ' '.join([fmt.format_title()
                                 for fmt in self.formatters])
             if len(jobs) != 0:

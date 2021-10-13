@@ -147,15 +147,18 @@ def _parse_slurm_timedelta(delta: str) -> int:
 
 
 def parsemem(mem: str, nodes: int, cpus: int):
-    multiple = mem[-2]
-    alloc = mem[-1]
+    # older version of slurm
+    if mem.endswith('n') or mem.endswith('c'):
+        multiple = mem[-2]
+        alloc = mem[-1]
+        mem = float(mem[:-2]) * multiple_map[multiple]
 
-    mem = float(mem[:-2]) * multiple_map[multiple]
-
-    if alloc == 'n':
-        return mem * nodes
+        if alloc == 'n':
+            return mem * nodes
+        else:
+            return mem * cpus
     else:
-        return mem * cpus
+        return float(mem[:-1]) * multiple_map[mem[-1]]
 
 
 def parsememstep(mem: str):
