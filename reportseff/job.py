@@ -30,6 +30,9 @@ HHMMSS_RE = re.compile(
 #: Regex for HHMMmmm style timestamps
 MMSSMMM_RE = re.compile(
     r'(?P<minutes>\d{2}):(?P<seconds>\d{2}).(?P<milliseconds>\d{3})')
+#: Regex for maxRSS and reqmem
+MEM_RE = re.compile(
+    r'(?P<memory>[-+]?\d*\.\d+|\d+)(?P<multiple>[KMGTE]?)(?P<type>[nc]?)')
 
 
 class Job():
@@ -91,7 +94,7 @@ class Job():
             for k, v in entry.items():
                 if k not in self.other_entries or not self.other_entries[k]:
                     self.other_entries[k] = v
-            self.stepmem += parsememstep(entry['MaxRSS']) \
+            self.stepmem += parsemem(entry['MaxRSS']) \
                 if 'MaxRSS' in entry else 0
 
     def name(self):
@@ -146,30 +149,20 @@ def _parse_slurm_timedelta(delta: str) -> int:
         ).total_seconds())
 
 
-def parsemem(mem: str, nodes: int, cpus: int):
-    # older version of slurm
-    if mem.endswith('n') or mem.endswith('c'):
-        multiple = mem[-2]
-        alloc = mem[-1]
-        mem = float(mem[:-2]) * multiple_map[multiple]
+def parsemem(mem: str, nodes: int = 1, cpus: int = 1) -> float:
+    if mem == '' or mem == '0':
+        return 0
+    match = re.fullmatch(MEM_RE, mem)
+    if not match:
+        raise ValueError(f'Failed to parse "{mem}"')
+    memory = float(match.group('memory'))
 
-        if alloc == 'n':
-            return mem * nodes
+    if match.group('multiple') != '':
+        memory *= multiple_map[match.group('multiple')]
+
+    if match.group('type') != '':
+        if match.group('type') == 'n':
+            memory *= nodes
         else:
-            return mem * cpus
-    else:
-        return float(mem[:-1]) * multiple_map[mem[-1]]
-
-
-def parsememstep(mem: str):
-    try:
-        if mem == '' or mem == '0':
-            return 0
-        multiple = mem[-1]
-
-        mem = float(mem[:-1]) * multiple_map[multiple]
-
-        return mem
-
-    except ValueError:
-        raise ValueError(f'Unexpected memstep format: {mem}')
+            memory *= cpus
+    return memory

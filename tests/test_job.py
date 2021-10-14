@@ -235,11 +235,13 @@ def test_parsemem_cpus():
 def test_parsememstep():
     for exp, multiple in enumerate('K M G T E'.split()):
         for mem in (2, 4, 6):
-            assert job_module.parsememstep(f'{mem}{multiple}') == \
+            assert job_module.parsemem(f'{mem}{multiple}') == \
                 mem * 1024 ** exp
 
     with pytest.raises(ValueError) as e:
-        job_module.parsememstep('18GG')
-    assert 'Unexpected memstep format: 18GG' in str(e)
+        job_module.parsemem('18GG')
+    assert 'Failed to parse "18GG"' in str(e)
 
-    assert job_module.parsememstep('') == 0
+    assert job_module.parsemem('') == 0
+    assert job_module.parsemem('0') == 0
+    assert job_module.parsemem('1084.50M') == 1084.5 * 1024
