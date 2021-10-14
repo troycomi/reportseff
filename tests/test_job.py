@@ -109,6 +109,18 @@ def test_update_main_job():
         'NNodes': '1',
         'NTasks': ''
     })
+    job.update({
+        'JobID': '24371655.batch',
+        'State': 'RUNNING',
+        'AllocCPUS': '1',
+        'REQMEM': '1Gn',
+        'TotalCPU': '00:09:00',
+        'Elapsed': '00:10:00',
+        'Timelimit': '00:20:00',
+        'MaxRSS': '',
+        'NNodes': '1',
+        'NTasks': ''
+    })
     assert job.state == 'RUNNING'
     assert job.time == '00:10:00'
     assert job.time_eff == 50.0
@@ -215,6 +227,10 @@ def test_parse_slurm_timedelta():
     for i, t in enumerate(timestamps):
         assert job_module._parse_slurm_timedelta(t) == expected_seconds[i]
 
+    with pytest.raises(ValueError) as e:
+        job_module._parse_slurm_timedelta('asdf')
+    assert 'Failed to parse time "asdf"' in str(e)
+
 
 def test_parsemem_nodes():
     for mem in (1, 2, 4):
@@ -240,8 +256,9 @@ def test_parsememstep():
 
     with pytest.raises(ValueError) as e:
         job_module.parsemem('18GG')
-    assert 'Failed to parse "18GG"' in str(e)
+    assert 'Failed to parse memory "18GG"' in str(e)
 
     assert job_module.parsemem('') == 0
     assert job_module.parsemem('0') == 0
+    assert job_module.parsemem('5') == 5
     assert job_module.parsemem('1084.50M') == 1084.5 * 1024

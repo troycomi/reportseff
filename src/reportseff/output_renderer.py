@@ -1,6 +1,6 @@
 from typing import List
 import click
-from reportseff.job import Job
+from .job import Job
 
 
 class Output_Renderer():

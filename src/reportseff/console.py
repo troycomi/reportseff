@@ -1,9 +1,11 @@
 import click
 import sys
 from shutil import which
-from reportseff.job_collection import Job_Collection
-from reportseff.db_inquirer import Sacct_Inquirer
-from reportseff.output_renderer import Output_Renderer
+
+from . import __version__
+from .job_collection import Job_Collection
+from .db_inquirer import Sacct_Inquirer
+from .output_renderer import Output_Renderer
 
 
 @click.command()
@@ -34,10 +36,9 @@ from reportseff.output_renderer import Output_Renderer
               'hours, and minutes can use case-insensitive abbreviations. '
               'Minutes is the minimum resolution, while weeks is the coarsest.'
               )
-@click.version_option()
+@click.version_option(version=__version__)
 @click.argument('jobs', nargs=-1)
-def reportseff(modified_sort, color, format_str, debug,
-               user, jobs, state, since):
+def main(modified_sort, color, format_str, debug, user, jobs, state, since):
 
     if format_str.startswith('+'):
         format_str = 'JobID%>,State,Elapsed%>,CPUEff,MemEff,' + format_str[1:]

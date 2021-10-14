@@ -1,0 +1,39 @@
+[tool.poetry]
+name = "reportseff"
+version = "0.3.0"
+description= "Tablular seff output"
+authors = ["Troy Comi <troycomi@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+homepage= "https://github.com/troycomi/reportseff"
+repository= "https://github.com/troycomi/reportseff"
+keywords= ["slurm","seff"]
+
+[tool.poetry.dependencies]
+python = "^3.7"
+click = "^7.0"
+
+[tool.poetry.dev-dependencies]
+pytest = "^6.2.5"
+pytest-mock = "^3.6.1"
+coverage = {extras = ["toml"], version = "^6.0.2"}
+pytest-cov = "^3.0.0"
+
+[tool.poetry.scripts]
+reportseff = "reportseff.console:main"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+# pyproject.toml
+[tool.coverage.paths]
+source = ["src", "*/site-packages"]
+
+[tool.coverage.run]
+branch = true
+source = ["reportseff"]
+
+[tool.coverage.report]
+show_missing = true
+fail_under = 100

@@ -147,6 +147,7 @@ def _parse_slurm_timedelta(delta: str) -> int:
             seconds=int(match.group('seconds')),
             milliseconds=int(match.group('milliseconds'))
         ).total_seconds())
+    raise ValueError(f'Failed to parse time "{delta}"')
 
 
 def parsemem(mem: str, nodes: int = 1, cpus: int = 1) -> float:
@@ -154,7 +155,7 @@ def parsemem(mem: str, nodes: int = 1, cpus: int = 1) -> float:
         return 0
     match = re.fullmatch(MEM_RE, mem)
     if not match:
-        raise ValueError(f'Failed to parse "{mem}"')
+        raise ValueError(f'Failed to parse memory "{mem}"')
     memory = float(match.group('memory'))
 
     if match.group('multiple') != '':

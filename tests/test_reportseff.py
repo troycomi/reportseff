@@ -1,5 +1,5 @@
 import pytest
-from reportseff import reportseff
+from reportseff import console
 from reportseff.job_collection import Job_Collection
 from reportseff.output_renderer import Output_Renderer
 from reportseff.db_inquirer import Sacct_Inquirer
@@ -15,7 +15,7 @@ def mock_inquirer(mocker):
 
 
 def test_directory_input(mocker, mock_inquirer):
-    mocker.patch('reportseff.reportseff.which', return_value=True)
+    mocker.patch('reportseff.console.which', return_value=True)
     runner = CliRunner()
     sub_result = mocker.MagicMock()
     sub_result.returncode = 0
@@ -34,7 +34,7 @@ def test_directory_input(mocker, mock_inquirer):
         self.set_jobs(('24418435',))
 
     mocker.patch.object(Job_Collection, 'set_out_dir', new=set_jobs)
-    result = runner.invoke(reportseff.reportseff,
+    result = runner.invoke(console.main,
                            '--no-color --format '
                            '"JobID,State,Elapsed,TimeEff,CPUEff,MemEff"')
 
@@ -47,7 +47,7 @@ def test_directory_input(mocker, mock_inquirer):
 
 
 def test_directory_input_exception(mocker, mock_inquirer):
-    mocker.patch('reportseff.reportseff.which', return_value=True)
+    mocker.patch('reportseff.console.which', return_value=True)
     runner = CliRunner()
     sub_result = mocker.MagicMock()
     sub_result.returncode = 0
@@ -66,7 +66,7 @@ def test_directory_input_exception(mocker, mock_inquirer):
         raise ValueError('Testing EXCEPTION')
 
     mocker.patch.object(Job_Collection, 'set_out_dir', new=set_jobs)
-    result = runner.invoke(reportseff.reportseff,
+    result = runner.invoke(console.main,
                            '--no-color')
 
     assert result.exit_code == 1
@@ -74,7 +74,7 @@ def test_directory_input_exception(mocker, mock_inquirer):
 
 
 def test_debug_option(mocker, mock_inquirer):
-    mocker.patch('reportseff.reportseff.which', return_value=True)
+    mocker.patch('reportseff.console.which', return_value=True)
     runner = CliRunner()
     sub_result = mocker.MagicMock()
     sub_result.returncode = 0
@@ -84,7 +84,7 @@ def test_debug_option(mocker, mock_inquirer):
     )
     mocker.patch('reportseff.db_inquirer.subprocess.run',
                  return_value=sub_result)
-    result = runner.invoke(reportseff.reportseff,
+    result = runner.invoke(console.main,
                            '--format '
                            '"JobID,State,Elapsed,TimeEff,CPUEff,MemEff" '
                            '--no-color --debug 23000233')
@@ -102,7 +102,7 @@ def test_debug_option(mocker, mock_inquirer):
 
 
 def test_process_failure(mocker, mock_inquirer):
-    mocker.patch('reportseff.reportseff.which', return_value=True)
+    mocker.patch('reportseff.console.which', return_value=True)
     runner = CliRunner()
     sub_result = mocker.MagicMock()
     sub_result.returncode = 0
@@ -115,7 +115,7 @@ def test_process_failure(mocker, mock_inquirer):
     mocker.patch.object(Job_Collection,
                         'process_entry',
                         side_effect=Exception('TESTING'))
-    result = runner.invoke(reportseff.reportseff,
+    result = runner.invoke(console.main,
                            '--no-color 23000233')
 
     assert result.exit_code != 0
@@ -130,7 +130,7 @@ def test_process_failure(mocker, mock_inquirer):
 
 
 def test_short_output(mocker, mock_inquirer):
-    mocker.patch('reportseff.reportseff.which', return_value=True)
+    mocker.patch('reportseff.console.which', return_value=True)
     runner = CliRunner()
     sub_result = mocker.MagicMock()
     sub_result.returncode = 0
@@ -140,13 +140,13 @@ def test_short_output(mocker, mock_inquirer):
     )
     mocker.patch('reportseff.db_inquirer.subprocess.run',
                  return_value=sub_result)
-    mocker.patch('reportseff.reportseff.len', return_value=20)
+    mocker.patch('reportseff.console.len', return_value=20)
     mocker.patch.object(Output_Renderer,
                         'format_jobs',
                         return_value='output')
 
-    mock_click = mocker.patch('reportseff.reportseff.click.echo')
-    result = runner.invoke(reportseff.reportseff,
+    mock_click = mocker.patch('reportseff.console.click.echo')
+    result = runner.invoke(console.main,
                            '--no-color 23000233')
 
     assert result.exit_code == 0
@@ -154,7 +154,7 @@ def test_short_output(mocker, mock_inquirer):
 
 
 def test_long_output(mocker, mock_inquirer):
-    mocker.patch('reportseff.reportseff.which', return_value=True)
+    mocker.patch('reportseff.console.which', return_value=True)
     runner = CliRunner()
     sub_result = mocker.MagicMock()
     sub_result.returncode = 0
@@ -164,12 +164,12 @@ def test_long_output(mocker, mock_inquirer):
     )
     mocker.patch('reportseff.db_inquirer.subprocess.run',
                  return_value=sub_result)
-    mocker.patch('reportseff.reportseff.len', return_value=21)
+    mocker.patch('reportseff.console.len', return_value=21)
     mocker.patch.object(Output_Renderer,
                         'format_jobs',
                         return_value='output')
-    mock_click = mocker.patch('reportseff.reportseff.click.echo_via_pager')
-    result = runner.invoke(reportseff.reportseff,
+    mock_click = mocker.patch('reportseff.console.click.echo_via_pager')
+    result = runner.invoke(console.main,
                            '--no-color 23000233')
 
     assert result.exit_code == 0
@@ -177,7 +177,7 @@ def test_long_output(mocker, mock_inquirer):
 
 
 def test_simple_job(mocker, mock_inquirer):
-    mocker.patch('reportseff.reportseff.which', return_value=True)
+    mocker.patch('reportseff.console.which', return_value=True)
     runner = CliRunner()
     sub_result = mocker.MagicMock()
     sub_result.returncode = 0
@@ -191,7 +191,7 @@ def test_simple_job(mocker, mock_inquirer):
     )
     mocker.patch('reportseff.db_inquirer.subprocess.run',
                  return_value=sub_result)
-    result = runner.invoke(reportseff.reportseff,
+    result = runner.invoke(console.main,
                            '--no-color 24418435')
 
     assert result.exit_code == 0
@@ -203,7 +203,7 @@ def test_simple_job(mocker, mock_inquirer):
 
 
 def test_simple_user(mocker, mock_inquirer):
-    mocker.patch('reportseff.reportseff.which', return_value=True)
+    mocker.patch('reportseff.console.which', return_value=True)
     runner = CliRunner()
     sub_result = mocker.MagicMock()
     sub_result.returncode = 0
@@ -221,7 +221,7 @@ def test_simple_user(mocker, mock_inquirer):
     )
     mocker.patch('reportseff.db_inquirer.subprocess.run',
                  return_value=sub_result)
-    result = runner.invoke(reportseff.reportseff,
+    result = runner.invoke(console.main,
                            '--no-color --user test')
 
     assert result.exit_code == 0
@@ -236,18 +236,18 @@ def test_simple_user(mocker, mock_inquirer):
 
 
 def test_format_add(mocker, mock_inquirer):
-    mocker.patch('reportseff.reportseff.which', return_value=True)
+    mocker.patch('reportseff.console.which', return_value=True)
     runner = CliRunner()
-    mock_jobs = mocker.patch('reportseff.reportseff.get_jobs',
+    mock_jobs = mocker.patch('reportseff.console.get_jobs',
                              return_value=('Testing', 1))
-    result = runner.invoke(reportseff.reportseff,
+    result = runner.invoke(console.main,
                            '--no-color --format=test')
 
     assert result.exit_code == 0
     mock_jobs.call_args[1] == 'test'
 
     # test adding onto end
-    result = runner.invoke(reportseff.reportseff,
+    result = runner.invoke(console.main,
                            '--no-color --format=+test')
 
     assert result.exit_code == 0
@@ -255,7 +255,7 @@ def test_format_add(mocker, mock_inquirer):
 
 
 def test_since(mocker, mock_inquirer):
-    mocker.patch('reportseff.reportseff.which', return_value=True)
+    mocker.patch('reportseff.console.which', return_value=True)
     runner = CliRunner()
     sub_result = mocker.MagicMock()
     sub_result.returncode = 0
@@ -273,7 +273,7 @@ def test_since(mocker, mock_inquirer):
     )
     mocker.patch('reportseff.db_inquirer.subprocess.run',
                  return_value=sub_result)
-    result = runner.invoke(reportseff.reportseff,
+    result = runner.invoke(console.main,
                            '--no-color --since 200406 24418435 25569410')
 
     assert result.exit_code == 0
@@ -288,7 +288,7 @@ def test_since(mocker, mock_inquirer):
 
 
 def test_simple_state(mocker, mock_inquirer):
-    mocker.patch('reportseff.reportseff.which', return_value=True)
+    mocker.patch('reportseff.console.which', return_value=True)
     runner = CliRunner()
     sub_result = mocker.MagicMock()
     sub_result.returncode = 0
@@ -306,7 +306,7 @@ def test_simple_state(mocker, mock_inquirer):
     )
     mocker.patch('reportseff.db_inquirer.subprocess.run',
                  return_value=sub_result)
-    result = runner.invoke(reportseff.reportseff,
+    result = runner.invoke(console.main,
                            '--no-color --state completed '
                            '25569410 24418435'
                            )
@@ -322,7 +322,7 @@ def test_simple_state(mocker, mock_inquirer):
 
 
 def test_no_state(mocker, mock_inquirer):
-    mocker.patch('reportseff.reportseff.which', return_value=True)
+    mocker.patch('reportseff.console.which', return_value=True)
     runner = CliRunner()
     sub_result = mocker.MagicMock()
     sub_result.returncode = 0
@@ -340,7 +340,7 @@ def test_no_state(mocker, mock_inquirer):
     )
     mocker.patch('reportseff.db_inquirer.subprocess.run',
                  return_value=sub_result)
-    result = runner.invoke(reportseff.reportseff,
+    result = runner.invoke(console.main,
                            '--no-color --state ZZ '
                            '25569410 24418435'
                            )
@@ -357,7 +357,7 @@ def test_no_state(mocker, mock_inquirer):
 
 
 def test_array_job_raw_id(mocker, mock_inquirer):
-    mocker.patch('reportseff.reportseff.which', return_value=True)
+    mocker.patch('reportseff.console.which', return_value=True)
     runner = CliRunner()
     sub_result = mocker.MagicMock()
     sub_result.returncode = 0
@@ -371,7 +371,7 @@ def test_array_job_raw_id(mocker, mock_inquirer):
     )
     mocker.patch('reportseff.db_inquirer.subprocess.run',
                  return_value=sub_result)
-    result = runner.invoke(reportseff.reportseff,
+    result = runner.invoke(console.main,
                            '--no-color 24221219')
 
     assert result.exit_code == 0
@@ -384,7 +384,7 @@ def test_array_job_raw_id(mocker, mock_inquirer):
 
 
 def test_array_job_single(mocker, mock_inquirer):
-    mocker.patch('reportseff.reportseff.which', return_value=True)
+    mocker.patch('reportseff.console.which', return_value=True)
     runner = CliRunner()
     sub_result = mocker.MagicMock()
     sub_result.returncode = 0
@@ -404,7 +404,7 @@ def test_array_job_single(mocker, mock_inquirer):
     )
     mocker.patch('reportseff.db_inquirer.subprocess.run',
                  return_value=sub_result)
-    result = runner.invoke(reportseff.reportseff,
+    result = runner.invoke(console.main,
                            '--no-color 24220929_421')
 
     assert result.exit_code == 0
@@ -417,7 +417,7 @@ def test_array_job_single(mocker, mock_inquirer):
 
 
 def test_array_job_base(mocker, mock_inquirer):
-    mocker.patch('reportseff.reportseff.which', return_value=True)
+    mocker.patch('reportseff.console.which', return_value=True)
     runner = CliRunner()
     sub_result = mocker.MagicMock()
     sub_result.returncode = 0
@@ -437,7 +437,7 @@ def test_array_job_base(mocker, mock_inquirer):
     )
     mocker.patch('reportseff.db_inquirer.subprocess.run',
                  return_value=sub_result)
-    result = runner.invoke(reportseff.reportseff,
+    result = runner.invoke(console.main,
                            '--no-color 24220929')
 
     assert result.exit_code == 0
@@ -453,7 +453,7 @@ def test_array_job_base(mocker, mock_inquirer):
 
 
 def test_sacct_error(mocker, mock_inquirer):
-    mocker.patch('reportseff.reportseff.which', return_value=True)
+    mocker.patch('reportseff.console.which', return_value=True)
     runner = CliRunner()
     sub_result = mocker.MagicMock()
     sub_result.returncode = 1
@@ -462,7 +462,7 @@ def test_sacct_error(mocker, mock_inquirer):
     )
     mocker.patch('reportseff.db_inquirer.subprocess.run',
                  return_value=sub_result)
-    result = runner.invoke(reportseff.reportseff,
+    result = runner.invoke(console.main,
                            '--no-color 9999999')
 
     assert result.exit_code == 1
@@ -470,7 +470,7 @@ def test_sacct_error(mocker, mock_inquirer):
 
 
 def test_empty_sacct(mocker, mock_inquirer):
-    mocker.patch('reportseff.reportseff.which', return_value=True)
+    mocker.patch('reportseff.console.which', return_value=True)
     runner = CliRunner()
     sub_result = mocker.MagicMock()
     sub_result.returncode = 0
@@ -479,7 +479,7 @@ def test_empty_sacct(mocker, mock_inquirer):
     )
     mocker.patch('reportseff.db_inquirer.subprocess.run',
                  return_value=sub_result)
-    result = runner.invoke(reportseff.reportseff,
+    result = runner.invoke(console.main,
                            '--no-color 9999999')
 
     assert result.exit_code == 0
@@ -491,7 +491,7 @@ def test_empty_sacct(mocker, mock_inquirer):
 
 
 def test_failed_no_mem(mocker, mock_inquirer):
-    mocker.patch('reportseff.reportseff.which', return_value=True)
+    mocker.patch('reportseff.console.which', return_value=True)
     runner = CliRunner()
     sub_result = mocker.MagicMock()
     sub_result.returncode = 0
@@ -504,7 +504,7 @@ def test_failed_no_mem(mocker, mock_inquirer):
     )
     mocker.patch('reportseff.db_inquirer.subprocess.run',
                  return_value=sub_result)
-    result = runner.invoke(reportseff.reportseff,
+    result = runner.invoke(console.main,
                            '--no-color 23000381')
 
     assert result.exit_code == 0
@@ -517,7 +517,7 @@ def test_failed_no_mem(mocker, mock_inquirer):
 
 
 def test_canceled_by_other(mocker, mock_inquirer):
-    mocker.patch('reportseff.reportseff.which', return_value=True)
+    mocker.patch('reportseff.console.which', return_value=True)
     runner = CliRunner()
     sub_result = mocker.MagicMock()
     sub_result.returncode = 0
@@ -527,7 +527,7 @@ def test_canceled_by_other(mocker, mock_inquirer):
     )
     mocker.patch('reportseff.db_inquirer.subprocess.run',
                  return_value=sub_result)
-    result = runner.invoke(reportseff.reportseff,
+    result = runner.invoke(console.main,
                            '--no-color 23000233')
 
     assert result.exit_code == 0
@@ -540,7 +540,7 @@ def test_canceled_by_other(mocker, mock_inquirer):
 
 
 def test_zero_runtime(mocker, mock_inquirer):
-    mocker.patch('reportseff.reportseff.which', return_value=True)
+    mocker.patch('reportseff.console.which', return_value=True)
     runner = CliRunner()
     sub_result = mocker.MagicMock()
     sub_result.returncode = 0
@@ -554,7 +554,7 @@ def test_zero_runtime(mocker, mock_inquirer):
     )
     mocker.patch('reportseff.db_inquirer.subprocess.run',
                  return_value=sub_result)
-    result = runner.invoke(reportseff.reportseff,
+    result = runner.invoke(console.main,
                            '--no-color 23000210')
 
     assert result.exit_code == 0
@@ -567,9 +567,9 @@ def test_zero_runtime(mocker, mock_inquirer):
 
 
 def test_no_systems(mocker, mock_inquirer):
-    mocker.patch('reportseff.reportseff.which', return_value=None)
+    mocker.patch('reportseff.console.which', return_value=None)
     runner = CliRunner()
-    result = runner.invoke(reportseff.reportseff,
+    result = runner.invoke(console.main,
                            '--no-color 23000210')
 
     assert result.exit_code == 1

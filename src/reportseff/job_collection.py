@@ -1,7 +1,7 @@
 import re
 from typing import Dict, List
-from reportseff.job import Job
-from reportseff.output_renderer import Output_Renderer
+from .job import Job
+from .output_renderer import Output_Renderer
 import os
 
 
