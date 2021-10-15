@@ -45,24 +45,24 @@ make accurate decisions on execution order and keep usage high.
 ### Why it matters as a user?
 "But my qos only allows 2 jobs to run at once if the time
 is less than 2 hours!  Can't I say my 10 minute job will take 2 hours?" Yes,
-but it is *rude* to the scheduler.  If that doesn't sway you, improperly 
+but it is *rude* to the scheduler.  If that doesn't sway you, improperly
 estimating resource usage can:
 - Decrease your priority for subsequent jobs.
 - Cause your account to be charged for the full, estimated usage.
 - Have fewer of your jobs running simultaneously.
-- Make it harder to fit your job into the available cluster resources, 
+- Make it harder to fit your job into the available cluster resources,
 increasing the queue time.
 
 ### Monitoring efficiency
 Before releasing a swarm of jobs, check the estimated vs predicted usage.
-Tune your parameters to improve efficiency. 
+Tune your parameters to improve efficiency.
 
 [Seff](https://github.com/SchedMD/slurm/tree/master/contribs/seff) provides
 efficiency estimates for a single job.  But to look at your usage
 for many jobs or monitor usage, I wrote
 [reportseff](https://github.com/troycomi/reportseff). It polls sacct
 and calculates the same efficiency information as seff, but outputs
-a tabular report. 
+a tabular report.
 
 During testing, I looked at random ranges of jobids on a Princeton cluster.
 Here is some typical output, with jobids modified to protect the innocent:

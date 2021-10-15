@@ -25,6 +25,7 @@ flake8-black = "^0.2.3"
 flake8-bugbear = "^21.9.2"
 flake8-import-order = "^0.18.1"
 safety = "^1.10.3"
+mypy = "^0.910"
 
 [tool.poetry.scripts]
 reportseff = "reportseff.console:main"

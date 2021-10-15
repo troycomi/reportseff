@@ -141,9 +141,7 @@ def test_renderer_init(renderer):
     assert sorted(renderer.query_columns) == sorted(("JobID JobIDRaw State").split())
 
     renderer = output_renderer.Output_Renderer(min_required, "TotalCPU%<5")
-    assert renderer.formatters == [
-        output_renderer.Column_Formatter("TotalCPU%<5"),
-    ]
+    assert renderer.formatters == [output_renderer.Column_Formatter("TotalCPU%<5")]
     assert sorted(renderer.query_columns) == sorted(
         ("JobID JobIDRaw State TotalCPU").split()
     )

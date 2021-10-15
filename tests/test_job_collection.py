@@ -79,9 +79,7 @@ def test_set_jobs(jobs, mocker):
     assert "No valid jobs provided!" in str(e)
 
     jobs.set_jobs(("1",))
-    assert jobs.jobs == {
-        "1": Job("1", "1", None),
-    }
+    assert jobs.jobs == {"1": Job("1", "1", None)}
 
     mocker.patch("reportseff.job_collection.os.path.isdir", return_value=True)
     mock_set_out = mocker.patch.object(job_collection.Job_Collection, "set_out_dir")
