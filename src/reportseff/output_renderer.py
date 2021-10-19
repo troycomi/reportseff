@@ -1,16 +1,16 @@
-from typing import List
+from typing import Any, Callable, List, Optional, Tuple, Union
 
 import click
 
-from .job import Job
+from .job import Job, state_colors
 
 
-class Output_Renderer:
+class OutputRenderer:
     def __init__(
         self,
         valid_titles: List,
         format_str: str = "JobID%>,State,Elapsed%>,CPUEff,MemEff",
-    ):
+    ) -> None:
         """
         Initialize renderer with format string and list of valid titles
         """
@@ -38,7 +38,7 @@ class Output_Renderer:
         Generate list of formatters from comma separated list in format string
         Return list of formatters
         """
-        return [Column_Formatter(fmt) for fmt in format_str.split(",") if fmt != ""]
+        return [ColumnFormatter(fmt) for fmt in format_str.split(",") if fmt != ""]
 
     def validate_formatters(self, valid_titles: List) -> List:
         """
@@ -47,7 +47,7 @@ class Output_Renderer:
         """
         return [fmt.validate_title(valid_titles) for fmt in self.formatters]
 
-    def correct_columns(self):
+    def correct_columns(self) -> None:
         """
         use derived values to update the list of query columns
         """
@@ -55,13 +55,13 @@ class Output_Renderer:
             self.derived[c] if c in self.derived else [c] for c in self.query_columns
         ]
         # flatten
-        result = [item for sublist in result for item in sublist]
+        flat_result = [item for sublist in result for item in sublist]
 
         # add in required values
-        result += self.required
+        flat_result += self.required
 
         # remove duplicates
-        self.query_columns = list(sorted(set(result)))
+        self.query_columns = list(sorted(set(flat_result)))
 
     def format_jobs(self, jobs: List[Job]) -> str:
         """
@@ -92,8 +92,8 @@ class Output_Renderer:
         return result
 
 
-class Column_Formatter:
-    def __init__(self, token):
+class ColumnFormatter:
+    def __init__(self, token: str) -> None:
         """
         Build column entry from format string of the form
         NAME[%[ALIGNMENT][WIDTH]]
@@ -113,17 +113,17 @@ class Column_Formatter:
                 except ValueError as err:
                     raise ValueError(f"Unable to parse format token '{token}'") from err
 
-        self.color_function = lambda x: (x, None)
+        self.color_function: Callable[[str], Tuple[str, Any]] = lambda x: (x, None)
         fold_title = self.title.casefold()
         if fold_title == "state":
             self.color_function = color_state
         elif fold_title == "cpueff":
             self.color_function = lambda x: render_eff(x, "high")
-        elif fold_title == "timeeff" or fold_title == "memeff":
+        elif fold_title in ("timeeff", "memeff"):
             self.color_function = lambda x: render_eff(x, "mid")
 
-    def __eq__(self, other):
-        if isinstance(other, Column_Formatter):
+    def __eq__(self, other: Any) -> bool:
+        if isinstance(other, ColumnFormatter):
             for k in self.__dict__:
                 if k != "color_function" and self.__dict__[k] != other.__dict__[k]:
                     return False
@@ -132,7 +132,7 @@ class Column_Formatter:
             return self.title == other
         return False
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{self.title}%{self.alignment}{self.width}"
 
     def validate_title(self, valid_titles: List) -> str:
@@ -151,7 +151,7 @@ class Column_Formatter:
 
         raise ValueError(f"'{self.title}' is not a valid title")
 
-    def compute_width(self, jobs: List):
+    def compute_width(self, jobs: List) -> None:
         """
         Determine the max width of all entries if the width attribute is unset.
         Includes title in determination
@@ -176,7 +176,7 @@ class Column_Formatter:
         value = job.get_entry(self.title)
         return self.format_entry(*self.color_function(value))
 
-    def format_entry(self, entry: str, color: str = None) -> str:
+    def format_entry(self, entry: str, color: Optional[str] = None) -> str:
         """
         Format the entry to match width, alignment, and color request
         If no color is supplied, will just return string
@@ -194,25 +194,16 @@ class Column_Formatter:
         return result
 
 
-def color_state(value) -> str:
-    state_colors = {
-        "FAILED": "red",
-        "TIMEOUT": "red",
-        "OUT_OF_MEMORY": "red",
-        "RUNNING": "cyan",
-        "CANCELLED": "yellow",
-        "COMPLETED": "green",
-        "PENDING": "blue",
-    }
+def color_state(value: str) -> Tuple[str, Optional[str]]:
     return value, state_colors.get(value, None)
 
 
-def render_eff(value: float, target_type: str) -> str:
+def render_eff(value: Union[str, float], target_type: str) -> Tuple[str, Optional[str]]:
     """
     Return a styled string for efficiency values
     """
     color_maps = {"mid": color_mid, "high": color_high}
-    if value == "---":
+    if isinstance(value, str):
         color = None
     else:
         color = color_maps[target_type](value)
@@ -220,7 +211,7 @@ def render_eff(value: float, target_type: str) -> str:
     return value, color
 
 
-def color_mid(value: float) -> str:
+def color_mid(value: float) -> Optional[str]:
     """
     Determine color for efficiency value where "mid" values are the target
     """
@@ -232,7 +223,7 @@ def color_mid(value: float) -> str:
         return None
 
 
-def color_high(value: float) -> str:
+def color_high(value: float) -> Optional[str]:
     """
     Determine color for efficiency value where "high" values are the target
     """

@@ -26,6 +26,10 @@ flake8-bugbear = "^21.9.2"
 flake8-import-order = "^0.18.1"
 safety = "^1.10.3"
 mypy = "^0.910"
+types-click = "^7.1.7"
+pytype = {version = "^2021.10.11", python = "3.7"}
+typeguard = "^2.13.0"
+flake8-annotations = "^2.7.0"
 
 [tool.poetry.scripts]
 reportseff = "reportseff.console:main"

@@ -2,9 +2,9 @@ from click.testing import CliRunner
 import pytest
 
 from reportseff import console
-from reportseff.db_inquirer import Sacct_Inquirer
-from reportseff.job_collection import Job_Collection
-from reportseff.output_renderer import Output_Renderer
+from reportseff.db_inquirer import SacctInquirer
+from reportseff.job_collection import JobCollection
+from reportseff.output_renderer import OutputRenderer
 
 
 @pytest.fixture
@@ -15,7 +15,7 @@ def mock_inquirer(mocker):
             "REQMEM,NNodes,MaxRSS,Timelimit"
         ).split(",")
 
-    mocker.patch.object(Sacct_Inquirer, "get_valid_formats", new=mock_valid)
+    mocker.patch.object(SacctInquirer, "get_valid_formats", new=mock_valid)
 
 
 def test_directory_input(mocker, mock_inquirer):
@@ -36,10 +36,10 @@ def test_directory_input(mocker, mock_inquirer):
     def set_jobs(self, directory):
         self.set_jobs(("24418435",))
 
-    mocker.patch.object(Job_Collection, "set_out_dir", new=set_jobs)
+    mocker.patch.object(JobCollection, "set_out_dir", new=set_jobs)
     result = runner.invoke(
         console.main,
-        "--no-color --format " '"JobID,State,Elapsed,TimeEff,CPUEff,MemEff"',
+        "--no-color",
     )
 
     assert result.exit_code == 0
@@ -73,7 +73,7 @@ def test_directory_input_exception(mocker, mock_inquirer):
     def set_jobs(self, directory):
         raise ValueError("Testing EXCEPTION")
 
-    mocker.patch.object(Job_Collection, "set_out_dir", new=set_jobs)
+    mocker.patch.object(JobCollection, "set_out_dir", new=set_jobs)
     result = runner.invoke(console.main, "--no-color")
 
     assert result.exit_code == 1
@@ -92,8 +92,6 @@ def test_debug_option(mocker, mock_inquirer):
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
     result = runner.invoke(
         console.main,
-        "--format "
-        '"JobID,State,Elapsed,TimeEff,CPUEff,MemEff" '
         "--no-color --debug 23000233",
     )
 
@@ -125,9 +123,12 @@ def test_process_failure(mocker, mock_inquirer):
     )
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
     mocker.patch.object(
-        Job_Collection, "process_entry", side_effect=Exception("TESTING")
+        JobCollection, "process_entry", side_effect=Exception("TESTING")
     )
-    result = runner.invoke(console.main, "--no-color 23000233")
+    result = runner.invoke(
+        console.main,
+        "--no-color 23000233 --format JobID%>,State,Elapsed%>,CPUEff,MemEff",
+    )
 
     assert result.exit_code != 0
     # remove header
@@ -151,7 +152,7 @@ def test_short_output(mocker, mock_inquirer):
     )
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
     mocker.patch("reportseff.console.len", return_value=20)
-    mocker.patch.object(Output_Renderer, "format_jobs", return_value="output")
+    mocker.patch.object(OutputRenderer, "format_jobs", return_value="output")
 
     mock_click = mocker.patch("reportseff.console.click.echo")
     result = runner.invoke(console.main, "--no-color 23000233")
@@ -170,7 +171,7 @@ def test_long_output(mocker, mock_inquirer):
     )
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
     mocker.patch("reportseff.console.len", return_value=21)
-    mocker.patch.object(Output_Renderer, "format_jobs", return_value="output")
+    mocker.patch.object(OutputRenderer, "format_jobs", return_value="output")
     mock_click = mocker.patch("reportseff.console.click.echo_via_pager")
     result = runner.invoke(console.main, "--no-color 23000233")
 
@@ -192,7 +193,10 @@ def test_simple_job(mocker, mock_inquirer):
         "COMPLETED|00:00:00\n"
     )
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
-    result = runner.invoke(console.main, "--no-color 24418435")
+    result = runner.invoke(
+        console.main,
+        "--no-color 24418435 --format JobID%>,State,Elapsed%>,CPUEff,MemEff",
+    )
 
     assert result.exit_code == 0
     # remove header
@@ -218,7 +222,10 @@ def test_simple_user(mocker, mock_inquirer):
         "1|21:14:43|25569410.0|25569410.0|62328K|1|4000Mc|COMPLETED|19:28:36\n"
     )
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
-    result = runner.invoke(console.main, "--no-color --user test")
+    result = runner.invoke(
+        console.main,
+        "--no-color --user test --format JobID%>,State,Elapsed%>,CPUEff,MemEff",
+    )
 
     assert result.exit_code == 0
     # remove header
@@ -242,7 +249,7 @@ def test_format_add(mocker, mock_inquirer):
     assert result.exit_code == 0
     assert (
         mock_jobs.call_args[1]["format_str"]
-        == "JobID%>,State,Elapsed%>,CPUEff,MemEff,test"
+        == "JobID%>,State,Elapsed%>,TimeEff,CPUEff,MemEff,test"
     )
 
 
@@ -264,7 +271,11 @@ def test_since(mocker, mock_inquirer):
         "1|21:14:43|25569410.0|25569410.0|62328K|1|4000Mc|COMPLETED|19:28:36\n"
     )
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
-    result = runner.invoke(console.main, "--no-color --since 200406 24418435 25569410")
+    result = runner.invoke(
+        console.main,
+        "--no-color --since 200406 24418435 25569410 "
+        "--format JobID%>,State,Elapsed%>,CPUEff,MemEff",
+    )
 
     assert result.exit_code == 0
     # remove header
@@ -292,7 +303,9 @@ def test_simple_state(mocker, mock_inquirer):
     )
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
     result = runner.invoke(
-        console.main, "--no-color --state completed " "25569410 24418435"
+        console.main,
+        "--no-color --state completed "
+        "25569410 24418435 --format JobID%>,State,Elapsed%>,CPUEff,MemEff",
     )
 
     assert result.exit_code == 0
@@ -328,7 +341,14 @@ def test_no_state(mocker, mock_inquirer):
     output = result.output.split("\n")
     assert output[0] == "Unknown state ZZ"
     assert output[1] == "No valid states provided"
-    assert output[2].split() == ["JobID", "State", "Elapsed", "CPUEff", "MemEff"]
+    assert output[2].split() == [
+        "JobID",
+        "State",
+        "Elapsed",
+        "TimeEff",
+        "CPUEff",
+        "MemEff",
+    ]
     assert output[3] == ""
 
 
@@ -346,7 +366,10 @@ def test_array_job_raw_id(mocker, mock_inquirer):
         "COMPLETED|00:00:00\n"
     )
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
-    result = runner.invoke(console.main, "--no-color 24221219")
+    result = runner.invoke(
+        console.main,
+        "--no-color 24221219 --format JobID%>,State,Elapsed%>,CPUEff,MemEff",
+    )
 
     assert result.exit_code == 0
     # remove header
@@ -381,7 +404,10 @@ def test_array_job_single(mocker, mock_inquirer):
         "PENDING|00:00:00\n"
     )
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
-    result = runner.invoke(console.main, "--no-color 24220929_421")
+    result = runner.invoke(
+        console.main,
+        "--no-color 24220929_421 --format JobID%>,State,Elapsed%>,CPUEff,MemEff",
+    )
 
     assert result.exit_code == 0
     # remove header
@@ -416,7 +442,10 @@ def test_array_job_base(mocker, mock_inquirer):
         "PENDING|00:00:00\n"
     )
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
-    result = runner.invoke(console.main, "--no-color 24220929")
+    result = runner.invoke(
+        console.main,
+        "--no-color 24220929 --format JobID%>,State,Elapsed%>,CPUEff,MemEff",
+    )
 
     assert result.exit_code == 0
     # remove header
@@ -456,7 +485,14 @@ def test_empty_sacct(mocker, mock_inquirer):
 
     assert result.exit_code == 0
     output = result.output.split("\n")[:-1]
-    assert output[0].split() == ["JobID", "State", "Elapsed", "CPUEff", "MemEff"]
+    assert output[0].split() == [
+        "JobID",
+        "State",
+        "Elapsed",
+        "TimeEff",
+        "CPUEff",
+        "MemEff",
+    ]
     assert len(output) == 1
 
 
@@ -478,7 +514,7 @@ def test_failed_no_mem(mocker, mock_inquirer):
     assert result.exit_code == 0
     # remove header
     output = result.output.split("\n")[1:-1]
-    assert output[0].split() == ["23000381", "FAILED", "00:00:12", "---", "0.0%"]
+    assert output[0].split() == ["23000381", "FAILED", "00:00:12", "---", "---", "0.0%"]
     assert len(output) == 1
 
 
@@ -496,7 +532,14 @@ def test_canceled_by_other(mocker, mock_inquirer):
     assert result.exit_code == 0
     # remove header
     output = result.output.split("\n")[1:-1]
-    assert output[0].split() == ["23000233", "CANCELLED", "00:00:00", "---", "0.0%"]
+    assert output[0].split() == [
+        "23000233",
+        "CANCELLED",
+        "00:00:00",
+        "---",
+        "---",
+        "0.0%",
+    ]
     assert len(output) == 1
 
 
@@ -519,7 +562,7 @@ def test_zero_runtime(mocker, mock_inquirer):
     assert result.exit_code == 0
     # remove header
     output = result.output.split("\n")[1:-1]
-    assert output[0].split() == ["23000210", "FAILED", "00:00:00", "---", "0.0%"]
+    assert output[0].split() == ["23000210", "FAILED", "00:00:00", "---", "---", "0.0%"]
     assert len(output) == 1
 
 

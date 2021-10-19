@@ -1,6 +1,6 @@
 from datetime import timedelta
 import re
-from typing import Dict
+from typing import Any, Dict, Optional, Union
 
 
 multiple_map = {
@@ -38,62 +38,38 @@ MEM_RE = re.compile(
 
 
 class Job:
-    def __init__(self, job: str, jobid: str, filename: str):
+    def __init__(self, job: str, jobid: str, filename: Optional[str]) -> None:
         self.job = job
         self.jobid = jobid
         self.filename = filename
-        self.stepmem = 0
-        self.totalmem = None
-        self.time = "---"
-        self.time_eff = "---"
-        self.cpu = "---"
-        self.mem = "---"
+        self.stepmem = 0.0
+        self.totalmem: Optional[float] = None
+        self.time: Optional[str] = "---"
+        self.time_eff: Union[str, float] = "---"
+        self.cpu: Optional[Union[str, float]] = "---"
+        self.mem: Union[str, float] = "---"
         self.state = None
-        self.other_entries = {}
+        self.other_entries: Dict[str, str] = {}
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         if not isinstance(other, Job):
             return False
 
         return self.__dict__ == other.__dict__
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"Job(job={self.job}, jobid={self.jobid}, " f"filename={self.filename})"
 
-    def update(self, entry: Dict):
+    def update(self, entry: Dict) -> None:
         if "." not in entry["JobID"]:
             self.state = entry["State"].split()[0]
 
         if self.state == "PENDING":
             return
 
-        # master job id
+        # main job id
         if self.jobid == entry["JobID"]:
-            self.other_entries = entry
-            self.time = entry["Elapsed"] if "Elapsed" in entry else None
-            requested = (
-                _parse_slurm_timedelta(entry["Timelimit"])
-                if "Timelimit" in entry
-                else 1
-            )
-            wall = _parse_slurm_timedelta(entry["Elapsed"]) if "Elapsed" in entry else 0
-            self.time_eff = round(wall / requested * 100, 1)
-            if self.state == "RUNNING":
-                return
-            cpus = (
-                _parse_slurm_timedelta(entry["TotalCPU"]) / int(entry["AllocCPUS"])
-                if "TotalCPU" in entry and "AllocCPUS" in entry
-                else 0
-            )
-            if wall == 0:
-                self.cpu = None
-            else:
-                self.cpu = round(cpus / wall * 100, 1)
-            self.totalmem = (
-                parsemem(entry["REQMEM"], int(entry["NNodes"]), int(entry["AllocCPUS"]))
-                if "REQMEM" in entry and "NNodes" in entry and "AllocCPUS" in entry
-                else None
-            )
+            self._update_main_job(entry)
 
         elif self.state != "RUNNING":
             for k, v in entry.items():
@@ -101,23 +77,50 @@ class Job:
                     self.other_entries[k] = v
             self.stepmem += parsemem(entry["MaxRSS"]) if "MaxRSS" in entry else 0
 
-    def name(self):
+    def _update_main_job(self, entry: Dict) -> None:
+        self.other_entries = entry
+        self.time = entry["Elapsed"] if "Elapsed" in entry else None
+        requested = (
+            _parse_slurm_timedelta(entry["Timelimit"]) if "Timelimit" in entry else 1
+        )
+        wall = _parse_slurm_timedelta(entry["Elapsed"]) if "Elapsed" in entry else 0
+
+        if requested != 0:
+            self.time_eff = round(wall / requested * 100, 1)
+
+        if self.state == "RUNNING":
+            return
+
+        cpus = (
+            _parse_slurm_timedelta(entry["TotalCPU"]) / int(entry["AllocCPUS"])
+            if "TotalCPU" in entry and "AllocCPUS" in entry
+            else 0
+        )
+        if wall == 0:
+            self.cpu = None
+        else:
+            self.cpu = round(cpus / wall * 100, 1)
+
+        if "REQMEM" in entry and "NNodes" in entry and "AllocCPUS" in entry:
+            self.totalmem = parsemem(
+                entry["REQMEM"], int(entry["NNodes"]), int(entry["AllocCPUS"])
+            )
+
+    def name(self) -> str:
         if self.filename:
             return self.filename
         else:
             return self.jobid
 
-    def get_entry(self, key):
+    def get_entry(self, key: str) -> Any:
         if key == "JobID":
             return self.name()
         if key == "State":
             return self.state
         if key == "MemEff":
             if self.totalmem:
-                value = round(self.stepmem / self.totalmem * 100, 1)
-            else:
-                value = "---"
-            return value
+                return round(self.stepmem / self.totalmem * 100, 1)
+            return "---"
         if key == "TimeEff":
             return self.time_eff
         if key == "CPUEff":

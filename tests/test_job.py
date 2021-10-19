@@ -86,6 +86,25 @@ def test_update_main_job():
     job.update(
         {
             "JobID": "24371655",
+            "State": "COMPLETED",
+            "AllocCPUS": "1",
+            "REQMEM": "1G",
+            "TotalCPU": "00:09:00",
+            "Elapsed": "00:10:00",
+            "Timelimit": "00:20:00",
+            "MaxRSS": "",
+        }
+    )
+    assert job.state == "COMPLETED"
+    assert job.time == "00:10:00"
+    assert job.time_eff == 50.0
+    assert job.cpu == 90.0
+    assert job.totalmem is None
+
+    job = job_module.Job("24371655", "24371655", None)
+    job.update(
+        {
+            "JobID": "24371655",
             "State": "PENDING",
             "AllocCPUS": "1",
             "REQMEM": "1Gn",

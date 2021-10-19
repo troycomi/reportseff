@@ -1,18 +1,17 @@
 import os
 import re
-from typing import Dict, List
+from typing import Dict, List, Optional, Tuple
 
 from .job import Job
-from .output_renderer import Output_Renderer
+from .output_renderer import OutputRenderer
 
 
-class Job_Collection:
+class JobCollection:
     """
     A group of jobs
     """
 
-    def __init__(self):
-        # TODO probably take in output renderer, and db_inquirer
+    def __init__(self) -> None:
         self.columns = [
             "JobIDRaw",
             "JobID",
@@ -32,50 +31,52 @@ class Job_Collection:
         )
         self.job_regex = re.compile(r"^(?P<jobid>(?P<job>[0-9]+)(_[][\-0-9]+)?)$")
 
-        self.jobs = {}  # type: Dict[str, Job]
-        self.renderer = None  # type: Output_Renderer
+        self.jobs: Dict[str, Job] = {}
+        self.renderer: Optional[OutputRenderer] = None
         self.dir_name = ""
 
-    def get_columns(self) -> str:
+    def get_columns(self) -> List[str]:
         """
         The list of columns requested from inquirer
         """
         return self.columns
 
-    def get_jobs(self) -> str:
+    def get_jobs(self) -> List[str]:
         """
         List of jobs to get from inquirer
         """
-        return sorted(set([job.job for job in self.jobs.values()]))
+        return sorted({job.job for job in self.jobs.values()})
 
-    def set_out_dir(self, directory: str):
+    def set_out_dir(self, directory: str) -> None:
         """
         Set this collection's directory to try parsing out jobs from
         output files
         """
         # set and validate working directory to full path
         if directory == "":
-            wd = os.getcwd()
+            working_directory = os.getcwd()
         else:
-            wd = os.path.realpath(directory)
+            working_directory = os.path.realpath(directory)
 
-        if not os.path.exists(wd):
-            raise ValueError(f"{wd} does not exist!")
+        if not os.path.exists(working_directory):
+            raise ValueError(f"{working_directory} does not exist!")
 
         # get files from directory
-        files = os.listdir(wd)
-        files = list(filter(lambda x: os.path.isfile(os.path.join(wd, x)), files))
+        files = os.listdir(working_directory)
+        files = list(
+            filter(lambda x: os.path.isfile(os.path.join(working_directory, x)), files)
+        )
         if len(files) == 0:
-            raise ValueError(f"{wd} contains no files!")
+            raise ValueError(f"{working_directory} contains no files!")
 
-        for f in files:
-            self.process_seff_file(f)
+        for file in files:
+            self.process_seff_file(file)
 
         if len(self.jobs) == 0:
-            raise ValueError(f"{wd} contains no valid output files!")
-        self.dir_name = wd
+            raise ValueError(f"{working_directory} contains no valid output files!")
+        self.dir_name = working_directory
 
-    def set_jobs(self, jobs: tuple):
+    def set_jobs(self, jobs: tuple) -> None:
         """
         Set the collection jobs to the provided job ids
         """
@@ -97,7 +98,7 @@ class Job_Collection:
         if len(self.jobs) == 0:
             raise ValueError("No valid jobs provided!")
 
-    def process_seff_file(self, filename: str):
+    def process_seff_file(self, filename: str) -> None:
         """
         Try to parse out job information from the supplied filename
         """
@@ -105,7 +106,7 @@ class Job_Collection:
         if match:
             self.add_job(match.group("job"), match.group("jobid"), filename)
 
-    def add_job(self, job: str, jobid: str, filename: str = None):
+    def add_job(self, job: str, jobid: str, filename: Optional[str] = None) -> None:
         """
         Add a job to the collection.
         job: the 'base' job number
@@ -114,7 +115,7 @@ class Job_Collection:
         """
         self.jobs[jobid] = Job(job, jobid, filename)
 
-    def process_entry(self, entry: Dict, user_provided: bool = False):
+    def process_entry(self, entry: Dict, user_provided: bool = False) -> None:
         """
         Update the jobs collection with information from the provided line
         """
@@ -134,26 +135,25 @@ class Job_Collection:
 
         self.jobs[job_id].update(entry)
 
-    def get_sorted_jobs(self, change_sort: bool) -> List:
+    def get_sorted_jobs(self, change_sort: bool) -> List[Job]:
         if change_sort:
 
-            def get_time(f):
+            def get_time(job: Job) -> float:
                 # handle None and '', use numeric representation of name
-                idnum = float(re.sub("[^0-9.]", "", f.jobid.replace("_", ".")))
-                f = f.filename
-                if f and self.dir_name:
-                    f = os.path.join(self.dir_name, f)
-                if f and os.path.exists(f):
-                    return os.path.getmtime(f)
-                else:
-                    return idnum
+                idnum = float(re.sub("[^0-9.]", "", job.jobid.replace("_", ".")))
+                file = job.filename
+                if file and self.dir_name:
+                    file = os.path.join(self.dir_name, file)
+                if file and os.path.exists(file):
+                    return os.path.getmtime(file)
+                return idnum
 
             return sorted(self.jobs.values(), key=get_time, reverse=True)
         else:
 
-            def get_file_name(f):
-                f = f.name()
-                f = os.path.join(self.dir_name, f)
-                return (not os.path.exists(f), len(f), f)
+            def get_file_name(job: Job) -> Tuple[bool, int, str]:
+                file = job.name()
+                file = os.path.join(self.dir_name, file)
+                return (not os.path.exists(file), len(file), file)
 
             return sorted(self.jobs.values(), key=get_file_name)

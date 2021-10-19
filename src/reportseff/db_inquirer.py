@@ -1,13 +1,13 @@
 from abc import ABC, abstractmethod
 import datetime
 import subprocess
-from typing import Dict, List
+from typing import Callable, Dict, List, Optional, Set
 
 import click
 
 
-class Base_Inquirer(ABC):
-    def __init__(self):
+class BaseInquirer(ABC):
+    def __init__(self) -> None:
         """
         Initialize a new inquirer
         """
@@ -21,7 +21,10 @@ class Base_Inquirer(ABC):
 
     @abstractmethod
     def get_db_output(
-        self, columns: List[str], jobs: List[str]
+        self,
+        columns: List[str],
+        jobs: List[str],
+        debug_cmd: Optional[Callable],
     ) -> List[Dict[str, str]]:
         """
         Query the databse with the supplied columns
@@ -31,32 +34,38 @@ class Base_Inquirer(ABC):
         """
 
     @abstractmethod
-    def set_user(self, user: str):
+    def set_user(self, user: str) -> None:
         """
         Set the collection of jobs based on the provided user
         """
 
     @abstractmethod
-    def set_state(self, state: str):
+    def set_state(self, state: str) -> None:
         """
         Set the state to filter output jobs with
         """
 
+    @abstractmethod
+    def set_since(self, since: str) -> None:
+        """
+        Set the filter for time of jobs to consider
+        """
 
-class Sacct_Inquirer(Base_Inquirer):
+
+class SacctInquirer(BaseInquirer):
     """
-    Implementation of Base_Inquirer for the sacct slurm function
+    Implementation of BaseInquirer for the sacct slurm function
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.default_args = "sacct -P -n".split()
-        self.user = None
-        self.state = None
-        self.since = None
+        self.user: Optional[str] = None
+        self.state: Optional[Set] = None
+        self.since: Optional[str] = None
 
-    def get_valid_formats(self):
+    def get_valid_formats(self) -> List[str]:
         command_args = "sacct --helpformat".split()
-        result = subprocess.run(
+        cmd_result = subprocess.run(
             args=command_args,
             stdout=subprocess.PIPE,
             encoding="utf8",
@@ -64,16 +73,21 @@ class Sacct_Inquirer(Base_Inquirer):
             universal_newlines=True,
             shell=False,
         )
-        if result.returncode != 0:
+        if cmd_result.returncode != 0:
             raise Exception("Error retrieving sacct options with --helpformat")
-        result = result.stdout.split()
+        result = cmd_result.stdout.split()
         return result
 
-    def get_db_output(self, columns, jobs, debug=False):
+    def get_db_output(
+        self,
+        columns: List[str],
+        jobs: List[str],
+        debug_cmd: Optional[Callable] = None,
+    ) -> List[Dict[str, str]]:
         """
         Assumes the columns have already been validated.
-        if debug is set, returns the subprocess result as
-        the second element of tuple
+        if debug_cmd is set, passes the subprocess result as
+        to the functions
         """
         args = self.default_args + ["--format=" + ",".join(columns)]
 
@@ -87,7 +101,7 @@ class Sacct_Inquirer(Base_Inquirer):
             if self.since:
                 args += [f"--starttime={self.since}"]
 
-        result = subprocess.run(
+        cmd_result = subprocess.run(
             args=args,
             stdout=subprocess.PIPE,
             encoding="utf8",
@@ -96,27 +110,27 @@ class Sacct_Inquirer(Base_Inquirer):
             shell=False,
         )
 
-        if result.returncode != 0:
+        if cmd_result.returncode != 0:
             raise Exception("Error running sacct!")
 
-        lines = result.stdout.split("\n")
+        lines = cmd_result.stdout.split("\n")
         result = [dict(zip(columns, line.split("|"))) for line in lines if line]
 
         if self.state:
             result = [r for r in result if r["State"] in self.state]
 
-        if debug:
-            return result, "\n".join(lines)
+        if debug_cmd is not None:
+            debug_cmd("\n".join(lines))
 
         return result
 
-    def set_user(self, user: str):
+    def set_user(self, user: str) -> None:
         """
         Set the collection of jobs based on the provided user
         """
         self.user = user
 
-    def set_state(self, state: str):
+    def set_state(self, state: str) -> None:
         """
         state is a comma separated string with codes and states
         Need to convert codes to states and set to upper
@@ -142,25 +156,25 @@ class Sacct_Inquirer(Base_Inquirer):
             "TO": "TIMEOUT",
         }
         possible_states = codes_to_states.values()
-        self.state = []
+        states = []
         for st in state.split(","):
             st = st.upper()
             if st in codes_to_states:
                 st = codes_to_states[st]
-            if st not in self.state:
-                self.state.append(st)
+            if st not in states:
+                states.append(st)
 
-        for st in self.state:
+        for st in states:
             if st not in possible_states:
                 click.secho(f"Unknown state {st}", fg="yellow", err=True)
 
-        self.state = {st for st in self.state if st in possible_states}
+        self.state = {st for st in states if st in possible_states}
         # add a single value if it's empty here
         if not self.state:
             click.secho("No valid states provided", fg="yellow", err=True)
             self.state.add(None)
 
-    def set_since(self, since: str):
+    def set_since(self, since: str) -> None:
         """
         since is either a comma separated string with codes ints or
         an sacct time.  The list will have '='

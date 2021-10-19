@@ -6,7 +6,7 @@ from reportseff.job import Job
 
 @pytest.fixture
 def jobs():
-    return job_collection.Job_Collection()
+    return job_collection.JobCollection()
 
 
 def test_get_columns(jobs):
@@ -82,7 +82,7 @@ def test_set_jobs(jobs, mocker):
     assert jobs.jobs == {"1": Job("1", "1", None)}
 
     mocker.patch("reportseff.job_collection.os.path.isdir", return_value=True)
-    mock_set_out = mocker.patch.object(job_collection.Job_Collection, "set_out_dir")
+    mock_set_out = mocker.patch.object(job_collection.JobCollection, "set_out_dir")
 
     jobs.set_jobs(())
     mock_set_out.assert_called_once_with("")

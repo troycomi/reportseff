@@ -7,7 +7,7 @@ from reportseff import db_inquirer
 
 @pytest.fixture
 def sacct():
-    return db_inquirer.Sacct_Inquirer()
+    return db_inquirer.SacctInquirer()
 
 
 def test_sacct_init(sacct):
@@ -199,8 +199,9 @@ def test_sacct_get_db_output(sacct, mocker):
         shell=False,
     )
 
-    _, debug = sacct.get_db_output("c1 c2".split(), "j1 j2 j3".split(), True)
-    assert debug == ("c1j1|c2j1\n" "c1j2|c2j2\n" "c1j3|c2j3\n")
+    debug = []
+    sacct.get_db_output("c1 c2".split(), "j1 j2 j3".split(), lambda d: debug.append(d))
+    assert debug[0] == ("c1j1|c2j1\n" "c1j2|c2j2\n" "c1j3|c2j3\n")
 
 
 def test_sacct_get_db_output_no_newline(sacct, mocker):
@@ -213,7 +214,8 @@ def test_sacct_get_db_output_no_newline(sacct, mocker):
     mock_sub = mocker.patch(
         "reportseff.db_inquirer.subprocess.run", return_value=mock_sacct
     )
-    result, debug = sacct.get_db_output(
+    debug = []
+    result = sacct.get_db_output(
         [
             "AllocCPUS",
             "Elapsed",
@@ -227,7 +229,7 @@ def test_sacct_get_db_output_no_newline(sacct, mocker):
             "TotalCPU",
         ],
         ["23000233"],
-        True,
+        lambda d: debug.append(d),
     )
     assert result == [
         {
@@ -245,7 +247,7 @@ def test_sacct_get_db_output_no_newline(sacct, mocker):
     ]
     mock_sub.assert_called_once()
 
-    assert debug == (
+    assert debug[0] == (
         "16|00:00:00|23000233|23000233||1|4000Mc|CANCELLED by 129319|"
         "6-00:00:00|00:00:00"
     )
@@ -291,8 +293,9 @@ def test_sacct_get_db_output_user(sacct, mocker):
         shell=False,
     )
 
-    _, debug = sacct.get_db_output("c1 c2".split(), "j1 j2 j3".split(), True)
-    assert debug == ("c1j1|c2j1\n" "c1j2|c2j2\n" "c1j3|c2j3\n")
+    debug = []
+    sacct.get_db_output("c1 c2".split(), "j1 j2 j3".split(), lambda d: debug.append(d))
+    assert debug[0] == ("c1j1|c2j1\n" "c1j2|c2j2\n" "c1j3|c2j3\n")
 
 
 def test_sacct_get_db_output_since(sacct, mocker):
@@ -318,8 +321,9 @@ def test_sacct_get_db_output_since(sacct, mocker):
         shell=False,
     )
 
-    _, debug = sacct.get_db_output("c1 c2".split(), "j1 j2 j3".split(), True)
-    assert debug == ("c1j1|c2j1\n" "c1j2|c2j2\n" "c1j3|c2j3\n")
+    debug = []
+    sacct.get_db_output("c1 c2".split(), "j1 j2 j3".split(), lambda d: debug.append(d))
+    assert debug[0] == ("c1j1|c2j1\n" "c1j2|c2j2\n" "c1j3|c2j3\n")
 
 
 def test_sacct_set_state(sacct, capsys):
@@ -477,7 +481,10 @@ def test_sacct_get_db_output_user_state(sacct, mocker):
     )
 
     # debug is not affected by state
-    _, debug = sacct.get_db_output("c1 c2 State".split(), "j1 j2 j3".split(), True)
-    assert debug == (
+    debug = []
+    sacct.get_db_output(
+        "c1 c2 State".split(), "j1 j2 j3".split(), lambda d: debug.append(d)
+    )
+    assert debug[0] == (
         "c1j1|c2j1|RUNNING\n" "c1j2|c2j2|RUNNING\n" "c1j3|c2j3|COMPLETED\n"
     )

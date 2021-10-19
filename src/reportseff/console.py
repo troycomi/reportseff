@@ -1,12 +1,13 @@
 from shutil import which
 import sys
+from typing import Dict, List, Tuple
 
 import click
 
 from . import __version__
-from .db_inquirer import Sacct_Inquirer
-from .job_collection import Job_Collection
-from .output_renderer import Output_Renderer
+from .db_inquirer import BaseInquirer, SacctInquirer
+from .job_collection import JobCollection
+from .output_renderer import OutputRenderer
 
 
 @click.command()
@@ -24,7 +25,7 @@ from .output_renderer import Output_Renderer
 @click.option(
     "--format",
     "format_str",
-    default="JobID%>,State,Elapsed%>,CPUEff,MemEff",
+    default="JobID%>,State,Elapsed%>,TimeEff,CPUEff,MemEff",
     help="Comma-separated list of columns to include.  Options "
     "are any valide sacct input along with CPUEff, MemEff, and "
     "TimeEff.  A width and alignment may optionally be provided "
@@ -57,10 +58,19 @@ from .output_renderer import Output_Renderer
 )
 @click.version_option(version=__version__)
 @click.argument("jobs", nargs=-1)
-def main(modified_sort, color, format_str, debug, user, jobs, state, since):
+def main(
+    modified_sort: bool,
+    color: bool,
+    format_str: str,
+    debug: bool,
+    user: str,
+    state: str,
+    since: str,
+    jobs: tuple,
+) -> None:
 
     if format_str.startswith("+"):
-        format_str = "JobID%>,State,Elapsed%>,CPUEff,MemEff," + format_str[1:]
+        format_str = "JobID%>,State,Elapsed%>,TimeEff,CPUEff,MemEff," + format_str[1:]
 
     output, entries = get_jobs(
         jobs=jobs,
@@ -79,9 +89,15 @@ def main(modified_sort, color, format_str, debug, user, jobs, state, since):
 
 
 def get_jobs(
-    jobs, format_str="", user="", debug=False, modified_sort=False, state="", since=""
-):
-    job_collection = Job_Collection()
+    jobs: tuple,
+    format_str: str = "",
+    user: str = "",
+    debug: bool = False,
+    modified_sort: bool = False,
+    state: str = "",
+    since: str = "",
+) -> Tuple[str, int]:
+    job_collection = JobCollection()
 
     inquirer, renderer = get_implementation(format_str)
 
@@ -99,37 +115,50 @@ def get_jobs(
         click.secho(str(error), fg="red", err=True)
         sys.exit(1)
 
-    try:
-        result = inquirer.get_db_output(
-            renderer.query_columns, job_collection.get_jobs(), debug
-        )
-    except Exception as error:
-        click.secho(str(error), fg="red", err=True)
-        sys.exit(1)
-
-    if debug:
-        click.echo(result[1], err=True)
-        result = result[0]
-
-    for entry in result:
+    db_output = get_db_output(inquirer, renderer, job_collection, debug)
+    for entry in db_output:
         try:
             job_collection.process_entry(entry, user_provided=(user != ""))
         except Exception as error:
             click.echo(f"Error processing entry: {entry}", err=True)
             raise error
 
-    jobs = job_collection.get_sorted_jobs(modified_sort)
-    jobs = [j for j in jobs if j.state]
+    found_jobs = job_collection.get_sorted_jobs(modified_sort)
+    found_jobs = [j for j in found_jobs if j.state]
 
-    return renderer.format_jobs(jobs), len(jobs)
+    return renderer.format_jobs(found_jobs), len(jobs)
 
 
-def get_implementation(format_str):
+def get_implementation(format_str: str) -> Tuple[BaseInquirer, OutputRenderer]:
     if which("sacct") is not None:
-        inquirer = Sacct_Inquirer()
-        renderer = Output_Renderer(inquirer.get_valid_formats(), format_str)
+        inquirer = SacctInquirer()
+        renderer = OutputRenderer(inquirer.get_valid_formats(), format_str)
     else:
         click.secho("No supported scheduling systems found!", fg="red", err=True)
         sys.exit(1)
 
     return inquirer, renderer
+
+
+def get_db_output(
+    inquirer: BaseInquirer,
+    renderer: OutputRenderer,
+    job_collection: JobCollection,
+    debug: bool,
+) -> List[Dict[str, str]]:
+    def print_debug(info: str) -> None:
+        click.echo(info, err=True)
+
+    debug_cmd = None
+    if debug:
+        debug_cmd = print_debug
+
+    try:
+        result = inquirer.get_db_output(
+            renderer.query_columns, job_collection.get_jobs(), debug_cmd
+        )
+    except Exception as error:
+        click.secho(str(error), fg="red", err=True)
+        sys.exit(1)
+
+    return result
