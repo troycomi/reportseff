@@ -1,3 +1,4 @@
+"""Test job collection functions."""
 import pytest
 
 from reportseff import job_collection
@@ -6,10 +7,12 @@ from reportseff.job import Job
 
 @pytest.fixture
 def jobs():
+    """New default job collection."""
     return job_collection.JobCollection()
 
 
 def test_get_columns(jobs):
+    """Default get columns are reasonable."""
     assert jobs.get_columns() == (
         "JobIDRaw,JobID,State,AllocCPUS,TotalCPU,Elapsed,Timelimit,"
         "REQMEM,MaxRSS,NNodes,NTasks"
@@ -17,6 +20,7 @@ def test_get_columns(jobs):
 
 
 def test_get_jobs(jobs):
+    """Can hold a set of jobs and access them."""
     assert jobs.get_jobs() == []
 
     jobs.jobs = {
@@ -28,6 +32,7 @@ def test_get_jobs(jobs):
 
 
 def test_set_out_dir_dir_handling(jobs, mocker):
+    """Can handle setting path from cwd or provided value."""
     # dir handling
     mock_cwd = mocker.patch(
         "reportseff.job_collection.os.getcwd", return_value="/dir/path/"
@@ -39,9 +44,9 @@ def test_set_out_dir_dir_handling(jobs, mocker):
         "reportseff.job_collection.os.path.exists", return_value=False
     )
 
-    with pytest.raises(ValueError) as e:
+    with pytest.raises(ValueError) as exception:
         jobs.set_out_dir("")
-    assert "/dir/path/ does not exist!" in str(e)
+    assert "/dir/path/ does not exist!" in str(exception)
     mock_cwd.assert_called_once()
     mock_real.assert_not_called()
     mock_exists.assert_called_once_with("/dir/path/")
@@ -50,19 +55,23 @@ def test_set_out_dir_dir_handling(jobs, mocker):
     mock_real.reset_mock()
     mock_exists.reset_mock()
 
-    with pytest.raises(ValueError) as e:
+    with pytest.raises(ValueError) as exception:
         jobs.set_out_dir("pwd")
-    assert "/dir/path2/ does not exist!" in str(e)
+    assert "/dir/path2/ does not exist!" in str(exception)
     mock_cwd.assert_not_called()
     mock_real.assert_called_once_with("pwd")
     mock_exists.assert_called_once_with("/dir/path2/")
 
 
-def test_set_jobs(jobs, mocker):
-    with pytest.raises(ValueError) as e:
+def test_set_jobs_none_valid(jobs, mocker):
+    """Set jobs raises exceptions when no valid name is provided."""
+    with pytest.raises(ValueError) as exception:
         jobs.set_jobs(("asdf", "qwer", "zxcv", "asdf111"))
-    assert "No valid jobs provided!" in str(e)
+    assert "No valid jobs provided!" in str(exception)
 
+
+def test_set_jobs_filter(jobs, mocker):
+    """Set jobs take only valid names from list."""
     jobs.set_jobs(("asdf", "1", "1_1", "asdf_1_2", "1_asdf_2"))
     assert jobs.jobs == {
         "1": Job("1", "1", None),
@@ -71,12 +80,14 @@ def test_set_jobs(jobs, mocker):
         "2": Job("2", "2", "1_asdf_2"),
     }
 
-    # test if single arg is a dir check if
+
+def test_set_jobs_dir(jobs, mocker):
+    """Can provide a directory to set jobs."""
     jobs.jobs = {}
     mocker.patch("reportseff.job_collection.os.path.isdir", return_value=False)
-    with pytest.raises(ValueError) as e:
+    with pytest.raises(ValueError) as exception:
         jobs.set_jobs(("dir",))
-    assert "No valid jobs provided!" in str(e)
+    assert "No valid jobs provided!" in str(exception)
 
     jobs.set_jobs(("1",))
     assert jobs.jobs == {"1": Job("1", "1", None)}
@@ -93,6 +104,7 @@ def test_set_jobs(jobs, mocker):
 
 
 def test_process_line(jobs, mocker):
+    """Can process entries from sacct and send to update."""
     jobs.jobs = {"24371655": Job("24371655", "24371655", "test_24371655")}
     mock_update = mocker.patch.object(Job, "update")
     jobs.process_entry(
@@ -173,6 +185,7 @@ def test_process_line(jobs, mocker):
 
 
 def test_set_out_dir(jobs, mocker):
+    """Can set directory with slurm out files."""
     mocker.patch(
         "reportseff.job_collection.os.path.realpath",
         side_effect=lambda x: f"/dir/path2/{x}",
@@ -181,14 +194,14 @@ def test_set_out_dir(jobs, mocker):
     mocker.patch("reportseff.job_collection.os.path.isfile", return_value=True)
 
     mocker.patch("reportseff.job_collection.os.listdir", return_value=[])
-    with pytest.raises(ValueError) as e:
+    with pytest.raises(ValueError) as exception:
         jobs.set_out_dir("test")
-    assert "/dir/path2/test contains no files!" in str(e)
+    assert "/dir/path2/test contains no files!" in str(exception)
 
     mocker.patch("reportseff.job_collection.os.listdir", return_value=["asdf"])
-    with pytest.raises(ValueError) as e:
+    with pytest.raises(ValueError) as exception:
         jobs.set_out_dir("test")
-    assert "/dir/path2/test contains no valid output files!" in str(e)
+    assert "/dir/path2/test contains no valid output files!" in str(exception)
 
     mocker.patch(
         "reportseff.job_collection.os.listdir",
@@ -210,6 +223,7 @@ def test_set_out_dir(jobs, mocker):
 
 
 def test_process_seff_file(jobs):
+    """Can parse job names from slurm output file names."""
     # no matches
     jobs.process_seff_file("")
     assert jobs.jobs == {}
@@ -268,6 +282,7 @@ def test_process_seff_file(jobs):
 
 
 def test_add_job(jobs):
+    """Can add jobs to collection."""
     jobs.add_job("j1", "jid1")
     assert jobs.jobs == {"jid1": Job("j1", "jid1", None)}
 
@@ -284,6 +299,7 @@ def test_add_job(jobs):
 
 
 def test_get_sorted_jobs(jobs, mocker):
+    """Can get jobs in sorted order by name or time."""
     jobs.add_job("j3", "jid3")
     jobs.add_job("j1", "jid1")
     jobs.add_job("j2", "jid2")
@@ -309,9 +325,7 @@ def test_get_sorted_jobs(jobs, mocker):
         side_effect=lambda x: x is not None and x != "dir/nothing",
     )
     # replace mtime with the length of the filename
-    mocker.patch(
-        "reportseff.job_collection.os.path.getmtime", side_effect=lambda x: len(x)
-    )
+    mocker.patch("reportseff.job_collection.os.path.getmtime", side_effect=len)
 
     # still uses other sorting, no dir_name set
     assert jobs.get_sorted_jobs(True) == [
@@ -333,6 +347,7 @@ def test_get_sorted_jobs(jobs, mocker):
 
 
 def test_process_entry_array_user(jobs):
+    """Providing a user shorts the checks for existing jobs."""
     jobs.process_entry(
         {
             "AllocCPUS": "1",

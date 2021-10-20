@@ -1,3 +1,4 @@
+"""Test operation of output renderer object."""
 import re
 
 import click
@@ -15,13 +16,13 @@ min_required = (
 
 @pytest.fixture
 def renderer():
-    # default renderer with valid names for only default string
+    """Default renderer with valid names for only default string."""
     return output_renderer.OutputRenderer(min_required)
 
 
 @pytest.fixture
 def some_jobs():
-    """a few test jobs for generating an output table"""
+    """A few test jobs for generating an output table."""
     jobs = []
     job = job_module.Job("24371655", "24371655", None)
     job.update(
@@ -123,6 +124,7 @@ def some_jobs():
 
 
 def test_renderer_init(renderer):
+    """Initialized renderer produces correct columns."""
     assert renderer.formatters == [
         output_renderer.ColumnFormatter("JobID%>"),
         output_renderer.ColumnFormatter("State"),
@@ -131,9 +133,7 @@ def test_renderer_init(renderer):
         output_renderer.ColumnFormatter("MemEff"),
     ]
     assert sorted(renderer.query_columns) == sorted(
-        (
-            "JobID JobIDRaw State Elapsed TotalCPU AllocCPUS REQMEM " "NNodes MaxRSS"
-        ).split()
+        ("JobID JobIDRaw State Elapsed TotalCPU AllocCPUS REQMEM NNodes MaxRSS").split()
     )
 
     renderer = output_renderer.OutputRenderer(min_required, "")
@@ -148,6 +148,7 @@ def test_renderer_init(renderer):
 
 
 def test_renderer_build_formatters(renderer):
+    """Can parse formatters from format string."""
     assert renderer.build_formatters("Name,Name%>,Name%10,Name%<10") == [
         output_renderer.ColumnFormatter("Name"),
         output_renderer.ColumnFormatter("Name%>"),
@@ -165,12 +166,14 @@ def test_renderer_build_formatters(renderer):
 
 
 def test_renderer_validate_formatters(renderer):
+    """Can validate formatters as members of a provided collection, normalizing name."""
     renderer.formatters = renderer.build_formatters("JobID,JOBid,jObId")
     assert renderer.validate_formatters(["JobID"]) == "JobID JobID JobID".split()
     assert renderer.formatters == "JobID JobID JobID".split()
 
 
 def test_renderer_correct_columns(renderer):
+    """Corrected coulmns include required entries and derived values."""
     renderer.query_columns = ["JobID"]
     renderer.correct_columns()
     assert sorted(renderer.query_columns) == sorted("JobID JobIDRaw State".split())
@@ -191,6 +194,7 @@ def test_renderer_correct_columns(renderer):
 
 
 def test_renderer_format_jobs(some_jobs):
+    """Can render output as table with colored entries."""
     renderer = output_renderer.OutputRenderer(
         min_required, "JobID,State,Elapsed,CPUEff,REQMEM,TimeEff"
     )
@@ -227,12 +231,14 @@ def test_renderer_format_jobs(some_jobs):
 
 
 def test_format_jobs_empty(some_jobs):
+    """Empty format string produces empty outputs."""
     renderer = output_renderer.OutputRenderer(min_required, "")
     result = renderer.format_jobs(some_jobs)
     assert result == ""
 
 
 def test_format_jobs_single_str(some_jobs):
+    """A single format string left aligns and supresses title for piping."""
     renderer = output_renderer.OutputRenderer(min_required, "JobID%>")
     assert len(renderer.formatters) == 1
     assert renderer.formatters[0].alignment == ">"
@@ -252,6 +258,7 @@ def test_format_jobs_single_str(some_jobs):
 
 
 def test_formatter_init():
+    """Column formatter parses format tokens correctly."""
     # empty
     result = output_renderer.ColumnFormatter("")
     assert result.title == ""
@@ -295,6 +302,7 @@ def test_formatter_init():
 
 
 def test_formatter_eq():
+    """Can test for equality and with a string."""
     fmt = output_renderer.ColumnFormatter("Name")
     fmt2 = output_renderer.ColumnFormatter("Name")
     fmt3 = output_renderer.ColumnFormatter("Name>")
@@ -314,6 +322,7 @@ def test_formatter_eq():
 
 
 def test_formatter_validate_title():
+    """Can validate titles against a column formatter."""
     fmt = output_renderer.ColumnFormatter("NaMe")
 
     with pytest.raises(ValueError) as e:
@@ -326,6 +335,7 @@ def test_formatter_validate_title():
 
 
 def test_formatter_compute_width():
+    """Can determine width of table entries."""
     fmt = output_renderer.ColumnFormatter("JobID")
     # matches title
     jobs = [
@@ -350,6 +360,7 @@ def test_formatter_compute_width():
 
 
 def test_formatter_format_entry():
+    """Can format entry with alignment, width, and color."""
     fmt = output_renderer.ColumnFormatter("Name")
     # no width causes just the name to be printed
     assert fmt.format_title() == click.style("Name", bold=True)

@@ -42,7 +42,13 @@ class BaseInquirer(ABC):
     @abstractmethod
     def set_state(self, state: str) -> None:
         """
-        Set the state to filter output jobs with
+        Set the state to include output jobs with
+        """
+
+    @abstractmethod
+    def set_not_state(self, state: str) -> None:
+        """
+        Set the state to exclude output jobs with
         """
 
     @abstractmethod
@@ -61,6 +67,7 @@ class SacctInquirer(BaseInquirer):
         self.default_args = "sacct -P -n".split()
         self.user: Optional[str] = None
         self.state: Optional[Set] = None
+        self.not_state: Optional[Set] = None
         self.since: Optional[str] = None
 
     def get_valid_formats(self) -> List[str]:
@@ -117,7 +124,12 @@ class SacctInquirer(BaseInquirer):
         result = [dict(zip(columns, line.split("|"))) for line in lines if line]
 
         if self.state:
-            result = [r for r in result if r["State"] in self.state]
+            # split to get first word in entries like "CANCELLED BY X"
+            result = [r for r in result if r["State"].split()[0] in self.state]
+
+        if self.not_state:
+            # split to get first word in entries like "CANCELLED BY X"
+            result = [r for r in result if r["State"].split()[0] not in self.not_state]
 
         if debug_cmd is not None:
             debug_cmd("\n".join(lines))
@@ -132,47 +144,29 @@ class SacctInquirer(BaseInquirer):
 
     def set_state(self, state: str) -> None:
         """
-        state is a comma separated string with codes and states
-        Need to convert codes to states and set to upper
-        Add states to list for searching later
+        Add states to list for including later
         """
         if not state:
             return
-        codes_to_states = {
-            "BF": "BOOT_FAIL",
-            "CA": "CANCELLED",
-            "CD": "COMPLETED",
-            "DL": "DEADLINE",
-            "F": "FAILED",
-            "NF": "NODE_FAIL",
-            "OOM": "OUT_OF_MEMORY",
-            "PD": "PENDING",
-            "PR": "PREEMPTED",
-            "R": "RUNNING",
-            "RQ": "REQUEUED",
-            "RS": "RESIZING",
-            "RV": "REVOKED",
-            "S": "SUSPENDED",
-            "TO": "TIMEOUT",
-        }
-        possible_states = codes_to_states.values()
-        states = []
-        for st in state.split(","):
-            st = st.upper()
-            if st in codes_to_states:
-                st = codes_to_states[st]
-            if st not in states:
-                states.append(st)
 
-        for st in states:
-            if st not in possible_states:
-                click.secho(f"Unknown state {st}", fg="yellow", err=True)
-
-        self.state = {st for st in states if st in possible_states}
+        self.state = get_states_as_set(state)
         # add a single value if it's empty here
         if not self.state:
-            click.secho("No valid states provided", fg="yellow", err=True)
+            click.secho("No valid states provided to include", fg="yellow", err=True)
             self.state.add(None)
+
+    def set_not_state(self, state: str) -> None:
+        """
+        Add states to list for excluding later
+        """
+        if not state:
+            return
+
+        self.not_state = get_states_as_set(state)
+        # add a single value if it's empty here
+        if not self.not_state:
+            click.secho("No valid states provided to exclude", fg="yellow", err=True)
+            self.not_state = None
 
     def set_since(self, since: str) -> None:
         """
@@ -222,3 +216,42 @@ class SacctInquirer(BaseInquirer):
 
         else:
             self.since = since
+
+
+def get_states_as_set(state: str) -> Set:
+    """
+    state is a comma separated string with codes and states
+        Need to convert codes to states and set to upper
+        Add states to list for searching later
+    """
+    codes_to_states = {
+        "BF": "BOOT_FAIL",
+        "CA": "CANCELLED",
+        "CD": "COMPLETED",
+        "DL": "DEADLINE",
+        "F": "FAILED",
+        "NF": "NODE_FAIL",
+        "OOM": "OUT_OF_MEMORY",
+        "PD": "PENDING",
+        "PR": "PREEMPTED",
+        "R": "RUNNING",
+        "RQ": "REQUEUED",
+        "RS": "RESIZING",
+        "RV": "REVOKED",
+        "S": "SUSPENDED",
+        "TO": "TIMEOUT",
+    }
+    possible_states = codes_to_states.values()
+    states = []
+    for st in state.split(","):
+        st = st.upper()
+        if st in codes_to_states:
+            st = codes_to_states[st]
+        if st not in states:
+            states.append(st)
+
+    for st in states:
+        if st not in possible_states:
+            click.secho(f"Unknown state {st}", fg="yellow", err=True)
+
+    return {st for st in states if st in possible_states}

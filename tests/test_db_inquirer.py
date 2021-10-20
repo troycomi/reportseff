@@ -180,7 +180,7 @@ def test_sacct_get_db_output(sacct, mocker):
 
     mock_sacct = mocker.MagicMock()
     mock_sacct.returncode = 0
-    mock_sacct.stdout = "c1j1|c2j1\n" "c1j2|c2j2\n" "c1j3|c2j3\n"
+    mock_sacct.stdout = "c1j1|c2j1\nc1j2|c2j2\nc1j3|c2j3\n"
     mock_sub = mocker.patch(
         "reportseff.db_inquirer.subprocess.run", return_value=mock_sacct
     )
@@ -201,7 +201,7 @@ def test_sacct_get_db_output(sacct, mocker):
 
     debug = []
     sacct.get_db_output("c1 c2".split(), "j1 j2 j3".split(), lambda d: debug.append(d))
-    assert debug[0] == ("c1j1|c2j1\n" "c1j2|c2j2\n" "c1j3|c2j3\n")
+    assert debug[0] == ("c1j1|c2j1\nc1j2|c2j2\nc1j3|c2j3\n")
 
 
 def test_sacct_get_db_output_no_newline(sacct, mocker):
@@ -273,7 +273,7 @@ def test_sacct_get_db_output_user(sacct, mocker):
 
     mock_sacct = mocker.MagicMock()
     mock_sacct.returncode = 0
-    mock_sacct.stdout = "c1j1|c2j1\n" "c1j2|c2j2\n" "c1j3|c2j3\n"
+    mock_sacct.stdout = "c1j1|c2j1\nc1j2|c2j2\nc1j3|c2j3\n"
     mock_sub = mocker.patch(
         "reportseff.db_inquirer.subprocess.run", return_value=mock_sacct
     )
@@ -285,7 +285,7 @@ def test_sacct_get_db_output_user(sacct, mocker):
         {"c1": "c1j3", "c2": "c2j3"},
     ]
     mock_sub.assert_called_once_with(
-        args=("sacct -P -n --format=c1,c2 --user=user " "--starttime=011318").split(),
+        args=("sacct -P -n --format=c1,c2 --user=user --starttime=011318").split(),
         stdout=mocker.ANY,
         encoding=mocker.ANY,
         check=mocker.ANY,
@@ -295,13 +295,13 @@ def test_sacct_get_db_output_user(sacct, mocker):
 
     debug = []
     sacct.get_db_output("c1 c2".split(), "j1 j2 j3".split(), lambda d: debug.append(d))
-    assert debug[0] == ("c1j1|c2j1\n" "c1j2|c2j2\n" "c1j3|c2j3\n")
+    assert debug[0] == ("c1j1|c2j1\nc1j2|c2j2\nc1j3|c2j3\n")
 
 
 def test_sacct_get_db_output_since(sacct, mocker):
     mock_sacct = mocker.MagicMock()
     mock_sacct.returncode = 0
-    mock_sacct.stdout = "c1j1|c2j1\n" "c1j2|c2j2\n" "c1j3|c2j3\n"
+    mock_sacct.stdout = "c1j1|c2j1\nc1j2|c2j2\nc1j3|c2j3\n"
     mock_sub = mocker.patch(
         "reportseff.db_inquirer.subprocess.run", return_value=mock_sacct
     )
@@ -323,7 +323,7 @@ def test_sacct_get_db_output_since(sacct, mocker):
 
     debug = []
     sacct.get_db_output("c1 c2".split(), "j1 j2 j3".split(), lambda d: debug.append(d))
-    assert debug[0] == ("c1j1|c2j1\n" "c1j2|c2j2\n" "c1j3|c2j3\n")
+    assert debug[0] == ("c1j1|c2j1\nc1j2|c2j2\nc1j3|c2j3\n")
 
 
 def test_sacct_set_state(sacct, capsys):
@@ -359,14 +359,14 @@ def test_sacct_set_state(sacct, capsys):
     sacct.set_state("unknown,z")
     assert sacct.state == {None}
     assert capsys.readouterr().err == (
-        "Unknown state UNKNOWN\n" "Unknown state Z\n" "No valid states provided\n"
+        "Unknown state UNKNOWN\nUnknown state Z\nNo valid states provided to include\n"
     )
 
     # remove duplicate unknowns
     sacct.set_state("unknown,z,z,z")
     assert sacct.state == {None}
     assert capsys.readouterr().err == (
-        "Unknown state UNKNOWN\n" "Unknown state Z\n" "No valid states provided\n"
+        "Unknown state UNKNOWN\nUnknown state Z\nNo valid states provided to include\n"
     )
 
 
@@ -456,9 +456,7 @@ def test_sacct_get_db_output_user_state(sacct, mocker):
 
     mock_sacct = mocker.MagicMock()
     mock_sacct.returncode = 0
-    mock_sacct.stdout = (
-        "c1j1|c2j1|RUNNING\n" "c1j2|c2j2|RUNNING\n" "c1j3|c2j3|COMPLETED\n"
-    )
+    mock_sacct.stdout = "c1j1|c2j1|RUNNING\nc1j2|c2j2|RUNNING\nc1j3|c2j3|COMPLETED\n"
     mock_sub = mocker.patch(
         "reportseff.db_inquirer.subprocess.run", return_value=mock_sacct
     )
@@ -471,7 +469,7 @@ def test_sacct_get_db_output_user_state(sacct, mocker):
     ]
     mock_sub.assert_called_once_with(
         args=(
-            "sacct -P -n --format=c1,c2,State --user=user " "--starttime=011318"
+            "sacct -P -n --format=c1,c2,State --user=user --starttime=011318"
         ).split(),
         stdout=mocker.ANY,
         encoding=mocker.ANY,
@@ -485,6 +483,4 @@ def test_sacct_get_db_output_user_state(sacct, mocker):
     sacct.get_db_output(
         "c1 c2 State".split(), "j1 j2 j3".split(), lambda d: debug.append(d)
     )
-    assert debug[0] == (
-        "c1j1|c2j1|RUNNING\n" "c1j2|c2j2|RUNNING\n" "c1j3|c2j3|COMPLETED\n"
-    )
+    assert debug[0] == ("c1j1|c2j1|RUNNING\nc1j2|c2j2|RUNNING\nc1j3|c2j3|COMPLETED\n")

@@ -1,3 +1,4 @@
+"""Test cli usage."""
 from click.testing import CliRunner
 import pytest
 
@@ -9,6 +10,8 @@ from reportseff.output_renderer import OutputRenderer
 
 @pytest.fixture
 def mock_inquirer(mocker):
+    """Override valid formats to prevent calls to shell."""
+
     def mock_valid(self):
         return (
             "JobID,State,Elapsed,JobIDRaw,State,TotalCPU,AllocCPUS,"
@@ -19,6 +22,7 @@ def mock_inquirer(mocker):
 
 
 def test_directory_input(mocker, mock_inquirer):
+    """Able to get jobs from directory calls."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
     sub_result = mocker.MagicMock()
@@ -56,6 +60,7 @@ def test_directory_input(mocker, mock_inquirer):
 
 
 def test_directory_input_exception(mocker, mock_inquirer):
+    """Catch exceptions in setting jobs from directory."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
     sub_result = mocker.MagicMock()
@@ -81,6 +86,7 @@ def test_directory_input_exception(mocker, mock_inquirer):
 
 
 def test_debug_option(mocker, mock_inquirer):
+    """Setting debug prints subprocess result."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
     sub_result = mocker.MagicMock()
@@ -113,6 +119,7 @@ def test_debug_option(mocker, mock_inquirer):
 
 
 def test_process_failure(mocker, mock_inquirer):
+    """Catch exceptions in process_entry by printing the offending entry."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
     sub_result = mocker.MagicMock()
@@ -142,6 +149,7 @@ def test_process_failure(mocker, mock_inquirer):
 
 
 def test_short_output(mocker, mock_inquirer):
+    """Outputs with 20 or fewer entries are directly printed."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
     sub_result = mocker.MagicMock()
@@ -162,12 +170,13 @@ def test_short_output(mocker, mock_inquirer):
 
 
 def test_long_output(mocker, mock_inquirer):
+    """Outputs with more than 20 entries are echoed via pager."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
     sub_result = mocker.MagicMock()
     sub_result.returncode = 0
     sub_result.stdout = (
-        "16|00:00:00|23000233|23000233||1|4000Mc|" "CANCELLED by 129319|00:00:00\n"
+        "16|00:00:00|23000233|23000233||1|4000Mc|CANCELLED by 129319|00:00:00\n"
     )
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
     mocker.patch("reportseff.console.len", return_value=21)
@@ -180,6 +189,7 @@ def test_long_output(mocker, mock_inquirer):
 
 
 def test_simple_job(mocker, mock_inquirer):
+    """Can get efficiency from a single job."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
     sub_result = mocker.MagicMock()
@@ -205,6 +215,7 @@ def test_simple_job(mocker, mock_inquirer):
 
 
 def test_simple_user(mocker, mock_inquirer):
+    """Can limit outputs by user."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
     sub_result = mocker.MagicMock()
@@ -235,6 +246,7 @@ def test_simple_user(mocker, mock_inquirer):
 
 
 def test_format_add(mocker, mock_inquirer):
+    """Can add to format specifier."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
     mock_jobs = mocker.patch("reportseff.console.get_jobs", return_value=("Testing", 1))
@@ -254,6 +266,7 @@ def test_format_add(mocker, mock_inquirer):
 
 
 def test_since(mocker, mock_inquirer):
+    """Can limit outputs by time since argument."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
     sub_result = mocker.MagicMock()
@@ -285,6 +298,7 @@ def test_since(mocker, mock_inquirer):
 
 
 def test_simple_state(mocker, mock_inquirer):
+    """Can limit outputs by filtering state."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
     sub_result = mocker.MagicMock()
@@ -316,7 +330,8 @@ def test_simple_state(mocker, mock_inquirer):
     assert output[1].split() == []
 
 
-def test_no_state(mocker, mock_inquirer):
+def test_simple_not_state(mocker, mock_inquirer):
+    """Can limit outputs by removing state."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
     sub_result = mocker.MagicMock()
@@ -334,13 +349,83 @@ def test_no_state(mocker, mock_inquirer):
         "1|21:14:43|25569410.0|25569410.0|62328K|1|4000Mc|RUNNING|19:28:36\n"
     )
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
-    result = runner.invoke(console.main, "--no-color --state ZZ " "25569410 24418435")
+    result = runner.invoke(
+        console.main,
+        "--no-color --not-state Running "
+        "25569410 24418435 --format JobID%>,State,Elapsed%>,CPUEff,MemEff",
+    )
+
+    assert result.exit_code == 0
+    # remove header
+    output = result.output.split("\n")[1:]
+    assert output[0].split() == ["24418435", "COMPLETED", "01:27:42", "99.8%", "47.7%"]
+    # other is suppressed by state filter
+    assert output[1].split() == []
+
+
+def test_invalid_not_state(mocker, mock_inquirer):
+    """When not state isn't found, return all jobs"""
+    mocker.patch("reportseff.console.which", return_value=True)
+    runner = CliRunner()
+    sub_result = mocker.MagicMock()
+    sub_result.returncode = 0
+    sub_result.stdout = (
+        "1|01:27:42|24418435|24418435||1|1Gn|"
+        "COMPLETED|01:27:29\n"
+        "1|01:27:42|24418435.batch|24418435.batch|499092K|1|1Gn|"
+        "COMPLETED|01:27:29\n"
+        "1|01:27:42|24418435.extern|24418435.extern|1376K|1|1Gn|"
+        "COMPLETED|00:00:00\n"
+        "1|21:14:48|25569410|25569410||1|4000Mc|RUNNING|19:28:36\n"
+        "1|21:14:49|25569410.extern|25569410.extern|1548K|1|4000Mc|"
+        "RUNNING|00:00:00\n"
+        "1|21:14:43|25569410.0|25569410.0|62328K|1|4000Mc|RUNNING|19:28:36\n"
+    )
+    mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
+    result = runner.invoke(
+        console.main,
+        "--no-color --not-state unning "
+        "25569410 24418435 --format JobID%>,State,Elapsed%>,CPUEff,MemEff",
+    )
+
+    assert result.exit_code == 0
+    # remove header
+    output = result.output.split("\n")
+    print(output)
+    assert output[0] == "Unknown state UNNING"
+    assert output[1] == "No valid states provided to exclude"
+    # output 2 is header
+    assert output[3].split() == ["24418435", "COMPLETED", "01:27:42", "99.8%", "47.7%"]
+    assert output[4].split() == ["25569410", "RUNNING", "21:14:48", "---", "---"]
+    assert output[5].split() == []
+
+
+def test_no_state(mocker, mock_inquirer):
+    """Unknown states produce empty output."""
+    mocker.patch("reportseff.console.which", return_value=True)
+    runner = CliRunner()
+    sub_result = mocker.MagicMock()
+    sub_result.returncode = 0
+    sub_result.stdout = (
+        "1|01:27:42|24418435|24418435||1|1Gn|"
+        "COMPLETED|01:27:29\n"
+        "1|01:27:42|24418435.batch|24418435.batch|499092K|1|1Gn|"
+        "COMPLETED|01:27:29\n"
+        "1|01:27:42|24418435.extern|24418435.extern|1376K|1|1Gn|"
+        "COMPLETED|00:00:00\n"
+        "1|21:14:48|25569410|25569410||1|4000Mc|RUNNING|19:28:36\n"
+        "1|21:14:49|25569410.extern|25569410.extern|1548K|1|4000Mc|"
+        "RUNNING|00:00:00\n"
+        "1|21:14:43|25569410.0|25569410.0|62328K|1|4000Mc|RUNNING|19:28:36\n"
+    )
+    mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
+    result = runner.invoke(console.main, "--no-color --state ZZ 25569410 24418435")
 
     assert result.exit_code == 0
     # remove header
     output = result.output.split("\n")
     assert output[0] == "Unknown state ZZ"
-    assert output[1] == "No valid states provided"
+    assert output[1] == "No valid states provided to include"
     assert output[2].split() == [
         "JobID",
         "State",
@@ -353,6 +438,7 @@ def test_no_state(mocker, mock_inquirer):
 
 
 def test_array_job_raw_id(mocker, mock_inquirer):
+    """Can find job array by base id."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
     sub_result = mocker.MagicMock()
@@ -385,6 +471,7 @@ def test_array_job_raw_id(mocker, mock_inquirer):
 
 
 def test_array_job_single(mocker, mock_inquirer):
+    """Can get single array job element."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
     sub_result = mocker.MagicMock()
@@ -423,6 +510,7 @@ def test_array_job_single(mocker, mock_inquirer):
 
 
 def test_array_job_base(mocker, mock_inquirer):
+    """Base array job id gets all elements."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
     sub_result = mocker.MagicMock()
@@ -462,6 +550,7 @@ def test_array_job_base(mocker, mock_inquirer):
 
 
 def test_sacct_error(mocker, mock_inquirer):
+    """Subprocess errors in sacct are reported."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
     sub_result = mocker.MagicMock()
@@ -475,6 +564,7 @@ def test_sacct_error(mocker, mock_inquirer):
 
 
 def test_empty_sacct(mocker, mock_inquirer):
+    """Emtpy sacct results produce just the header line."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
     sub_result = mocker.MagicMock()
@@ -497,6 +587,7 @@ def test_empty_sacct(mocker, mock_inquirer):
 
 
 def test_failed_no_mem(mocker, mock_inquirer):
+    """Empty memory entries produce valid output."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
     sub_result = mocker.MagicMock()
@@ -519,15 +610,16 @@ def test_failed_no_mem(mocker, mock_inquirer):
 
 
 def test_canceled_by_other(mocker, mock_inquirer):
+    """Canceled states are correctly handled."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
     sub_result = mocker.MagicMock()
     sub_result.returncode = 0
     sub_result.stdout = (
-        "16|00:00:00|23000233|23000233||1|4000Mc|" "CANCELLED by 129319|00:00:00\n"
+        "16|00:00:00|23000233|23000233||1|4000Mc|CANCELLED by 129319|00:00:00\n"
     )
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
-    result = runner.invoke(console.main, "--no-color 23000233")
+    result = runner.invoke(console.main, "--no-color 23000233 --state CA")
 
     assert result.exit_code == 0
     # remove header
@@ -544,6 +636,7 @@ def test_canceled_by_other(mocker, mock_inquirer):
 
 
 def test_zero_runtime(mocker, mock_inquirer):
+    """Entries with zero runtime produce reasonable timeeff."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
     sub_result = mocker.MagicMock()
@@ -567,6 +660,7 @@ def test_zero_runtime(mocker, mock_inquirer):
 
 
 def test_no_systems(mocker, mock_inquirer):
+    """When no scheduling system is found, raise error."""
     mocker.patch("reportseff.console.which", return_value=None)
     runner = CliRunner()
     result = runner.invoke(console.main, "--no-color 23000210")

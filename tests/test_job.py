@@ -1,3 +1,4 @@
+"""Test job object."""
 import pytest
 
 from reportseff import job as job_module
@@ -5,10 +6,12 @@ from reportseff import job as job_module
 
 @pytest.fixture
 def job():
+    """Default job ."""
     return job_module.Job("job", "jobid", "filename")
 
 
 def test_eq():
+    """Jobs must have all matching values to equal."""
     job1 = job_module.Job("j1", "j1", "filename")
     job2 = job_module.Job("j1", "j1", "filename")
     assert job1 == job2
@@ -20,6 +23,7 @@ def test_eq():
 
 
 def test_repr():
+    """Representation builds constructor."""
     job1 = job_module.Job("j1", "jid1", "filename")
     assert repr(job1) == "Job(job=j1, jobid=jid1, filename=filename)"
 
@@ -28,6 +32,7 @@ def test_repr():
 
 
 def test_job_init(job):
+    """Blank job has expected defaults."""
     assert job.job == "job"
     assert job.jobid == "jobid"
     assert job.filename == "filename"
@@ -40,6 +45,7 @@ def test_job_init(job):
 
 
 def test_update_main_job():
+    """Updating jobs changes expected properties."""
     job = job_module.Job("24371655", "24371655", None)
     job.update(
         {
@@ -180,6 +186,7 @@ def test_update_main_job():
 
 
 def test_update_part_job():
+    """Can update job with batch to add to stepmem."""
     job = job_module.Job("24371655", "24371655", None)
     job.update(
         {
@@ -202,6 +209,7 @@ def test_update_part_job():
 
 
 def test_parse_bug():
+    """Can handle job id mismatches."""
     job = job_module.Job("24371655", "24371655", None)
     job.update(
         {
@@ -221,12 +229,14 @@ def test_parse_bug():
 
 
 def test_name(job):
+    """Name is either filename or the jobid."""
     assert job.name() == "filename"
     job = job_module.Job("job", "jobid", None)
     assert job.name() == "jobid"
 
 
 def test_get_entry(job):
+    """State is read properly and updated by main job entry."""
     job.state = "TEST"
     assert job.get_entry("JobID") == "filename"
     assert job.get_entry("State") == "TEST"
@@ -260,17 +270,19 @@ def test_get_entry(job):
 
 
 def test_parse_slurm_timedelta():
+    """Can parse all types of time formats."""
     timestamps = ["01-03:04:02", "03:04:02", "04:02.123"]
     expected_seconds = [97442, 11042, 242]
-    for i, t in enumerate(timestamps):
-        assert job_module._parse_slurm_timedelta(t) == expected_seconds[i]
+    for timestamp, seconds in zip(timestamps, expected_seconds):
+        assert job_module._parse_slurm_timedelta(timestamp) == seconds
 
-    with pytest.raises(ValueError) as e:
+    with pytest.raises(ValueError) as exception:
         job_module._parse_slurm_timedelta("asdf")
-    assert 'Failed to parse time "asdf"' in str(e)
+    assert 'Failed to parse time "asdf"' in str(exception)
 
 
 def test_parsemem_nodes():
+    """Can parse memory entries with nodes provided."""
     for mem in (1, 2, 4):
         for exp, multiple in enumerate("K M G T E".split()):
             for alloc in (1, 2, 4):
@@ -281,6 +293,7 @@ def test_parsemem_nodes():
 
 
 def test_parsemem_cpus():
+    """Can parse memory entries with cpus provided."""
     for mem in (1, 2, 4):
         for exp, multiple in enumerate("K M G T E".split()):
             for alloc in (1, 2, 4):
@@ -291,6 +304,7 @@ def test_parsemem_cpus():
 
 
 def test_parsememstep():
+    """Can parse memory for steps and handle odd formats."""
     for exp, multiple in enumerate("K M G T E".split()):
         for mem in (2, 4, 6):
             assert job_module.parsemem(f"{mem}{multiple}") == mem * 1024 ** exp

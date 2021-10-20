@@ -44,10 +44,12 @@ from .output_renderer import OutputRenderer
     help="Ignore jobs, return all jobs in last week from user",
 )
 @click.option(
-    "-s", "--state", default="", help="Only include jobs with the specified state"
+    "-s", "--state", default="", help="Only include jobs with the specified states"
 )
 @click.option(
-    "-S",
+    "-S", "--not-state", default="", help="Include jobs without the specified states"
+)
+@click.option(
     "--since",
     default="",
     help="Only include jobs before this time.  Can be valid sacct "
@@ -65,6 +67,7 @@ def main(
     debug: bool,
     user: str,
     state: str,
+    not_state: str,
     since: str,
     jobs: tuple,
 ) -> None:
@@ -78,6 +81,7 @@ def main(
         user=user,
         modified_sort=modified_sort,
         state=state,
+        not_state=not_state,
         since=since,
         debug=debug,
     )
@@ -95,6 +99,7 @@ def get_jobs(
     debug: bool = False,
     modified_sort: bool = False,
     state: str = "",
+    not_state: str = "",
     since: str = "",
 ) -> Tuple[str, int]:
     job_collection = JobCollection()
@@ -102,6 +107,7 @@ def get_jobs(
     inquirer, renderer = get_implementation(format_str)
 
     inquirer.set_state(state)
+    inquirer.set_not_state(not_state)
 
     inquirer.set_since(since)
 

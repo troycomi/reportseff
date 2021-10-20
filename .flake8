@@ -5,6 +5,7 @@ ignore = E203,W503,E501,ANN101
 max-line-length = 80
 application-import-names= reportseff,tests
 import-order-style = google
+docstring-convention = google
 per-file-ignores =
     tests/*:S101,ANN
     noxfile.py:ANN
