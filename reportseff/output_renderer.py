@@ -153,7 +153,7 @@ class Column_Formatter():
                 self.title = title
                 return title
 
-        raise ValueError(f"'{self.title}' is not a valid title")
+        raise ValueError(f"'{self.title}' is not a valid title. Run sacct --helpformat for a list of allowed values.")
 
     def compute_width(self, jobs: List):
         '''
