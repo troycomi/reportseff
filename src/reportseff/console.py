@@ -1,6 +1,6 @@
 """CLI for reportseff."""
-from shutil import which
 import sys
+from shutil import which
 from typing import Dict, List, Tuple
 
 import click
@@ -27,9 +27,9 @@ from .output_renderer import OutputRenderer
     "--format",
     "format_str",
     default="JobID%>,State,Elapsed%>,TimeEff,CPUEff,MemEff",
-    help="Comma-separated list of columns to include.  Options "
-    "are any valide sacct input along with CPUEff, MemEff, and "
-    "TimeEff.  A width and alignment may optionally be provided "
+    help="Comma-separated list of columns to include. Options "
+    "are any valid sacct input along with CPUEff, MemEff, and "
+    "TimeEff. A width and alignment may optionally be provided "
     'after "%", e.g. JobID%>15 aligns job id right with max '
     "width of 15 characters. Generally NAME[[%:][ALIGNMENT][WIDTH[e$]?]]. "
     "When an `e` is present after a width argument, "
@@ -57,9 +57,9 @@ from .output_renderer import OutputRenderer
 @click.option(
     "--since",
     default="",
-    help="Only include jobs before this time.  Can be valid sacct "
+    help="Only include jobs before this time. Can be valid sacct "
     "or as a comma separated list of time deltas, e.g. d=2,h=1 "
-    "means 2 days, 1 hour before current time.  Weeks, days, "
+    "means 2 days, 1 hour before current time. Weeks, days, "
     "hours, and minutes can use case-insensitive abbreviations. "
     "Minutes is the minimum resolution, while weeks is the coarsest.",
 )
