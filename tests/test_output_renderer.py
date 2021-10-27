@@ -402,3 +402,6 @@ def test_formatter_format_entry():
     assert fmt.format_entry("A Long Entry", "green") == click.style(
         "A Long E", fg="green"
     )
+
+    fmt.end = "e"
+    assert fmt.format_entry("A Long Entry") == "ng Entry"

@@ -123,7 +123,9 @@ class ColumnFormatter:
         """
         match = re.fullmatch(FORMAT_RE, token)
         if not match or (
-            "%" in token and not match.group("alignment") and not match.group("width")
+            ("%" in token or ":" in token)
+            and not match.group("alignment")
+            and not match.group("width")
         ):
             err = f"Unable to parse format token '{token}'"
             if "%" in token:
@@ -265,7 +267,10 @@ class ColumnFormatter:
         if self.width is None:
             result = entry
         else:
-            entry = entry[: self.width]
+            if self.end:
+                entry = entry[-self.width :]
+            else:
+                entry = entry[: self.width]
             result = (f"{{:{self.alignment}{self.width}}}").format(entry)
 
         if color:
