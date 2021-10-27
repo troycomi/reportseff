@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "reportseff"
-version = "0.3.0"
+version = "1.0.0"
 description= "Tablular seff output"
 authors = ["Troy Comi <troycomi@gmail.com>"]
 license = "MIT"
@@ -33,6 +33,7 @@ flake8-annotations = "^2.7.0"
 flake8-docstrings = "^1.6.0"
 darglint = "^1.8.1"
 Sphinx = "^4.2.0"
+codecov = "^2.1.12"
 
 [tool.poetry.scripts]
 reportseff = "reportseff.console:main"

@@ -1,5 +1,6 @@
-[![Build Status](https://travis-ci.com/troycomi/reportseff.svg?branch=master)](https://travis-ci.com/troycomi/reportseff)
-[![codecov](https://codecov.io/gh/troycomi/reportseff/branch/master/graph/badge.svg)](https://codecov.io/gh/troycomi/reportseff)
+[![Tests](https://github.com/troycomi/reportseff/workflows/Tests/badge.svg)](https://github.com/troycomi/reportseff/actions?workflow=Tests)
+[![codecov](https://codecov.io/gh/troycomi/reportseff/branch/main/graph/badge.svg)](https://codecov.io/gh/troycomi/reportseff)
+[![PyPI](https://img.shields.io/pypi/v/reportseff.svg)](https://pypi.org/project/reportseff/)
 
 # reportseff
 
