@@ -111,7 +111,7 @@ pipe-friendly manner:
 ```txt
 old_runs   ❯❯❯ reportseff --since d=4 --state Timeout
 
-                  JobID   State      Elapsed  CPUEff   MemEff
+                 JobID   State      Elapsed  CPUEff   MemEff
 call_variants_31550458  TIMEOUT    20:05:17  99.5%     0.0%
 call_variants_31550474  TIMEOUT    20:05:17  99.6%     0.0%
 call_variants_31550500  TIMEOUT    20:05:08  99.7%     0.0%
