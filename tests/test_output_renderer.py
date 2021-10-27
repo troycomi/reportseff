@@ -259,12 +259,6 @@ def test_format_jobs_single_str(some_jobs):
 
 def test_formatter_init():
     """Column formatter parses format tokens correctly."""
-    # empty
-    result = output_renderer.ColumnFormatter("")
-    assert result.title == ""
-    assert result.alignment == "^"
-    assert result.width is None
-
     # simple name
     result = output_renderer.ColumnFormatter("test")
     assert result.title == "test"
@@ -288,17 +282,49 @@ def test_formatter_init():
     assert result.title == "test"
     assert result.alignment == "<"
     assert result.width == 10
+    assert result.end is None
 
     # with invalid width
     with pytest.raises(ValueError) as exception:
         result = output_renderer.ColumnFormatter("test%1<0")
     assert "Unable to parse format token 'test%1<0'" in str(exception)
 
-    # with ignore other % things
-    result = output_renderer.ColumnFormatter("test%<10%>5")
+    # empty
+    with pytest.raises(ValueError) as exception:
+        result = output_renderer.ColumnFormatter("")
+    assert "Unable to parse format token ''" in str(exception)
+
+    # if unable to parse with %, recommend using ""
+    with pytest.raises(ValueError) as exception:
+        result = output_renderer.ColumnFormatter("test%a")
+    assert (
+        "Unable to parse format token 'test%a', " "did you forget to wrap in quotes?"
+    ) in str(exception)
+
+    # if unable to parse with %, recommend using "" even when matching
+    with pytest.raises(ValueError) as exception:
+        result = output_renderer.ColumnFormatter("test%")
+    assert (
+        "Unable to parse format token 'test%', " "did you forget to wrap in quotes?"
+    ) in str(exception)
+
+    # end without width is an error
+    with pytest.raises(ValueError) as exception:
+        result = output_renderer.ColumnFormatter("test%e")
+
+    # can specify end with width
+    result = output_renderer.ColumnFormatter("test%20e")
     assert result.title == "test"
-    assert result.alignment == "<"
-    assert result.width == 10
+    assert result.alignment == "^"
+    assert result.width == 20
+    assert result.end is not None
+
+    # can use alternate tokens : and $
+    result = output_renderer.ColumnFormatter("test:20$")
+    assert result.title == "test"
+    assert result.alignment == "^"
+    assert result.width == 20
+    assert result.end is not None
 
 
 def test_formatter_eq():

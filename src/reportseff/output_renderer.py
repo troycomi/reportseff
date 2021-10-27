@@ -1,9 +1,20 @@
 """Module for rendering tabulated values."""
+import re
 from typing import Any, Callable, List, Optional, Tuple, Union
 
 import click
 
 from .job import Job, state_colors
+
+
+#: Regex for format tokens, NAME[%[ALIGNMENT][WIDTH[e?]]]
+FORMAT_RE = re.compile(
+    r"(?P<title>[^%:]+)"  # must have title
+    r"([%:]"  # may have other formatting
+    r"(?P<alignment>[<^>])?"  # like alignment
+    r"((?P<width>\d+)(?P<end>[e$])?)?"  # if width is present, may have an e
+    r")?"
+)
 
 
 class OutputRenderer:
@@ -105,25 +116,31 @@ class ColumnFormatter:
         """Build column entry.
 
         Args:
-            token: format string of the form NAME[%[ALIGNMENT][WIDTH]]
+            token: format string of the form NAME[%[ALIGNMENT][WIDTH[e?]]]
 
         Raises:
             ValueError: if unable to parse the format token
         """
-        tokens = token.split("%")
-        self.title = tokens[0]
-        self.alignment = "^"
-        self.width = None  # must calculate later
-        if len(tokens) > 1:
-            format_str = tokens[1]
-            if format_str[0] in "<^>":
-                self.alignment = format_str[0]
-                format_str = format_str[1:]
-            if format_str:
-                try:
-                    self.width = int(format_str)
-                except ValueError as err:
-                    raise ValueError(f"Unable to parse format token '{token}'") from err
+        match = re.fullmatch(FORMAT_RE, token)
+        if not match or (
+            "%" in token and not match.group("alignment") and not match.group("width")
+        ):
+            err = f"Unable to parse format token '{token}'"
+            if "%" in token:
+                err += ", did you forget to wrap in quotes?"
+            raise ValueError(err)
+
+        self.title = match.group("title")
+
+        self.alignment = match.group("alignment")
+        if not self.alignment:
+            self.alignment = "^"
+
+        self.width = None
+        if match.group("width"):
+            self.width = int(match.group("width"))  # none will be calcualted later
+
+        self.end = match.group("end")
 
         self.color_function: Callable[[str], Tuple[str, Any]] = lambda x: (x, None)
         fold_title = self.title.casefold()

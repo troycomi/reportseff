@@ -31,7 +31,9 @@ from .output_renderer import OutputRenderer
     "are any valide sacct input along with CPUEff, MemEff, and "
     "TimeEff.  A width and alignment may optionally be provided "
     'after "%", e.g. JobID%>15 aligns job id right with max '
-    "width of 15 characters. Generally NAME[%[ALIGNMENT][WIDTH]].  "
+    "width of 15 characters. Generally NAME[[%:][ALIGNMENT][WIDTH[e$]?]]. "
+    "When an `e` is present after a width argument, "
+    "the output will be truncated to the right."
     "Prefix with a + to add to the defaults. "
     "A single format token will suppress the header line. "
     "Wrap in quotes to pass a string literal, "
