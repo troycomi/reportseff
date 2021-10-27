@@ -101,7 +101,7 @@ class SacctInquirer(BaseInquirer):
             stdout=subprocess.PIPE,
             encoding="utf8",
             check=True,
-            universal_newlines=True,
+            text=True,
             shell=False,
         )
         if cmd_result.returncode != 0:
@@ -147,7 +147,7 @@ class SacctInquirer(BaseInquirer):
             stdout=subprocess.PIPE,
             encoding="utf8",
             check=True,
-            universal_newlines=True,
+            text=True,
             shell=False,
         )
 

@@ -5,15 +5,19 @@ repos:
     -   id: check-yaml
     -   id: end-of-file-fixer
     -   id: trailing-whitespace
--   repo: local
+
+-   repo: https://github.com/psf/black
+    rev: 21.9b0
     hooks:
     -   id: black
-        name: black
-        entry: poetry run black
-        language: system
-        types: [python]
+
+-   repo: https://github.com/PyCQA/flake8
+    rev: 3.9.2
+    hooks:
     -   id: flake8
-        name: flake8
-        entry: poetry run flake8
-        language: system
-        types: [python]
+
+-   repo: https://github.com/asottile/pyupgrade
+    rev: v2.29.0
+    hooks:
+    -   id: pyupgrade
+        args: [--py37-plus]
