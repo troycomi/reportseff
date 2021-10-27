@@ -1,3 +1,4 @@
+"""Abstract and concrete implementations of scheduler databases."""
 from abc import ABC, abstractmethod
 import datetime
 import subprocess
@@ -7,16 +8,17 @@ import click
 
 
 class BaseInquirer(ABC):
+    """Abstract interface for inquiring different schedulers."""
+
     def __init__(self) -> None:
-        """
-        Initialize a new inquirer
-        """
+        """Initialize a new inquirer."""
 
     @abstractmethod
     def get_valid_formats(self) -> List[str]:
-        """
-        Get the valid formatting options supported by the inquirer.
-        Return as list of strings
+        """Get the valid formatting options supported by the inquirer.
+
+        Returns:
+            List of valid format options
         """
 
     @abstractmethod
@@ -26,44 +28,58 @@ class BaseInquirer(ABC):
         jobs: List[str],
         debug_cmd: Optional[Callable],
     ) -> List[Dict[str, str]]:
-        """
-        Query the databse with the supplied columns
-        Format output to be a list of rows, where each row is a dictionary
-        with the columns as keys and entries as values
-        Output order is not garunteed to match the jobs list
+        """Query the databse with the supplied columns.
+
+        Args:
+            columns: validated format names as strings
+            jobs: list of job names
+            debug_cmd: If specified, the raw output will passed to this function
+
+        Returns:
+            List of rows, where each row is a dictionary
+            with the columns as keys and entries as values
+            Output order is not garunteed to match the jobs list
         """
 
     @abstractmethod
     def set_user(self, user: str) -> None:
-        """
-        Set the collection of jobs based on the provided user
+        """Set the collection of jobs based on the provided user.
+
+        Args:
+            user: user name
         """
 
     @abstractmethod
     def set_state(self, state: str) -> None:
-        """
-        Set the state to include output jobs with
+        """Set the state to include output jobs.
+
+        Args:
+            state: comma separated list of state names or codes
         """
 
     @abstractmethod
     def set_not_state(self, state: str) -> None:
-        """
-        Set the state to exclude output jobs with
+        """Set the state to exclude from output jobs.
+
+        Args:
+            state: comma separated list of state names or codes
         """
 
     @abstractmethod
     def set_since(self, since: str) -> None:
-        """
-        Set the filter for time of jobs to consider
+        """Set the filter for time of jobs to consider.
+
+        Args:
+            since: the string for filtering.  If specified as time=amount
+                will subract that amount from the current time
         """
 
 
 class SacctInquirer(BaseInquirer):
-    """
-    Implementation of BaseInquirer for the sacct slurm function
-    """
+    """Implementation of BaseInquirer for the sacct slurm function."""
 
     def __init__(self) -> None:
+        """Initialize a new inquirer."""
         self.default_args = "sacct -P -n".split()
         self.user: Optional[str] = None
         self.state: Optional[Set] = None
@@ -71,6 +87,14 @@ class SacctInquirer(BaseInquirer):
         self.since: Optional[str] = None
 
     def get_valid_formats(self) -> List[str]:
+        """Get the valid formatting options supported by the inquirer.
+
+        Returns:
+            List of valid format options
+
+        Raises:
+            RuntimeError: if sacct raises an error
+        """
         command_args = "sacct --helpformat".split()
         cmd_result = subprocess.run(
             args=command_args,
@@ -81,7 +105,7 @@ class SacctInquirer(BaseInquirer):
             shell=False,
         )
         if cmd_result.returncode != 0:
-            raise Exception("Error retrieving sacct options with --helpformat")
+            raise RuntimeError("Error retrieving sacct options with --helpformat")
         result = cmd_result.stdout.split()
         return result
 
@@ -91,10 +115,20 @@ class SacctInquirer(BaseInquirer):
         jobs: List[str],
         debug_cmd: Optional[Callable] = None,
     ) -> List[Dict[str, str]]:
-        """
-        Assumes the columns have already been validated.
-        if debug_cmd is set, passes the subprocess result as
-        to the functions
+        """Query the databse with the supplied columns.
+
+        Args:
+            columns: validated format names as strings
+            jobs: list of job names
+            debug_cmd: If specified, the raw output will passed to this function
+
+        Returns:
+            List of rows, where each row is a dictionary
+            with the columns as keys and entries as values
+            Output order is not garunteed to match the jobs list
+
+        Raises:
+            RuntimeError: if sacct doesn't return properly
         """
         args = self.default_args + ["--format=" + ",".join(columns)]
 
@@ -118,7 +152,7 @@ class SacctInquirer(BaseInquirer):
         )
 
         if cmd_result.returncode != 0:
-            raise Exception("Error running sacct!")
+            raise RuntimeError("Error running sacct!")
 
         lines = cmd_result.stdout.split("\n")
         result = [dict(zip(columns, line.split("|"))) for line in lines if line]
@@ -137,14 +171,18 @@ class SacctInquirer(BaseInquirer):
         return result
 
     def set_user(self, user: str) -> None:
-        """
-        Set the collection of jobs based on the provided user
+        """Set the collection of jobs based on the provided user.
+
+        Args:
+            user: user name
         """
         self.user = user
 
     def set_state(self, state: str) -> None:
-        """
-        Add states to list for including later
+        """Set the state to include output jobs.
+
+        Args:
+            state: comma separated list of state names or codes
         """
         if not state:
             return
@@ -156,8 +194,10 @@ class SacctInquirer(BaseInquirer):
             self.state.add(None)
 
     def set_not_state(self, state: str) -> None:
-        """
-        Add states to list for excluding later
+        """Set the state to exclude from output jobs.
+
+        Args:
+            state: comma separated list of state names or codes
         """
         if not state:
             return
@@ -169,10 +209,11 @@ class SacctInquirer(BaseInquirer):
             self.not_state = None
 
     def set_since(self, since: str) -> None:
-        """
-        since is either a comma separated string with codes ints or
-        an sacct time.  The list will have '='
-        Need to convert codes to datetimes
+        """Set the filter for time of jobs to consider.
+
+        Args:
+            since: the string for filtering.  If specified as time=amount
+                will subract that amount from the current time
         """
         if not since:
             return
@@ -218,11 +259,14 @@ class SacctInquirer(BaseInquirer):
             self.since = since
 
 
-def get_states_as_set(state: str) -> Set:
-    """
-    state is a comma separated string with codes and states
-        Need to convert codes to states and set to upper
-        Add states to list for searching later
+def get_states_as_set(state_list: str) -> Set:
+    """Helper method to parse the state string.
+
+    Args:
+        state_list: comma separated string with codes and states
+
+    Returns:
+        Set with valid state names in upper case
     """
     codes_to_states = {
         "BF": "BOOT_FAIL",
@@ -241,17 +285,13 @@ def get_states_as_set(state: str) -> Set:
         "S": "SUSPENDED",
         "TO": "TIMEOUT",
     }
-    possible_states = codes_to_states.values()
-    states = []
-    for st in state.split(","):
-        st = st.upper()
-        if st in codes_to_states:
-            st = codes_to_states[st]
-        if st not in states:
-            states.append(st)
+    possible_states = set(codes_to_states.values())
+    states = {
+        codes_to_states.get(state, state) for state in state_list.upper().split(",")
+    }
 
-    for st in states:
-        if st not in possible_states:
-            click.secho(f"Unknown state {st}", fg="yellow", err=True)
+    for state in states:
+        if state not in possible_states:
+            click.secho(f"Unknown state {state}", fg="yellow", err=True)
 
-    return {st for st in states if st in possible_states}
+    return states.intersection(possible_states)

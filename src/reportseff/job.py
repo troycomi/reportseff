@@ -1,3 +1,4 @@
+"""Module for reprsenting scheduler jobs."""
 from datetime import timedelta
 import re
 from typing import Any, Dict, Optional, Union
@@ -38,7 +39,16 @@ MEM_RE = re.compile(
 
 
 class Job:
+    """Representation of scheduler job."""
+
     def __init__(self, job: str, jobid: str, filename: Optional[str]) -> None:
+        """Initialize new job.
+
+        Args:
+            job: the base job number
+            jobid: same as job unless an array job
+            filename: the output file associated with this job
+        """
         self.job = job
         self.jobid = jobid
         self.filename = filename
@@ -48,19 +58,37 @@ class Job:
         self.time_eff: Union[str, float] = "---"
         self.cpu: Optional[Union[str, float]] = "---"
         self.mem: Union[str, float] = "---"
-        self.state = None
+        self.state: Optional[str] = None
         self.other_entries: Dict[str, str] = {}
 
     def __eq__(self, other: Any) -> bool:
+        """Test for equality.
+
+        Args:
+            other: the other object
+
+        Returns:
+            true if the other object is a Job and all attributes match
+        """
         if not isinstance(other, Job):
             return False
 
         return self.__dict__ == other.__dict__
 
     def __repr__(self) -> str:
-        return f"Job(job={self.job}, jobid={self.jobid}, " f"filename={self.filename})"
+        """Job representation.
+
+        Returns:
+            The job string representation
+        """
+        return f"Job(job={self.job}, jobid={self.jobid}, filename={self.filename})"
 
     def update(self, entry: Dict) -> None:
+        """Update the job properties based on the db_inquirer entry.
+
+        Args:
+            entry: the db_inquirer entry for the matching job
+        """
         if "." not in entry["JobID"]:
             self.state = entry["State"].split()[0]
 
@@ -72,12 +100,17 @@ class Job:
             self._update_main_job(entry)
 
         elif self.state != "RUNNING":
-            for k, v in entry.items():
+            for k, value in entry.items():
                 if k not in self.other_entries or not self.other_entries[k]:
-                    self.other_entries[k] = v
+                    self.other_entries[k] = value
             self.stepmem += parsemem(entry["MaxRSS"]) if "MaxRSS" in entry else 0
 
     def _update_main_job(self, entry: Dict) -> None:
+        """Update properties for the main job.
+
+        Args:
+            entry: the entry where the jobid matches exactly
+        """
         self.other_entries = entry
         self.time = entry["Elapsed"] if "Elapsed" in entry else None
         requested = (
@@ -107,12 +140,24 @@ class Job:
             )
 
     def name(self) -> str:
+        """The name of the job.
+
+        Returns:
+            The filename (if set) or jobid
+        """
         if self.filename:
             return self.filename
-        else:
-            return self.jobid
+        return self.jobid
 
     def get_entry(self, key: str) -> Any:
+        """Get an attribute by name.
+
+        Args:
+            key: the attribute to query
+
+        Returns:
+            The value of that attribute or "---" if not found
+        """
         if key == "JobID":
             return self.name()
         if key == "State":
@@ -130,8 +175,20 @@ class Job:
 
 
 def _parse_slurm_timedelta(delta: str) -> int:
-    """Parse one of the three formats used in TotalCPU
-    into a timedelta and return seconds."""
+    """Parse one of the three formats used in TotalCPU.
+
+    Based on which regex matches, convert into a timedelta
+    and return total seconds.
+
+    Args:
+        delta: The time duration
+
+    Returns:
+        Number of seconds elapsed during the delta
+
+    Raises:
+        ValueError: if unable to parse delta
+    """
     match = re.match(DDHHMMSS_RE, delta)
     if match:
         return int(
@@ -164,6 +221,22 @@ def _parse_slurm_timedelta(delta: str) -> int:
 
 
 def parsemem(mem: str, nodes: int = 1, cpus: int = 1) -> float:
+    """Parse memory representations of reqmem and maxrss.
+
+    Args:
+        mem: the memory representation
+        nodes: the number of nodes in the job
+        cpus: the number of cpus in the job
+
+    Returns:
+        The number of bytes for the job.
+        if mem is empty, return 0.
+        if mem ends with n or c, scale by the provided nodes or cpus respecitvely
+        the multiple of memory (e.g. M or G) is always scaled if provided
+
+    Raises:
+        ValueError: if unable to parse mem
+    """
     if mem == "" or mem == "0":
         return 0
     match = re.fullmatch(MEM_RE, mem)

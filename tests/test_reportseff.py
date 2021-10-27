@@ -364,7 +364,7 @@ def test_simple_not_state(mocker, mock_inquirer):
 
 
 def test_invalid_not_state(mocker, mock_inquirer):
-    """When not state isn't found, return all jobs"""
+    """When not state isn't found, return all jobs."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
     sub_result = mocker.MagicMock()

@@ -1,3 +1,4 @@
+"""Module for rendering tabulated values."""
 from typing import Any, Callable, List, Optional, Tuple, Union
 
 import click
@@ -6,13 +7,18 @@ from .job import Job, state_colors
 
 
 class OutputRenderer:
+    """A collection of formatting columns for rendering output."""
+
     def __init__(
         self,
         valid_titles: List,
         format_str: str = "JobID%>,State,Elapsed%>,CPUEff,MemEff",
     ) -> None:
-        """
-        Initialize renderer with format string and list of valid titles
+        """Initialize renderer with format string and list of valid titles.
+
+        Args:
+            valid_titles: List of valid options for format tokens
+            format_str: comma separated list of format tokens
         """
         # values required for proper parsing, need not be included in output
         self.required = ["JobID", "JobIDRaw", "State"]
@@ -24,7 +30,7 @@ class OutputRenderer:
         }
 
         # build formatters
-        self.formatters = self.build_formatters(format_str)
+        self.formatters = build_formatters(format_str)
 
         # validate with titles and derived keys
         valid_titles += self.derived.keys()
@@ -33,24 +39,19 @@ class OutputRenderer:
         # build columns for sacct call
         self.correct_columns()
 
-    def build_formatters(self, format_str: str) -> List:
-        """
-        Generate list of formatters from comma separated list in format string
-        Return list of formatters
-        """
-        return [ColumnFormatter(fmt) for fmt in format_str.split(",") if fmt != ""]
-
     def validate_formatters(self, valid_titles: List) -> List:
-        """
-        Validate all titles of formatters
-        Return list of query columns
+        """Validate titles of formatters attribute.
+
+        Args:
+            valid_titles: List of valid options for format tokens
+
+        Returns:
+            Return list of validated ColumnFormatters
         """
         return [fmt.validate_title(valid_titles) for fmt in self.formatters]
 
     def correct_columns(self) -> None:
-        """
-        use derived values to update the list of query columns
-        """
+        """Expand derived values of query columns and remove duplicates."""
         result = [
             self.derived[c] if c in self.derived else [c] for c in self.query_columns
         ]
@@ -64,8 +65,13 @@ class OutputRenderer:
         self.query_columns = list(sorted(set(flat_result)))
 
     def format_jobs(self, jobs: List[Job]) -> str:
-        """
-        Given list of jobs, build output table
+        """Given list of jobs, build output table.
+
+        Args:
+            jobs: List of job objects
+
+        Returns:
+            Formatted table as single string
         """
         result = ""
         if len(self.formatters) == 0:
@@ -93,10 +99,16 @@ class OutputRenderer:
 
 
 class ColumnFormatter:
+    """A single column formatting object."""
+
     def __init__(self, token: str) -> None:
-        """
-        Build column entry from format string of the form
-        NAME[%[ALIGNMENT][WIDTH]]
+        """Build column entry.
+
+        Args:
+            token: format string of the form NAME[%[ALIGNMENT][WIDTH]]
+
+        Raises:
+            ValueError: if unable to parse the format token
         """
         tokens = token.split("%")
         self.title = tokens[0]
@@ -123,6 +135,16 @@ class ColumnFormatter:
             self.color_function = lambda x: render_eff(x, "mid")
 
     def __eq__(self, other: Any) -> bool:
+        """Test for equality.
+
+        Args:
+            other: other object
+
+        Returns:
+            True if the other object is a column formatter with matching attributes
+            or if this title match the other object as a string
+
+        """
         if isinstance(other, ColumnFormatter):
             for k in self.__dict__:
                 if k != "color_function" and self.__dict__[k] != other.__dict__[k]:
@@ -133,15 +155,28 @@ class ColumnFormatter:
         return False
 
     def __repr__(self) -> str:
+        """Recreate format string of formatter.
+
+        Returns:
+            String representation of column formatter
+        """
         return f"{self.title}%{self.alignment}{self.width}"
 
-    def validate_title(self, valid_titles: List) -> str:
-        """
-        Tries to find this formatter's title in the valid titles list
-        case insensitive.  If found, replace with valid_title to correct
+    def validate_title(self, valid_titles: List[str]) -> str:
+        """Validate the title against a list.
+
+        Tries to find this formatter's title in the valid titles list in a case
+        insensitive manner.  If found, replace with valid_title to correct
         capitalization to match valid_titles entry.
-        If not found, raise value error
-        Returns the valid title found
+
+        Args:
+            valid_titles: list of valid title strings
+
+        Returns:
+            The self title validated from the valid_titles list
+
+        Raises:
+            ValueError: if self.title is not found in the valid list
         """
         fold_title = self.title.casefold()
         for title in valid_titles:
@@ -151,10 +186,14 @@ class ColumnFormatter:
 
         raise ValueError(f"'{self.title}' is not a valid title")
 
-    def compute_width(self, jobs: List) -> None:
-        """
+    def compute_width(self, jobs: List[Job]) -> None:
+        """Set width for this column based on job listing.
+
         Determine the max width of all entries if the width attribute is unset.
         Includes title in determination
+
+        Args:
+            jobs: List of job objects to consider
         """
         if self.width is not None:
             return
@@ -169,19 +208,39 @@ class ColumnFormatter:
         self.width += 2  # add some boarder
 
     def format_title(self) -> str:
+        """Format title of column for printing.
+
+        Returns:
+            the formatted title
+        """
         result = self.format_entry(self.title)
         return click.style(result, bold=True)
 
     def format_job(self, job: Job) -> str:
+        """Format the provided job for printing.
+
+        Args:
+            job: the Job to format
+
+        Returns:
+            the formatted job entry
+        """
         value = job.get_entry(self.title)
         return self.format_entry(*self.color_function(value))
 
     def format_entry(self, entry: str, color: Optional[str] = None) -> str:
-        """
-        Format the entry to match width, alignment, and color request
+        """Format the entry to match width, alignment, and color.
+
         If no color is supplied, will just return string
         If supplied, use click.style to change fg
         If the entry is longer than self.width, truncate the end
+
+        Args:
+            entry: the string to format
+            color: set foreground of style string
+
+        Returns:
+            entry colored, aligned, and possibly truncated
         """
         if self.width is None:
             result = entry
@@ -195,15 +254,31 @@ class ColumnFormatter:
 
 
 def color_state(value: str) -> Tuple[str, Optional[str]]:
+    """Get the color name of the provided state string.
+
+    Args:
+        value: the state name of the job
+
+    Returns:
+        The state value and it's color (if found) or None
+    """
     return value, state_colors.get(value, None)
 
 
 def render_eff(value: Union[str, float], target_type: str) -> Tuple[str, Optional[str]]:
-    """
-    Return a styled string for efficiency values
+    """Return a styled string for efficiency values.
+
+    Args:
+        value: the number or string to render
+        target_type: "mid" or "high", the type of color map to use
+
+    Returns:
+        A tuple with:
+        the value formatted with a percent sybol
+        the color or None if it should remain the default
     """
     color_maps = {"mid": color_mid, "high": color_high}
-    if isinstance(value, str):
+    if isinstance(value, str):  # a "---"
         color = None
     else:
         color = color_maps[target_type](value)
@@ -212,24 +287,44 @@ def render_eff(value: Union[str, float], target_type: str) -> Tuple[str, Optiona
 
 
 def color_mid(value: float) -> Optional[str]:
+    """Determine color for efficiency value where "mid" values are the target.
+
+    Args:
+        value: percent (0-100) of value to color
+
+    Returns:
+        The color string for click or None if color should be unchanged
     """
-    Determine color for efficiency value where "mid" values are the target
-    """
-    if value < 20 or value > 90:
+    if value < 20 or value > 90:  # too close to limit
         return "red"
-    elif value > 60:
+    if value > 60:  # good
         return "green"
-    else:
-        return None
+    return None
 
 
 def color_high(value: float) -> Optional[str]:
+    """Determine color for efficiency value where "high" values are the target.
+
+    Args:
+        value: percent (0-100) of value to color
+
+    Returns:
+        The color string for click or None if color should be unchanged
     """
-    Determine color for efficiency value where "high" values are the target
-    """
-    if value < 20:
+    if value < 20:  # too low
         return "red"
-    elif value > 80:
+    if value > 80:  # good
         return "green"
-    else:
-        return None
+    return None
+
+
+def build_formatters(format_str: str) -> List:
+    """Generate list of formatters from comma separated list in format string.
+
+    Args:
+        format_str: comma separated list of format tokens
+
+    Returns:
+        Return list of ColumnFormatters
+    """
+    return [ColumnFormatter(fmt) for fmt in format_str.split(",") if fmt != ""]

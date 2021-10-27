@@ -1,3 +1,4 @@
+"""CLI for reportseff."""
 from shutil import which
 import sys
 from typing import Dict, List, Tuple
@@ -71,7 +72,7 @@ def main(
     since: str,
     jobs: tuple,
 ) -> None:
-
+    """Main entry point for reportseff."""
     if format_str.startswith("+"):
         format_str = "JobID%>,State,Elapsed%>,TimeEff,CPUEff,MemEff," + format_str[1:]
 
@@ -102,6 +103,15 @@ def get_jobs(
     not_state: str = "",
     since: str = "",
 ) -> Tuple[str, int]:
+    """Helper method to get jobs from db_inquirer.
+
+    Returns:
+        The string to display, tabulated and colored
+        The number of jobs found to use paging properly
+
+    Raises:
+        Exception: if there is an error processing entries
+    """
     job_collection = JobCollection()
 
     inquirer, renderer = get_implementation(format_str)
@@ -136,6 +146,15 @@ def get_jobs(
 
 
 def get_implementation(format_str: str) -> Tuple[BaseInquirer, OutputRenderer]:
+    """Get system-specific objects.
+
+    Args:
+        format_str: the formatting options specified by user
+
+    Returns:
+        A db_inqurirer
+        An output renderer
+    """
     if which("sacct") is not None:
         inquirer = SacctInquirer()
         renderer = OutputRenderer(inquirer.get_valid_formats(), format_str)
@@ -152,6 +171,12 @@ def get_db_output(
     job_collection: JobCollection,
     debug: bool,
 ) -> List[Dict[str, str]]:
+    """Get output from inquirer.
+
+    Returns:
+        The db inquirer entries for the provided objects
+    """
+
     def print_debug(info: str) -> None:
         click.echo(info, err=True)
 
@@ -163,7 +188,7 @@ def get_db_output(
         result = inquirer.get_db_output(
             renderer.query_columns, job_collection.get_jobs(), debug_cmd
         )
-    except Exception as error:
+    except RuntimeError as error:
         click.secho(str(error), fg="red", err=True)
         sys.exit(1)
 

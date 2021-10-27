@@ -31,6 +31,8 @@ pytype = {version = "^2021.10.11", python = "3.7"}
 typeguard = "^2.13.0"
 flake8-annotations = "^2.7.0"
 flake8-docstrings = "^1.6.0"
+darglint = "^1.8.1"
+Sphinx = "^4.2.0"
 
 [tool.poetry.scripts]
 reportseff = "reportseff.console:main"

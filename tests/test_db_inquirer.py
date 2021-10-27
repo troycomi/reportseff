@@ -1,3 +1,4 @@
+"""Test sacct implementation of db inqurirer."""
 import datetime
 
 import pytest
@@ -7,15 +8,18 @@ from reportseff import db_inquirer
 
 @pytest.fixture
 def sacct():
+    """Default sacct inquirer."""
     return db_inquirer.SacctInquirer()
 
 
 def test_sacct_init(sacct):
+    """Check default options on new object."""
     assert sacct.default_args == ["sacct", "-P", "-n"]
     assert sacct.user is None
 
 
 def test_sacct_get_valid_formats(sacct, mocker):
+    """Check valid parsing of help format."""
     mock_sacct = mocker.MagicMock
     mock_sacct.returncode = 1
     # these are the values for 18.08.7
@@ -54,9 +58,9 @@ def test_sacct_get_valid_formats(sacct, mocker):
         "\nWorkDir            \n"
     )
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=mock_sacct)
-    with pytest.raises(Exception) as e:
+    with pytest.raises(Exception) as exception:
         sacct.get_valid_formats()
-    assert "Error retrieving sacct options with --helpformat" in str(e)
+    assert "Error retrieving sacct options with --helpformat" in str(exception)
 
     mock_sacct.returncode = 0
     result = [
@@ -170,13 +174,14 @@ def test_sacct_get_valid_formats(sacct, mocker):
 
 
 def test_sacct_get_db_output(sacct, mocker):
+    """get_db_output returns subprocess output as dictionary."""
     mock_sacct = mocker.MagicMock()
     mock_sacct.returncode = 1
 
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=mock_sacct)
-    with pytest.raises(Exception) as e:
+    with pytest.raises(Exception) as exception:
         sacct.get_db_output("c1 c2".split(), "j1 j2 j3".split())
-    assert "Error running sacct!" in str(e)
+    assert "Error running sacct!" in str(exception)
 
     mock_sacct = mocker.MagicMock()
     mock_sacct.returncode = 0
@@ -200,11 +205,12 @@ def test_sacct_get_db_output(sacct, mocker):
     )
 
     debug = []
-    sacct.get_db_output("c1 c2".split(), "j1 j2 j3".split(), lambda d: debug.append(d))
+    sacct.get_db_output("c1 c2".split(), "j1 j2 j3".split(), debug.append)
     assert debug[0] == ("c1j1|c2j1\nc1j2|c2j2\nc1j3|c2j3\n")
 
 
 def test_sacct_get_db_output_no_newline(sacct, mocker):
+    """Can process output without newlines."""
     mock_sacct = mocker.MagicMock()
     mock_sacct.returncode = 0
     mock_sacct.stdout = (
@@ -229,7 +235,7 @@ def test_sacct_get_db_output_no_newline(sacct, mocker):
             "TotalCPU",
         ],
         ["23000233"],
-        lambda d: debug.append(d),
+        debug.append,
     )
     assert result == [
         {
@@ -254,22 +260,24 @@ def test_sacct_get_db_output_no_newline(sacct, mocker):
 
 
 def test_sacct_set_user(sacct):
+    """Can set user."""
     sacct.set_user("user")
     assert sacct.user == "user"
 
 
 def test_sacct_get_db_output_user(sacct, mocker):
+    """User and since affects subprocess call."""
     mock_sacct = mocker.MagicMock()
     mock_sacct.returncode = 1
 
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=mock_sacct)
     mock_date = mocker.MagicMock()
     mock_date.today.return_value = datetime.date(2018, 1, 20)
-    mock_date.side_effect = lambda *args, **kw: datetime.date(*args, **kw)
+    mock_date.side_effect = datetime.date
     mocker.patch("reportseff.db_inquirer.datetime.date", mock_date)
-    with pytest.raises(Exception) as e:
+    with pytest.raises(Exception) as exception:
         sacct.get_db_output("c1 c2".split(), "j1 j2 j3".split())
-    assert "Error running sacct!" in str(e)
+    assert "Error running sacct!" in str(exception)
 
     mock_sacct = mocker.MagicMock()
     mock_sacct.returncode = 0
@@ -294,11 +302,12 @@ def test_sacct_get_db_output_user(sacct, mocker):
     )
 
     debug = []
-    sacct.get_db_output("c1 c2".split(), "j1 j2 j3".split(), lambda d: debug.append(d))
+    sacct.get_db_output("c1 c2".split(), "j1 j2 j3".split(), debug.append)
     assert debug[0] == ("c1j1|c2j1\nc1j2|c2j2\nc1j3|c2j3\n")
 
 
 def test_sacct_get_db_output_since(sacct, mocker):
+    """Subprocess call is affected by since argument."""
     mock_sacct = mocker.MagicMock()
     mock_sacct.returncode = 0
     mock_sacct.stdout = "c1j1|c2j1\nc1j2|c2j2\nc1j3|c2j3\n"
@@ -322,12 +331,12 @@ def test_sacct_get_db_output_since(sacct, mocker):
     )
 
     debug = []
-    sacct.get_db_output("c1 c2".split(), "j1 j2 j3".split(), lambda d: debug.append(d))
+    sacct.get_db_output("c1 c2".split(), "j1 j2 j3".split(), debug.append)
     assert debug[0] == ("c1j1|c2j1\nc1j2|c2j2\nc1j3|c2j3\n")
 
 
 def test_sacct_set_state(sacct, capsys):
-    # decodes properly, to upper
+    """Decodes state properly and sets to upper."""
     sacct.set_state("BF,ca,cD,Dl,F,NF,OOM,PD,PR,R,RQ,RS,RV,S,TO")
     assert sacct.state == {
         "BOOT_FAIL",
@@ -358,19 +367,26 @@ def test_sacct_set_state(sacct, capsys):
 
     sacct.set_state("unknown,z")
     assert sacct.state == {None}
-    assert capsys.readouterr().err == (
-        "Unknown state UNKNOWN\nUnknown state Z\nNo valid states provided to include\n"
-    )
+    assert {string for string in capsys.readouterr().err.split("\n")} == {
+        "Unknown state UNKNOWN",
+        "Unknown state Z",
+        "No valid states provided to include",
+        "",
+    }
 
     # remove duplicate unknowns
     sacct.set_state("unknown,z,z,z")
     assert sacct.state == {None}
-    assert capsys.readouterr().err == (
-        "Unknown state UNKNOWN\nUnknown state Z\nNo valid states provided to include\n"
-    )
+    assert {string for string in capsys.readouterr().err.split("\n")} == {
+        "Unknown state UNKNOWN",
+        "Unknown state Z",
+        "No valid states provided to include",
+        "",
+    }
 
 
 def test_sacct_set_since(sacct, mocker):
+    """Can set since with various formats."""
     # no equal sign, retain argument
     sacct.set_since("022399")
     assert sacct.since == "022399"
@@ -442,17 +458,18 @@ def test_sacct_set_since(sacct, mocker):
 
 
 def test_sacct_get_db_output_user_state(sacct, mocker):
+    """Can set user and state at the same time."""
     mock_sacct = mocker.MagicMock()
     mock_sacct.returncode = 1
 
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=mock_sacct)
     mock_date = mocker.MagicMock()
     mock_date.today.return_value = datetime.date(2018, 1, 20)
-    mock_date.side_effect = lambda *args, **kw: datetime.date(*args, **kw)
+    mock_date.side_effect = datetime.date
     mocker.patch("reportseff.db_inquirer.datetime.date", mock_date)
-    with pytest.raises(Exception) as e:
+    with pytest.raises(Exception) as exception:
         sacct.get_db_output("c1 c2".split(), "j1 j2 j3".split())
-    assert "Error running sacct!" in str(e)
+    assert "Error running sacct!" in str(exception)
 
     mock_sacct = mocker.MagicMock()
     mock_sacct.returncode = 0
@@ -480,7 +497,5 @@ def test_sacct_get_db_output_user_state(sacct, mocker):
 
     # debug is not affected by state
     debug = []
-    sacct.get_db_output(
-        "c1 c2 State".split(), "j1 j2 j3".split(), lambda d: debug.append(d)
-    )
+    sacct.get_db_output("c1 c2 State".split(), "j1 j2 j3".split(), debug.append)
     assert debug[0] == ("c1j1|c2j1|RUNNING\nc1j2|c2j2|RUNNING\nc1j3|c2j3|COMPLETED\n")

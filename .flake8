@@ -1,5 +1,5 @@
 [flake8]
-select = ANN,B,B9,BLK,C,E,F,I,W
+select = ANN,B,B9,BLK,C,D,DAR,E,F,I,W
 max-complexity = 10
 ignore = E203,W503,E501,ANN101
 max-line-length = 80
@@ -7,5 +7,6 @@ application-import-names= reportseff,tests
 import-order-style = google
 docstring-convention = google
 per-file-ignores =
-    tests/*:S101,ANN
-    noxfile.py:ANN
+    tests/*:S101,ANN,DAR
+    noxfile.py:ANN,DAR
+    src/reportseff/console.py:DAR101
