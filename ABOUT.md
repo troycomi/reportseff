@@ -74,7 +74,7 @@ During testing, I looked at random ranges of jobids on a Princeton cluster.
 Here is some typical output, with jobids modified to protect the innocent:
 
 ```txt
-Name      State     Time   CPU   Memory
+  Name      State        Time     CPU   Memory
 XXXXX000  COMPLETED    00:01:53  97.3%  14.0%
 XXXXX001  COMPLETED    00:02:19  84.2%  14.0%
 XXXXX002  COMPLETED    00:06:33  28.2%  14.0%
