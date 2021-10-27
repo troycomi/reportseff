@@ -33,7 +33,9 @@ from .output_renderer import OutputRenderer
     'after "%", e.g. JobID%>15 aligns job id right with max '
     "width of 15 characters. Generally NAME[%[ALIGNMENT][WIDTH]].  "
     "Prefix with a + to add to the defaults. "
-    "A single format token will suppress the header line.",
+    "A single format token will suppress the header line. "
+    "Wrap in quotes to pass a string literal, "
+    "otherwise alignment may be misinterpreted.",
 )
 @click.option(
     "--debug", default=False, is_flag=True, help="Print raw db query to stderr"
