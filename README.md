@@ -12,7 +12,7 @@
 The only external dependency is click (>= 7.0).
 Calling
 ```
-pip install git+https://github.com/troycomi/reportseff
+pip install reportseff
 ```
 will create command line bindings and install click.
 
@@ -150,14 +150,17 @@ directory to check for slurm outputs.
 ## Contributions
 Bug reports, pull requests, and any feedback are welcome!  Prior to submitting
 a pull request, be sure any new features have been tested and all unit tests
-are passing.  In the cloned repo, the test environment can be setup with:
+are passing.  In the cloned repo with
+[poetry](https://github.com/python-poetry/poetry#installation) installed:
 ```
-conda create -n reportseff-dev
-conda activate reportseff-dev
-conda install -y -c conda-forge click pytest pytest-cov pytest-mock pytest-flake8
-pytest --flake8 --cov
+poetry install
+poetry run pytest
+poetry run pre-commit install
+nox
 ```
 
 ## Acknowledgements
 The code for calling sacct and parsing the returning information was taken
 from [Slurmee](https://github.com/PrincetonUniversity/slurmee).
+
+Style and tooling from [hypermodern python](https://cjolowicz.github.io/posts/hypermodern-python-01-setup/)
