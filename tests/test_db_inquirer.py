@@ -200,8 +200,8 @@ def test_sacct_get_db_output(sacct, mocker):
         stdout=mocker.ANY,
         encoding=mocker.ANY,
         check=mocker.ANY,
-        universal_newlines=mocker.ANY,
         shell=False,
+        text=True,
     )
 
     debug = []
@@ -297,7 +297,7 @@ def test_sacct_get_db_output_user(sacct, mocker):
         stdout=mocker.ANY,
         encoding=mocker.ANY,
         check=mocker.ANY,
-        universal_newlines=mocker.ANY,
+        text=True,
         shell=False,
     )
 
@@ -326,7 +326,7 @@ def test_sacct_get_db_output_since(sacct, mocker):
         stdout=mocker.ANY,
         encoding=mocker.ANY,
         check=mocker.ANY,
-        universal_newlines=mocker.ANY,
+        text=True,
         shell=False,
     )
 
@@ -491,7 +491,7 @@ def test_sacct_get_db_output_user_state(sacct, mocker):
         stdout=mocker.ANY,
         encoding=mocker.ANY,
         check=mocker.ANY,
-        universal_newlines=mocker.ANY,
+        text=True,
         shell=False,
     )
 
