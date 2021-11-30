@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "reportseff"
-version = "1.0.0"
+version = "1.0.1"
 description= "Tablular seff output"
 authors = ["Troy Comi <troycomi@gmail.com>"]
 license = "MIT"
@@ -10,8 +10,9 @@ repository= "https://github.com/troycomi/reportseff"
 keywords= ["slurm","seff"]
 
 [tool.poetry.dependencies]
-python = "^3.7"
-click = "^7.0"
+python = ">=3.7,<4.0"
+click = ">=7.0"
+importlib-metadata = {version = "^4.8.2", python = "<3.8"}
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.5"
@@ -19,19 +20,19 @@ pytest-mock = "^3.6.1"
 coverage = {extras = ["toml"], version = "^6.0.2"}
 pytest-cov = "^3.0.0"
 black = "^21.9b0"
-flake8 = "^4.0.1"
-flake8-bandit = "^2.1.2"
-flake8-black = "^0.2.3"
-flake8-bugbear = "^21.9.2"
-flake8-import-order = "^0.18.1"
+flake8 = "^3.7.9"
+flake8-bandit = ">=2.1.2"
+flake8-black = ">=0.2.3"
+flake8-bugbear = ">=21.9.2"
+flake8-import-order = ">=0.18.1"
 safety = "^1.10.3"
 mypy = "^0.910"
 types-click = "^7.1.7"
 pytype = {version = "^2021.10.11", python = "3.7"}
 typeguard = "^2.13.0"
-flake8-annotations = "^2.7.0"
-flake8-docstrings = "^1.6.0"
-darglint = "^1.8.1"
+flake8-annotations = "^2.0.0"
+flake8-docstrings = ">=1.6.0"
+darglint = ">=1.8.1"
 Sphinx = "^4.2.0"
 codecov = "^2.1.12"
 
