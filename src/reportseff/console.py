@@ -146,7 +146,7 @@ def get_jobs(
     found_jobs = job_collection.get_sorted_jobs(modified_sort)
     found_jobs = [j for j in found_jobs if j.state]
 
-    return renderer.format_jobs(found_jobs), len(jobs)
+    return renderer.format_jobs(found_jobs), len(found_jobs)
 
 
 def get_implementation(format_str: str) -> Tuple[BaseInquirer, OutputRenderer]:
