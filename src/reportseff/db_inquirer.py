@@ -125,7 +125,7 @@ class SacctInquirer(BaseInquirer):
         Returns:
             List of rows, where each row is a dictionary
             with the columns as keys and entries as values
-            Output order is not garunteed to match the jobs list
+            Output order is not guarunteed to match the jobs list
 
         Raises:
             RuntimeError: if sacct doesn't return properly
@@ -155,7 +155,12 @@ class SacctInquirer(BaseInquirer):
             raise RuntimeError("Error running sacct!")
 
         lines = cmd_result.stdout.split("\n")
+        if debug_cmd is not None:
+            debug_cmd("\n".join(lines))
+
         result = [dict(zip(columns, line.split("|"))) for line in lines if line]
+        # import pprint
+        # pprint.pprint(result)
 
         if self.state:
             # split to get first word in entries like "CANCELLED BY X"
@@ -164,9 +169,6 @@ class SacctInquirer(BaseInquirer):
         if self.not_state:
             # split to get first word in entries like "CANCELLED BY X"
             result = [r for r in result if r["State"].split()[0] not in self.not_state]
-
-        if debug_cmd is not None:
-            debug_cmd("\n".join(lines))
 
         return result
 

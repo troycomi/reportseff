@@ -109,7 +109,7 @@ class Job:
         """Update properties for the main job.
 
         Args:
-            entry: the entry where the jobid matches exactly
+            entry: the entry where the jobid matches exactly, e.g. not batch or ex
         """
         self.other_entries = entry
         self.time = entry["Elapsed"] if "Elapsed" in entry else None

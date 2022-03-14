@@ -32,7 +32,7 @@ class OutputRenderer:
             format_str: comma separated list of format tokens
         """
         # values required for proper parsing, need not be included in output
-        self.required = ["JobID", "JobIDRaw", "State"]
+        self.required = ["JobID", "JobIDRaw", "State", "AdminComment"]
         # values derived from other values, list includes all dependent values
         self.derived = {
             "CPUEff": ["TotalCPU", "AllocCPUS", "Elapsed"],

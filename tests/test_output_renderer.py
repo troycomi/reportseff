@@ -133,17 +133,22 @@ def test_renderer_init(renderer):
         output_renderer.ColumnFormatter("MemEff"),
     ]
     assert sorted(renderer.query_columns) == sorted(
-        ("JobID JobIDRaw State Elapsed TotalCPU AllocCPUS REQMEM NNodes MaxRSS").split()
+        (
+            "JobID JobIDRaw State Elapsed TotalCPU "
+            "AllocCPUS REQMEM NNodes MaxRSS AdminComment"
+        ).split()
     )
 
     renderer = output_renderer.OutputRenderer(min_required, "")
     assert renderer.formatters == []
-    assert sorted(renderer.query_columns) == sorted(("JobID JobIDRaw State").split())
+    assert sorted(renderer.query_columns) == sorted(
+        ("JobID JobIDRaw State AdminComment").split()
+    )
 
     renderer = output_renderer.OutputRenderer(min_required, "TotalCPU%<5")
     assert renderer.formatters == [output_renderer.ColumnFormatter("TotalCPU%<5")]
     assert sorted(renderer.query_columns) == sorted(
-        ("JobID JobIDRaw State TotalCPU").split()
+        ("JobID JobIDRaw State TotalCPU AdminComment").split()
     )
 
 
@@ -173,24 +178,28 @@ def test_renderer_validate_formatters(renderer):
 
 
 def test_renderer_correct_columns(renderer):
-    """Corrected coulmns include required entries and derived values."""
+    """Corrected columns include required entries and derived values."""
     renderer.query_columns = ["JobID"]
     renderer.correct_columns()
-    assert sorted(renderer.query_columns) == sorted("JobID JobIDRaw State".split())
+    assert sorted(renderer.query_columns) == sorted(
+        "JobID JobIDRaw State AdminComment".split()
+    )
 
     renderer.query_columns = "JobID CPUEff MemEff TimeEff".split()
     renderer.correct_columns()
     assert sorted(renderer.query_columns) == sorted(
         (
             "JobID TotalCPU Elapsed REQMEM"
-            " JobIDRaw State"
+            " JobIDRaw State AdminComment"
             " NNodes AllocCPUS MaxRSS Timelimit"
         ).split()
     )
 
     renderer.query_columns = "JobID JobID JobID".split()
     renderer.correct_columns()
-    assert sorted(renderer.query_columns) == sorted("JobID JobIDRaw State".split())
+    assert sorted(renderer.query_columns) == sorted(
+        "JobID JobIDRaw State AdminComment".split()
+    )
 
 
 def test_renderer_format_jobs(some_jobs):

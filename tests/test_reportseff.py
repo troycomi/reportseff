@@ -28,11 +28,11 @@ def test_directory_input(mocker, mock_inquirer):
     sub_result = mocker.MagicMock()
     sub_result.returncode = 0
     sub_result.stdout = (
-        "1|01:27:42|24418435|24418435||1|1Gn|"
+        "|1|01:27:42|24418435|24418435||1|1Gn|"
         "COMPLETED|03:00:00|01:27:29\n"
-        "1|01:27:42|24418435.batch|24418435.batch|499092K|1|1Gn|"
+        "|1|01:27:42|24418435.batch|24418435.batch|499092K|1|1Gn|"
         "COMPLETED||01:27:29\n"
-        "1|01:27:42|24418435.extern|24418435.extern|1376K|1|1Gn|"
+        "|1|01:27:42|24418435.extern|24418435.extern|1376K|1|1Gn|"
         "COMPLETED||00:00:00\n"
     )
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
@@ -92,7 +92,7 @@ def test_debug_option(mocker, mock_inquirer):
     sub_result = mocker.MagicMock()
     sub_result.returncode = 0
     sub_result.stdout = (
-        "16|00:00:00|23000233|23000233||1|4000Mc|"
+        "|16|00:00:00|23000233|23000233||1|4000Mc|"
         "CANCELLED by 129319|6-00:00:00|00:00:00\n"
     )
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
@@ -105,7 +105,7 @@ def test_debug_option(mocker, mock_inquirer):
     # remove header
     output = result.output.split("\n")
     assert output[0] == (
-        "16|00:00:00|23000233|23000233||1|4000Mc|"
+        "|16|00:00:00|23000233|23000233||1|4000Mc|"
         "CANCELLED by 129319|6-00:00:00|00:00:00"
     )
     assert output[3].split() == [
@@ -125,7 +125,7 @@ def test_process_failure(mocker, mock_inquirer):
     sub_result = mocker.MagicMock()
     sub_result.returncode = 0
     sub_result.stdout = (
-        "16|00:00:00|23000233|23000233||1|4000Mc|"
+        "|16|00:00:00|23000233|23000233||1|4000Mc|"
         "CANCELLED by 129319|6-00:00:00|00:00:00\n"
     )
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
@@ -141,7 +141,7 @@ def test_process_failure(mocker, mock_inquirer):
     # remove header
     output = result.output.split("\n")
     assert output[0] == "Error processing entry: " + (
-        "{'AllocCPUS': '16', 'Elapsed': '00:00:00', 'JobID': '23000233', "
+        "{'AdminComment': '', 'AllocCPUS': '16', 'Elapsed': '00:00:00', 'JobID': '23000233', "
         "'JobIDRaw': '23000233', 'MaxRSS': '', 'NNodes': '1', "
         "'REQMEM': '4000Mc', 'State': 'CANCELLED by 129319', "
         "'TotalCPU': '6-00:00:00'}"
@@ -155,7 +155,7 @@ def test_short_output(mocker, mock_inquirer):
     sub_result = mocker.MagicMock()
     sub_result.returncode = 0
     sub_result.stdout = (
-        "23000233|23000233|CANCELLED by 129319|16|"
+        "|23000233|23000233|CANCELLED by 129319|16|"
         "00:00:00|00:00:00|6-00:00:00|4000Mc||1|\n"
     )
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
@@ -176,7 +176,7 @@ def test_long_output(mocker, mock_inquirer):
     sub_result = mocker.MagicMock()
     sub_result.returncode = 0
     sub_result.stdout = (
-        "16|00:00:00|23000233|23000233||1|4000Mc|CANCELLED by 129319|00:00:00\n"
+        "|16|00:00:00|23000233|23000233||1|4000Mc|CANCELLED by 129319|00:00:00\n"
     )
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
     mocker.patch("reportseff.console.len", return_value=21)
@@ -195,11 +195,11 @@ def test_simple_job(mocker, mock_inquirer):
     sub_result = mocker.MagicMock()
     sub_result.returncode = 0
     sub_result.stdout = (
-        "1|01:27:42|24418435|24418435||1|1Gn|"
+        "|1|01:27:42|24418435|24418435||1|1Gn|"
         "COMPLETED|01:27:29\n"
-        "1|01:27:42|24418435.batch|24418435.batch|499092K|1|1Gn|"
+        "|1|01:27:42|24418435.batch|24418435.batch|499092K|1|1Gn|"
         "COMPLETED|01:27:29\n"
-        "1|01:27:42|24418435.extern|24418435.extern|1376K|1|1Gn|"
+        "|1|01:27:42|24418435.extern|24418435.extern|1376K|1|1Gn|"
         "COMPLETED|00:00:00\n"
     )
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
@@ -221,16 +221,16 @@ def test_simple_user(mocker, mock_inquirer):
     sub_result = mocker.MagicMock()
     sub_result.returncode = 0
     sub_result.stdout = (
-        "1|01:27:42|24418435|24418435||1|1Gn|"
+        "|1|01:27:42|24418435|24418435||1|1Gn|"
         "COMPLETED|01:27:29\n"
-        "1|01:27:42|24418435.batch|24418435.batch|499092K|1|1Gn|"
+        "|1|01:27:42|24418435.batch|24418435.batch|499092K|1|1Gn|"
         "COMPLETED|01:27:29\n"
-        "1|01:27:42|24418435.extern|24418435.extern|1376K|1|1Gn|"
+        "|1|01:27:42|24418435.extern|24418435.extern|1376K|1|1Gn|"
         "COMPLETED|00:00:00\n"
-        "1|21:14:48|25569410|25569410||1|4000Mc|COMPLETED|19:28:36\n"
-        "1|21:14:49|25569410.extern|25569410.extern|1548K|1|4000Mc|"
+        "|1|21:14:48|25569410|25569410||1|4000Mc|COMPLETED|19:28:36\n"
+        "|1|21:14:49|25569410.extern|25569410.extern|1548K|1|4000Mc|"
         "COMPLETED|00:00:00\n"
-        "1|21:14:43|25569410.0|25569410.0|62328K|1|4000Mc|COMPLETED|19:28:36\n"
+        "|1|21:14:43|25569410.0|25569410.0|62328K|1|4000Mc|COMPLETED|19:28:36\n"
     )
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
     result = runner.invoke(
@@ -272,16 +272,16 @@ def test_since(mocker, mock_inquirer):
     sub_result = mocker.MagicMock()
     sub_result.returncode = 0
     sub_result.stdout = (
-        "1|01:27:42|24418435|24418435||1|1Gn|"
+        "|1|01:27:42|24418435|24418435||1|1Gn|"
         "COMPLETED|01:27:29\n"
-        "1|01:27:42|24418435.batch|24418435.batch|499092K|1|1Gn|"
+        "|1|01:27:42|24418435.batch|24418435.batch|499092K|1|1Gn|"
         "COMPLETED|01:27:29\n"
-        "1|01:27:42|24418435.extern|24418435.extern|1376K|1|1Gn|"
+        "|1|01:27:42|24418435.extern|24418435.extern|1376K|1|1Gn|"
         "COMPLETED|00:00:00\n"
-        "1|21:14:48|25569410|25569410||1|4000Mc|COMPLETED|19:28:36\n"
-        "1|21:14:49|25569410.extern|25569410.extern|1548K|1|4000Mc|"
+        "|1|21:14:48|25569410|25569410||1|4000Mc|COMPLETED|19:28:36\n"
+        "|1|21:14:49|25569410.extern|25569410.extern|1548K|1|4000Mc|"
         "COMPLETED|00:00:00\n"
-        "1|21:14:43|25569410.0|25569410.0|62328K|1|4000Mc|COMPLETED|19:28:36\n"
+        "|1|21:14:43|25569410.0|25569410.0|62328K|1|4000Mc|COMPLETED|19:28:36\n"
     )
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
     result = runner.invoke(
@@ -304,16 +304,16 @@ def test_simple_state(mocker, mock_inquirer):
     sub_result = mocker.MagicMock()
     sub_result.returncode = 0
     sub_result.stdout = (
-        "1|01:27:42|24418435|24418435||1|1Gn|"
+        "|1|01:27:42|24418435|24418435||1|1Gn|"
         "COMPLETED|01:27:29\n"
-        "1|01:27:42|24418435.batch|24418435.batch|499092K|1|1Gn|"
+        "|1|01:27:42|24418435.batch|24418435.batch|499092K|1|1Gn|"
         "COMPLETED|01:27:29\n"
-        "1|01:27:42|24418435.extern|24418435.extern|1376K|1|1Gn|"
+        "|1|01:27:42|24418435.extern|24418435.extern|1376K|1|1Gn|"
         "COMPLETED|00:00:00\n"
-        "1|21:14:48|25569410|25569410||1|4000Mc|RUNNING|19:28:36\n"
-        "1|21:14:49|25569410.extern|25569410.extern|1548K|1|4000Mc|"
+        "|1|21:14:48|25569410|25569410||1|4000Mc|RUNNING|19:28:36\n"
+        "|1|21:14:49|25569410.extern|25569410.extern|1548K|1|4000Mc|"
         "RUNNING|00:00:00\n"
-        "1|21:14:43|25569410.0|25569410.0|62328K|1|4000Mc|RUNNING|19:28:36\n"
+        "|1|21:14:43|25569410.0|25569410.0|62328K|1|4000Mc|RUNNING|19:28:36\n"
     )
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
     result = runner.invoke(
@@ -337,16 +337,16 @@ def test_simple_not_state(mocker, mock_inquirer):
     sub_result = mocker.MagicMock()
     sub_result.returncode = 0
     sub_result.stdout = (
-        "1|01:27:42|24418435|24418435||1|1Gn|"
+        "|1|01:27:42|24418435|24418435||1|1Gn|"
         "COMPLETED|01:27:29\n"
-        "1|01:27:42|24418435.batch|24418435.batch|499092K|1|1Gn|"
+        "|1|01:27:42|24418435.batch|24418435.batch|499092K|1|1Gn|"
         "COMPLETED|01:27:29\n"
-        "1|01:27:42|24418435.extern|24418435.extern|1376K|1|1Gn|"
+        "|1|01:27:42|24418435.extern|24418435.extern|1376K|1|1Gn|"
         "COMPLETED|00:00:00\n"
-        "1|21:14:48|25569410|25569410||1|4000Mc|RUNNING|19:28:36\n"
-        "1|21:14:49|25569410.extern|25569410.extern|1548K|1|4000Mc|"
+        "|1|21:14:48|25569410|25569410||1|4000Mc|RUNNING|19:28:36\n"
+        "|1|21:14:49|25569410.extern|25569410.extern|1548K|1|4000Mc|"
         "RUNNING|00:00:00\n"
-        "1|21:14:43|25569410.0|25569410.0|62328K|1|4000Mc|RUNNING|19:28:36\n"
+        "|1|21:14:43|25569410.0|25569410.0|62328K|1|4000Mc|RUNNING|19:28:36\n"
     )
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
     result = runner.invoke(
@@ -370,16 +370,16 @@ def test_invalid_not_state(mocker, mock_inquirer):
     sub_result = mocker.MagicMock()
     sub_result.returncode = 0
     sub_result.stdout = (
-        "1|01:27:42|24418435|24418435||1|1Gn|"
+        "|1|01:27:42|24418435|24418435||1|1Gn|"
         "COMPLETED|01:27:29\n"
-        "1|01:27:42|24418435.batch|24418435.batch|499092K|1|1Gn|"
+        "|1|01:27:42|24418435.batch|24418435.batch|499092K|1|1Gn|"
         "COMPLETED|01:27:29\n"
-        "1|01:27:42|24418435.extern|24418435.extern|1376K|1|1Gn|"
+        "|1|01:27:42|24418435.extern|24418435.extern|1376K|1|1Gn|"
         "COMPLETED|00:00:00\n"
-        "1|21:14:48|25569410|25569410||1|4000Mc|RUNNING|19:28:36\n"
-        "1|21:14:49|25569410.extern|25569410.extern|1548K|1|4000Mc|"
+        "|1|21:14:48|25569410|25569410||1|4000Mc|RUNNING|19:28:36\n"
+        "|1|21:14:49|25569410.extern|25569410.extern|1548K|1|4000Mc|"
         "RUNNING|00:00:00\n"
-        "1|21:14:43|25569410.0|25569410.0|62328K|1|4000Mc|RUNNING|19:28:36\n"
+        "|1|21:14:43|25569410.0|25569410.0|62328K|1|4000Mc|RUNNING|19:28:36\n"
     )
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
     result = runner.invoke(
@@ -407,16 +407,16 @@ def test_no_state(mocker, mock_inquirer):
     sub_result = mocker.MagicMock()
     sub_result.returncode = 0
     sub_result.stdout = (
-        "1|01:27:42|24418435|24418435||1|1Gn|"
+        "|1|01:27:42|24418435|24418435||1|1Gn|"
         "COMPLETED|01:27:29\n"
-        "1|01:27:42|24418435.batch|24418435.batch|499092K|1|1Gn|"
+        "|1|01:27:42|24418435.batch|24418435.batch|499092K|1|1Gn|"
         "COMPLETED|01:27:29\n"
-        "1|01:27:42|24418435.extern|24418435.extern|1376K|1|1Gn|"
+        "|1|01:27:42|24418435.extern|24418435.extern|1376K|1|1Gn|"
         "COMPLETED|00:00:00\n"
-        "1|21:14:48|25569410|25569410||1|4000Mc|RUNNING|19:28:36\n"
-        "1|21:14:49|25569410.extern|25569410.extern|1548K|1|4000Mc|"
+        "|1|21:14:48|25569410|25569410||1|4000Mc|RUNNING|19:28:36\n"
+        "|1|21:14:49|25569410.extern|25569410.extern|1548K|1|4000Mc|"
         "RUNNING|00:00:00\n"
-        "1|21:14:43|25569410.0|25569410.0|62328K|1|4000Mc|RUNNING|19:28:36\n"
+        "|1|21:14:43|25569410.0|25569410.0|62328K|1|4000Mc|RUNNING|19:28:36\n"
     )
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
     result = runner.invoke(console.main, "--no-color --state ZZ 25569410 24418435")
@@ -444,11 +444,11 @@ def test_array_job_raw_id(mocker, mock_inquirer):
     sub_result = mocker.MagicMock()
     sub_result.returncode = 0
     sub_result.stdout = (
-        "1|00:09:34|24220929_421|24221219||1|16000Mn|"
+        "|1|00:09:34|24220929_421|24221219||1|16000Mn|"
         "COMPLETED|09:28.052\n"
-        "1|00:09:34|24220929_421.batch|24221219.batch|5664932K|1|16000Mn|"
+        "|1|00:09:34|24220929_421.batch|24221219.batch|5664932K|1|16000Mn|"
         "COMPLETED|09:28.051\n"
-        "1|00:09:34|24220929_421.extern|24221219.extern|1404K|1|16000Mn|"
+        "|1|00:09:34|24220929_421.extern|24221219.extern|1404K|1|16000Mn|"
         "COMPLETED|00:00:00\n"
     )
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
@@ -477,17 +477,17 @@ def test_array_job_single(mocker, mock_inquirer):
     sub_result = mocker.MagicMock()
     sub_result.returncode = 0
     sub_result.stdout = (
-        "1|00:09:34|24220929_421|24221219||1|16000Mn|"
+        "|1|00:09:34|24220929_421|24221219||1|16000Mn|"
         "COMPLETED|09:28.052\n"
-        "1|00:09:34|24220929_421.batch|24221219.batch|5664932K|1|16000Mn|"
+        "|1|00:09:34|24220929_421.batch|24221219.batch|5664932K|1|16000Mn|"
         "COMPLETED|09:28.051\n"
-        "1|00:09:34|24220929_421.extern|24221219.extern|1404K|1|16000Mn|"
+        "|1|00:09:34|24220929_421.extern|24221219.extern|1404K|1|16000Mn|"
         "COMPLETED|00:00:00\n"
-        "1|00:09:33|24220929_431|24221220||1|16000Mn|"
+        "|1|00:09:33|24220929_431|24221220||1|16000Mn|"
         "PENDING|09:27.460\n"
-        "1|00:09:33|24220929_431.batch|24221220.batch|5518572K|1|16000Mn|"
+        "|1|00:09:33|24220929_431.batch|24221220.batch|5518572K|1|16000Mn|"
         "PENDING|09:27.459\n"
-        "1|00:09:33|24220929_431.extern|24221220.extern|1400K|1|16000Mn|"
+        "|1|00:09:33|24220929_431.extern|24221220.extern|1400K|1|16000Mn|"
         "PENDING|00:00:00\n"
     )
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
@@ -516,17 +516,17 @@ def test_array_job_base(mocker, mock_inquirer):
     sub_result = mocker.MagicMock()
     sub_result.returncode = 0
     sub_result.stdout = (
-        "1|00:09:34|24220929_421|24221219||1|16000Mn|"
+        "|1|00:09:34|24220929_421|24221219||1|16000Mn|"
         "COMPLETED|09:28.052\n"
-        "1|00:09:34|24220929_421.batch|24221219.batch|5664932K|1|16000Mn|"
+        "|1|00:09:34|24220929_421.batch|24221219.batch|5664932K|1|16000Mn|"
         "COMPLETED|09:28.051\n"
-        "1|00:09:34|24220929_421.extern|24221219.extern|1404K|1|16000Mn|"
+        "|1|00:09:34|24220929_421.extern|24221219.extern|1404K|1|16000Mn|"
         "COMPLETED|00:00:00\n"
-        "1|00:09:33|24220929_431|24221220||1|16000Mn|"
+        "|1|00:09:33|24220929_431|24221220||1|16000Mn|"
         "PENDING|09:27.460\n"
-        "1|00:09:33|24220929_431.batch|24221220.batch|5518572K|1|16000Mn|"
+        "|1|00:09:33|24220929_431.batch|24221220.batch|5518572K|1|16000Mn|"
         "PENDING|09:27.459\n"
-        "1|00:09:33|24220929_431.extern|24221220.extern|1400K|1|16000Mn|"
+        "|1|00:09:33|24220929_431.extern|24221220.extern|1400K|1|16000Mn|"
         "PENDING|00:00:00\n"
     )
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
@@ -593,10 +593,10 @@ def test_failed_no_mem(mocker, mock_inquirer):
     sub_result = mocker.MagicMock()
     sub_result.returncode = 0
     sub_result.stdout = (
-        "8|00:00:12|23000381|23000381||1|4000Mc|FAILED|00:00:00\n"
-        "8|00:00:12|23000381.batch|23000381.batch||1|4000Mc|"
+        "|8|00:00:12|23000381|23000381||1|4000Mc|FAILED|00:00:00\n"
+        "|8|00:00:12|23000381.batch|23000381.batch||1|4000Mc|"
         "FAILED|00:00:00\n"
-        "8|00:00:12|23000381.extern|23000381.extern|1592K|1|4000Mc|"
+        "|8|00:00:12|23000381.extern|23000381.extern|1592K|1|4000Mc|"
         "COMPLETED|00:00:00\n"
     )
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
@@ -616,7 +616,7 @@ def test_canceled_by_other(mocker, mock_inquirer):
     sub_result = mocker.MagicMock()
     sub_result.returncode = 0
     sub_result.stdout = (
-        "16|00:00:00|23000233|23000233||1|4000Mc|CANCELLED by 129319|00:00:00\n"
+        "|16|00:00:00|23000233|23000233||1|4000Mc|CANCELLED by 129319|00:00:00\n"
     )
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
     result = runner.invoke(console.main, "--no-color 23000233 --state CA")
@@ -642,11 +642,11 @@ def test_zero_runtime(mocker, mock_inquirer):
     sub_result = mocker.MagicMock()
     sub_result.returncode = 0
     sub_result.stdout = (
-        "8|00:00:00|23000210|23000210||1|20000Mn|"
+        "|8|00:00:00|23000210|23000210||1|20000Mn|"
         "FAILED|00:00.007\n"
-        "8|00:00:00|23000210.batch|23000210.batch|1988K|1|20000Mn|"
+        "|8|00:00:00|23000210.batch|23000210.batch|1988K|1|20000Mn|"
         "FAILED|00:00.006\n"
-        "8|00:00:00|23000210.extern|23000210.extern|1556K|1|20000Mn|"
+        "|8|00:00:00|23000210.extern|23000210.extern|1556K|1|20000Mn|"
         "COMPLETED|00:00:00\n"
     )
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
