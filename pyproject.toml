@@ -12,7 +12,7 @@ keywords= ["slurm","seff"]
 [tool.poetry.dependencies]
 python = ">=3.7,<4.0"
 importlib-metadata = {version = "^4.8.2", python = "<3.8"}
-click = "^8.0.3"
+click = ">=7.1.2"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.5"

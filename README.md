@@ -15,7 +15,9 @@ The only external dependency is click (>= 7.0).
 Calling
 
 ```sh
-pip install reportseff
+pip install --user reportseff
+# OR
+pipx install reportseff
 ```
 
 will create command line bindings and install click.
