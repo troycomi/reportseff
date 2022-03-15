@@ -29,10 +29,12 @@ from .output_renderer import OutputRenderer
     default="JobID%>,State,Elapsed%>,TimeEff,CPUEff,MemEff",
     help="Comma-separated list of columns to include. Options "
     "are any valid sacct input along with CPUEff, MemEff, and "
-    "TimeEff. A width and alignment may optionally be provided "
+    "TimeEff.  In systems with jobstat caching, GPU usage can be "
+    "added with GPUEff, GPUMem or GPU (for both). "
+    "A width and alignment may optionally be provided "
     'after "%", e.g. JobID%>15 aligns job id right with max '
     "width of 15 characters. Generally NAME[[%:][ALIGNMENT][WIDTH[e$]?]]. "
-    "When an `e` is present after a width argument, "
+    "When an `e` or `$` is present after a width argument, "
     "the output will be truncated to the right."
     "Prefix with a + to add to the defaults. "
     "A single format token will suppress the header line. "

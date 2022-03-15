@@ -1,6 +1,9 @@
 """Module for reprsenting scheduler jobs."""
 from datetime import timedelta
 import re
+import json
+import gzip
+import base64
 from typing import Any, Dict, Optional, Union
 
 
@@ -59,7 +62,11 @@ class Job:
         self.cpu: Optional[Union[str, float]] = "---"
         self.mem: Union[str, float] = "---"
         self.state: Optional[str] = None
+        self.mem_eff: Optional[float] = None
+        self.gpu: Optional[float] = None
+        self.gpu_mem: Optional[float] = None
         self.other_entries: Dict[str, str] = {}
+        self.comment_data: Dict = {}
 
     def __eq__(self, other: Any) -> bool:
         """Test for equality.
@@ -139,6 +146,62 @@ class Job:
                 entry["REQMEM"], int(entry["NNodes"]), int(entry["AllocCPUS"])
             )
 
+        if "AdminComment" in entry and len(entry["AdminComment"]) > 10:
+            self._parse_admin_comment(entry["AdminComment"])
+
+    def _parse_admin_comment(self, comment: str) -> None:
+        """use admin command to override efficiency values"""
+        comment_type = comment[:3]
+        if comment_type not in ("JS1",):
+            raise ValueError(f"Unknown comment type '{comment_type}'")
+        data = {}
+        try:
+            data = json.loads(gzip.decompress(base64.b64decode(comment[4:])))
+        except BaseException as exception:
+            raise ValueError(f"Cannot decode comment '{comment}'") from exception
+
+        def average(value: str, data: Optional[dict] = None) -> float:
+            if data is None:
+                data = self.comment_data
+            return round(
+                sum(v[value] for v in data.values()) / len(data),
+                1,
+            )
+
+        for node, value in data["nodes"].items():
+            self.comment_data[node] = {
+                "cpu_eff": value["total_time"]
+                / value["cpus"]
+                / data["total_time"]
+                * 100,
+                "mem_eff": value["used_memory"] / value["total_memory"] * 100,
+            }
+            if data["gpus"]:
+                self.comment_data[node]["gpus"] = {
+                    gpu: {
+                        "gpu_eff": value["gpu_utilization"][gpu],
+                        "mem_eff": round(
+                            value["gpu_used_memory"][gpu]
+                            / value["gpu_total_memory"][gpu]
+                            * 100,
+                            1,
+                        ),
+                    }
+                    for gpu in value["gpu_utilization"]
+                }
+                self.comment_data[node]["gpu_eff"] = average(
+                    "gpu_eff", self.comment_data[node]["gpus"]
+                )
+                self.comment_data[node]["gpu_mem_eff"] = average(
+                    "mem_eff", self.comment_data[node]["gpus"]
+                )
+
+        self.cpu = average("cpu_eff")
+        self.mem_eff = average("mem_eff")
+        if data["gpus"]:
+            self.gpu = average("gpu_eff")
+            self.gpu_mem = average("gpu_mem_eff")
+
     def name(self) -> str:
         """The name of the job.
 
@@ -163,6 +226,8 @@ class Job:
         if key == "State":
             return self.state
         if key == "MemEff":
+            if self.mem_eff:  # set by admin comment
+                return self.mem_eff
             if self.totalmem:
                 return round(self.stepmem / self.totalmem * 100, 1)
             return "---"
@@ -170,8 +235,11 @@ class Job:
             return self.time_eff
         if key == "CPUEff":
             return self.cpu if self.cpu else "---"
-        else:
-            return self.other_entries.get(key, "---")
+        if key == "GPUEff":
+            return self.gpu if self.gpu else "---"
+        if key == "GPUMem":
+            return self.gpu_mem if self.gpu_mem else "---"
+        return self.other_entries.get(key, "---")
 
 
 def _parse_slurm_timedelta(delta: str) -> int:

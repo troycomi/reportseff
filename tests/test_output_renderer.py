@@ -175,6 +175,17 @@ def test_renderer_validate_formatters(renderer):
     renderer.formatters = output_renderer.build_formatters("JobID,JOBid,jObId")
     assert renderer.validate_formatters(["JobID"]) == "JobID JobID JobID".split()
     assert renderer.formatters == "JobID JobID JobID".split()
+    renderer.formatters = output_renderer.build_formatters("JobID,GPU%>10")
+    assert (
+        renderer.validate_formatters(["JobID", "GPU", "GPUEff", "GPUMem"])
+        == "JobID GPU".split()
+    )
+    assert renderer.formatters == "JobID GPUEff GPUMem".split()
+    # other params are copied from GPU to GPUEff and GPUMem
+    assert renderer.formatters[1].alignment == ">"
+    assert renderer.formatters[2].alignment == ">"
+    assert renderer.formatters[1].width == 10
+    assert renderer.formatters[2].width == 10
 
 
 def test_renderer_correct_columns(renderer):

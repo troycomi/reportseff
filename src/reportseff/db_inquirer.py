@@ -159,8 +159,6 @@ class SacctInquirer(BaseInquirer):
             debug_cmd("\n".join(lines))
 
         result = [dict(zip(columns, line.split("|"))) for line in lines if line]
-        # import pprint
-        # pprint.pprint(result)
 
         if self.state:
             # split to get first word in entries like "CANCELLED BY X"

@@ -391,7 +391,6 @@ def test_invalid_not_state(mocker, mock_inquirer):
     assert result.exit_code == 0
     # remove header
     output = result.output.split("\n")
-    print(output)
     assert output[0] == "Unknown state UNNING"
     assert output[1] == "No valid states provided to exclude"
     # output 2 is header

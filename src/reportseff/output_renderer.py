@@ -1,6 +1,7 @@
 """Module for rendering tabulated values."""
+import copy
 import re
-from typing import Any, Callable, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import click
 
@@ -34,10 +35,13 @@ class OutputRenderer:
         # values required for proper parsing, need not be included in output
         self.required = ["JobID", "JobIDRaw", "State", "AdminComment"]
         # values derived from other values, list includes all dependent values
-        self.derived = {
+        self.derived: Dict[str, List] = {
             "CPUEff": ["TotalCPU", "AllocCPUS", "Elapsed"],
             "MemEff": ["REQMEM", "NNodes", "AllocCPUS", "MaxRSS"],
             "TimeEff": ["Elapsed", "Timelimit"],
+            "GPU": [],
+            "GPUMem": [],
+            "GPUEff": [],
         }
 
         # build formatters
@@ -52,18 +56,29 @@ class OutputRenderer:
 
     def validate_formatters(self, valid_titles: List) -> List:
         """Validate titles of formatters attribute.
+        Expands GPU to GPUEff and GPUMem in formatters
 
         Args:
             valid_titles: List of valid options for format tokens
 
         Returns:
-            Return list of validated ColumnFormatters
+            Return list of validated strings to query
         """
-        return [fmt.validate_title(valid_titles) for fmt in self.formatters]
+        result = [fmt.validate_title(valid_titles) for fmt in self.formatters]
+
+        if "GPU" in self.formatters:
+            ind = self.formatters.index("GPU")
+            self.formatters[ind].title = "GPUEff"
+            gpu_mem = copy.copy(self.formatters[ind])
+            gpu_mem.title = "GPUMem"
+            gpu_mem.color_function = lambda x: render_eff(x, "mid")
+            self.formatters.insert(ind + 1, gpu_mem)
+
+        return result
 
     def correct_columns(self) -> None:
         """Expand derived values of query columns and remove duplicates."""
-        result = [
+        result: List[List] = [
             self.derived[c] if c in self.derived else [c] for c in self.query_columns
         ]
         # flatten
@@ -148,9 +163,9 @@ class ColumnFormatter:
         fold_title = self.title.casefold()
         if fold_title == "state":
             self.color_function = color_state
-        elif fold_title == "cpueff":
+        elif fold_title in ("cpueff", "gpueff", "gpu"):
             self.color_function = lambda x: render_eff(x, "high")
-        elif fold_title in ("timeeff", "memeff"):
+        elif fold_title in ("timeeff", "memeff", "gpueff"):
             self.color_function = lambda x: render_eff(x, "mid")
 
     def __eq__(self, other: Any) -> bool:
