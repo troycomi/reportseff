@@ -364,4 +364,5 @@ def test_process_entry_array_user(jobs):
     )
     expected_job = Job("14729857", "14729857_[737-999]", None)
     expected_job.state = "PENDING"
+    expected_job._cache_entries()
     assert jobs.jobs == {"14729857_[737-999]": expected_job}

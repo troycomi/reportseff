@@ -1,8 +1,5 @@
 """Test job object."""
 import pytest
-import json
-import gzip
-import base64
 
 from reportseff import job as job_module
 
@@ -241,8 +238,6 @@ def test_name(job):
 def test_get_entry(job):
     """State is read properly and updated by main job entry."""
     job.state = "TEST"
-    assert job.get_entry("JobID") == "filename"
-    assert job.get_entry("State") == "TEST"
     assert job.get_entry("MemEff") == "---"
     assert job.get_entry("TimeEff") == "---"
     assert job.get_entry("CPUEff") == "---"
@@ -322,271 +317,8 @@ def test_parsememstep():
     assert job_module.parsemem("1084.50M") == 1084.5 * 1024
 
 
-def to_comment(info: dict) -> str:
-    """Convert jobstats dict to compressed base64 to match AdminComment"""
-    return "JS1:" + base64.b64encode(
-        gzip.compress(json.dumps(info, sort_keys=True, indent=4).encode("ascii"))
-    ).decode("ascii")
-
-
-def to_sacct_dict(sacct_line: str) -> dict:
-    columns = (
-        "AdminComment",
-        "AllocCPUS",
-        "Elapsed",
-        "JobID",
-        "JobIDRaw",
-        "MaxRSS",
-        "NNodes",
-        "REQMEM",
-        "State",
-        "Timelimit",
-        "TotalCPU",
-    )
-    return dict(zip(columns, sacct_line.split("|")))
-
-
-@pytest.fixture
-def single_core():
-    """single core 8206163"""
-    comment = to_comment(
-        {
-            "gpus": False,
-            "nodes": {
-                "tiger-h26c1n19": {
-                    "cpus": 1,
-                    "total_memory": 16106127360,
-                    "total_time": 54515.3,
-                    "used_memory": 582283264,
-                }
-            },
-            "total_time": 54677,
-        }
-    )
-
-    # sacct info is from another job!
-    return [
-        to_sacct_dict(
-            f"{comment}|2|02:14:11|39889258_1426|39895850||1|8G|COMPLETED|02:55:00|03:43:27"
-        ),
-        to_sacct_dict(
-            "|2|02:14:11|39889258_1426.batch|39895850.batch|4224K|1||COMPLETED||00:00.081"
-        ),
-        to_sacct_dict(
-            "|2|02:14:11|39889258_1426.extern|39895850.extern|0|1||COMPLETED||00:00.001"
-        ),
-        to_sacct_dict(
-            "|2|02:14:11|39889258_1426.0|39895850.0|3501608K|1||COMPLETED||03:43:27"
-        ),
-    ]
-
-
-@pytest.fixture
-def multi_node():
-    """multiple nodes with 20 cpus, 80 GB, 9 minutes 8205048"""
-    comment = to_comment(
-        {
-            "gpus": False,
-            "nodes": {
-                "tiger-h19c1n15": {
-                    "cpus": 20,
-                    "total_memory": 83886080000,
-                    "total_time": 542.0,
-                    "used_memory": 3790352384,
-                },
-                "tiger-h26c2n13": {
-                    "cpus": 20,
-                    "total_memory": 83886080000,
-                    "total_time": 0.0,
-                    "used_memory": 0,
-                },
-                "tiger-i26c2n11": {
-                    "cpus": 20,
-                    "total_memory": 83886080000,
-                    "total_time": 0.0,
-                    "used_memory": 0,
-                },
-                "tiger-i26c2n15": {
-                    "cpus": 20,
-                    "total_memory": 83886080000,
-                    "total_time": 0.0,
-                    "used_memory": 0,
-                },
-            },
-            "total_time": 146,
-        }
-    )
-
-    return [
-        to_sacct_dict(
-            f"{comment}|80|00:02:26|8205048|8205048||4|312.50G|COMPLETED|01:00:00|16:01.272"
-        ),
-        to_sacct_dict(
-            "|20|00:02:26|8205048.batch|8205048.batch|1764224K|1||COMPLETED||16:01.268"
-        ),
-        to_sacct_dict(
-            "|80|00:02:26|8205048.extern|8205048.extern|0|4||COMPLETED||00:00.004"
-        ),
-    ]
-
-
-@pytest.fixture
-def single_gpu():
-    """one gpu, used all 16 GB, 30% eff 8197399"""
-    comment = to_comment(
-        {
-            "gpus": True,
-            "nodes": {
-                "tiger-i23g14": {
-                    "cpus": 1,
-                    "gpu_total_memory": {"3": 17071734784},
-                    "gpu_used_memory": {"3": 17040539648},
-                    "gpu_utilization": {"3": 29.4},
-                    "total_memory": 34359738368,
-                    "total_time": 17368.0,
-                    "used_memory": 3250450432,
-                }
-            },
-            "total_time": 18203,
-        }
-    )
-
-    return [
-        to_sacct_dict(
-            f"{comment}|1|05:03:23|8197399|8197399||1|32G|COMPLETED|23:59:00|04:49:38"
-        ),
-        to_sacct_dict(
-            "|1|05:03:23|8197399.batch|8197399.batch|3132024K|1||COMPLETED||04:49:38"
-        ),
-        to_sacct_dict(
-            "|1|05:03:23|8197399.extern|8197399.extern|0|1||COMPLETED||00:00:00"
-        ),
-    ]
-
-
-@pytest.fixture
-def multi_gpu():
-    """4 gpus, 30% mem eff, 3% util 8189521"""
-    comment = to_comment(
-        {
-            "gpus": True,
-            "nodes": {
-                "tiger-i19g9": {
-                    "cpus": 28,
-                    "gpu_total_memory": {
-                        "0": 17071734784,
-                        "1": 17071734784,
-                        "2": 17071734784,
-                        "3": 17071734784,
-                    },
-                    "gpu_used_memory": {
-                        "0": 5146542080,
-                        "1": 5146542080,
-                        "2": 5146542080,
-                        "3": 5146542080,
-                    },
-                    "gpu_utilization": {"0": 3.5, "1": 3.5, "2": 3.2, "3": 3.8},
-                    "total_memory": 117440512000,
-                    "total_time": 201481.2,
-                    "used_memory": 30866018304,
-                }
-            },
-            "total_time": 68687,
-        }
-    )
-    return [
-        to_sacct_dict(
-            f"{comment}|28|19:04:47|8189521|8189521||1|112000M|CANCELLED by 129276|23:00:00|2-07:51:43"
-        ),
-        to_sacct_dict(
-            "|28|19:04:48|8189521.batch|8189521.batch|29036860K|1||CANCELLED||2-07:51:43"
-        ),
-        to_sacct_dict(
-            "|28|19:04:47|8189521.extern|8189521.extern|0|1||COMPLETED||00:00:00"
-        ),
-    ]
-
-
-@pytest.fixture
-def multi_node_multi_gpu():
-    """made up job with multiple nodes and gpus"""
-    comment = to_comment(
-        {
-            "gpus": True,
-            "nodes": {
-                "tiger-i19g9": {
-                    "cpus": 28,
-                    "gpu_total_memory": {
-                        "0": 17071734784,
-                        "1": 17071734784,
-                        "2": 17071734784,
-                        "3": 17071734784,
-                    },
-                    "gpu_used_memory": {
-                        "0": 5146542080,
-                        "1": 5146542080,
-                        "2": 5146542080,
-                        "3": 5146542080,
-                    },
-                    "gpu_utilization": {"0": 3.5, "1": 3.5, "2": 3.2, "3": 3.8},
-                    "total_memory": 117440512000,
-                    "total_time": 201481.2,
-                    "used_memory": 30866018304,
-                },
-                "tiger-i19g10": {
-                    "cpus": 28,
-                    "gpu_total_memory": {
-                        "0": 17071734783,
-                        "1": 17071734783,
-                        "2": 17071734783,
-                        "3": 17071734783,
-                    },
-                    "gpu_used_memory": {
-                        "0": 5146542380,
-                        "1": 5146542380,
-                        "2": 5146542322,
-                        "3": 5146542380,
-                    },
-                    "gpu_utilization": {"0": 7.5, "1": 7.5, "2": 7.2, "3": 7.8},
-                    "total_memory": 117440512000,
-                    "total_time": 201411.2,
-                    "used_memory": 30266018304,
-                },
-            },
-            "total_time": 68687,
-        }
-    )
-    return [
-        to_sacct_dict(
-            f"{comment}|28|19:04:47|8189521|8189521||1|112000M|CANCELLED by 129276|23:00:00|2-07:51:43"
-        ),
-        to_sacct_dict(
-            "|28|19:04:48|8189521.batch|8189521.batch|29036860K|1||CANCELLED||2-07:51:43"
-        ),
-        to_sacct_dict(
-            "|28|19:04:47|8189521.extern|8189521.extern|0|1||COMPLETED||00:00:00"
-        ),
-    ]
-
-
-@pytest.fixture
-def short_job():
-    """used for jobs which don't last long enough 8205464"""
-    comment = "JS1:Short"
-    return [
-        to_sacct_dict(
-            f"{comment}|8|00:00:02|8205464|8205464||1|64G|FAILED|1-00:00:00|00:01.608"
-        ),
-        to_sacct_dict("|8|00:00:02|8205464.batch|8205464.batch|0|1||FAILED||00:00.020"),
-        to_sacct_dict(
-            "|8|00:00:02|8205464.extern|8205464.extern|0|1||COMPLETED||00:00:00"
-        ),
-        to_sacct_dict("|8|00:00:02|8205464.0|8205464.0|0|1||FAILED||00:01.587"),
-    ]
-
-
 def test_unknown_admin_comment(job):
-    # unknown comment type
+    """Unknown comment types raise informative errors."""
     with pytest.raises(ValueError, match="Unknown comment type 'JX1'"):
         job._parse_admin_comment("JX1:asdfasdf")
 
@@ -599,7 +331,8 @@ def test_unknown_admin_comment(job):
         job._parse_admin_comment("JS1:asd&asdf")
 
 
-def test_update_single_core(single_core):
+def test_single_core(single_core):
+    """Job with single node is updated properly."""
     job = job_module.Job("39895850", "39889258_1426", None)
     for line in single_core:
         job.update(line)
@@ -608,9 +341,13 @@ def test_update_single_core(single_core):
     assert job.mem_eff == 3.6
     assert job.gpu is None
     assert job.gpu_mem is None
+    # single nodes are not printed
+    assert list(job.get_node_entries("JobID")) == ["39889258_1426"]
+    assert list(job.get_node_entries("CPUEff")) == [99.7]
 
 
-def test_update_multi_node(multi_node):
+def test_multi_node(multi_node):
+    """Job with multiple nodes is updated properly."""
     job = job_module.Job("8205048", "8205048", None)
     for line in multi_node:
         job.update(line)
@@ -620,8 +357,41 @@ def test_update_multi_node(multi_node):
     assert job.gpu is None
     assert job.gpu_mem is None
 
+    assert list(job.get_node_entries("JobID")) == [
+        "8205048",
+        "  tiger-h19c1n15",
+        "  tiger-h26c2n13",
+        "  tiger-i26c2n11",
+        "  tiger-i26c2n15",
+    ]
 
-def test_update_single_gpu(single_gpu):
+    assert list(job.get_node_entries("CPUEff")) == [
+        4.6,
+        18.6,
+        0.0,
+        0.0,
+        0.0,
+    ]
+
+    assert list(job.get_node_entries("MemEff")) == [
+        1.1,
+        4.5,
+        0.0,
+        0.0,
+        0.0,
+    ]
+
+    assert list(job.get_node_entries("GPUEff")) == [
+        "---",
+        "",
+        "",
+        "",
+        "",
+    ]
+
+
+def test_single_gpu(single_gpu):
+    """Jobs with GPUs are reported properly."""
     job = job_module.Job("8197399", "8197399", None)
     for line in single_gpu:
         job.update(line)
@@ -631,8 +401,47 @@ def test_update_single_gpu(single_gpu):
     assert job.gpu == 29.4
     assert job.gpu_mem == 99.8
 
+    # without forcing GPU output
+    assert list(job.get_node_entries("JobID")) == ["8197399"]
+    assert list(job.get_node_entries("CPUEff")) == [95.4]
+    assert list(job.get_node_entries("MemEff")) == [9.5]
+    assert list(job.get_node_entries("GPUEff")) == [29.4]
+    assert list(job.get_node_entries("GPUMem")) == [99.8]
 
-def test_update_multi_gpu(multi_gpu):
+    # with forced GPU output
+    assert list(job.get_node_entries("JobID", True)) == [
+        "8197399",
+        "  tiger-i23g14",
+        "    3",
+    ]
+
+    assert list(job.get_node_entries("CPUEff", True)) == [
+        95.4,
+        95.4,
+        "",
+    ]
+
+    assert list(job.get_node_entries("MemEff", True)) == [
+        9.5,
+        9.5,
+        "",
+    ]
+
+    assert list(job.get_node_entries("GPUEff", True)) == [
+        29.4,
+        29.4,
+        29.4,
+    ]
+
+    assert list(job.get_node_entries("GPUMem", True)) == [
+        99.8,
+        99.8,
+        99.8,
+    ]
+
+
+def test_multi_gpu(multi_gpu):
+    """Single core, multi gpu jobs are updated properly."""
     job = job_module.Job("8189521", "8189521", None)
     for line in multi_gpu:
         job.update(line)
@@ -642,8 +451,62 @@ def test_update_multi_gpu(multi_gpu):
     assert job.gpu == 3.5
     assert job.gpu_mem == 30.1
 
+    # without forcing GPU output
+    assert list(job.get_node_entries("JobID")) == ["8189521"]
+    assert list(job.get_node_entries("CPUEff")) == [10.5]
+    assert list(job.get_node_entries("MemEff")) == [26.3]
+    assert list(job.get_node_entries("GPUEff")) == [3.5]
+    assert list(job.get_node_entries("GPUMem")) == [30.1]
 
-def test_update_multi_node_multi_gpu(multi_node_multi_gpu):
+    # with forced GPU output
+    assert list(job.get_node_entries("JobID", True)) == [
+        "8189521",
+        "  tiger-i19g9",
+        "    0",
+        "    1",
+        "    2",
+        "    3",
+    ]
+
+    assert list(job.get_node_entries("CPUEff", True)) == [
+        10.5,
+        10.5,
+        "",
+        "",
+        "",
+        "",
+    ]
+
+    assert list(job.get_node_entries("MemEff", True)) == [
+        26.3,
+        26.3,
+        "",
+        "",
+        "",
+        "",
+    ]
+
+    assert list(job.get_node_entries("GPUEff", True)) == [
+        3.5,
+        3.5,
+        3.5,
+        3.5,
+        3.2,
+        3.8,
+    ]
+
+    assert list(job.get_node_entries("GPUMem", True)) == [
+        30.1,
+        30.1,
+        30.1,
+        30.1,
+        30.1,
+        30.1,
+    ]
+
+
+def test_multi_node_multi_gpu(multi_node_multi_gpu):
+    """Multiple nodes with multiple gpus are updated properly."""
     job = job_module.Job("8189521", "8189521", None)
     for line in multi_node_multi_gpu:
         job.update(line)
@@ -653,8 +516,109 @@ def test_update_multi_node_multi_gpu(multi_node_multi_gpu):
     assert job.gpu == 5.5
     assert job.gpu_mem == 30.1
 
+    assert list(job.get_node_entries("JobID")) == [
+        "8189521",
+        "  tiger-i19g10",
+        "  tiger-i19g9",
+    ]
 
-def test_update_short_job(short_job):
+    assert list(job.get_node_entries("CPUEff")) == [
+        10.5,
+        10.5,
+        10.5,
+    ]
+
+    assert list(job.get_node_entries("MemEff")) == [
+        26.0,
+        25.8,
+        26.3,
+    ]
+
+    assert list(job.get_node_entries("GPUEff")) == [
+        5.5,
+        7.5,
+        3.5,
+    ]
+
+    assert list(job.get_node_entries("GPUMem")) == [
+        30.1,
+        30.1,
+        30.1,
+    ]
+
+    assert list(job.get_node_entries("JobID", True)) == [
+        "8189521",
+        "  tiger-i19g10",
+        "    0",
+        "    1",
+        "    2",
+        "    3",
+        "  tiger-i19g9",
+        "    0",
+        "    1",
+        "    2",
+        "    3",
+    ]
+
+    assert list(job.get_node_entries("CPUEff", True)) == [
+        10.5,
+        10.5,
+        "",
+        "",
+        "",
+        "",
+        10.5,
+        "",
+        "",
+        "",
+        "",
+    ]
+
+    assert list(job.get_node_entries("MemEff", True)) == [
+        26.0,
+        25.8,
+        "",
+        "",
+        "",
+        "",
+        26.3,
+        "",
+        "",
+        "",
+        "",
+    ]
+
+    assert list(job.get_node_entries("GPUEff", True)) == [
+        5.5,
+        7.5,
+        7.5,
+        7.5,
+        7.2,
+        7.8,
+        3.5,
+        3.5,
+        3.5,
+        3.2,
+        3.8,
+    ]
+
+    assert list(job.get_node_entries("GPUMem", True)) == [
+        30.1,
+        30.1,
+        30.1,
+        30.1,
+        30.1,
+        30.1,
+        30.1,
+        30.1,
+        30.1,
+        30.1,
+        30.1,
+    ]
+
+
+def test_short_job(short_job):
+    """Jobs with JS1:Short are handled with sacct info instead."""
     job = job_module.Job("8205464", "8205464", None)
     for line in short_job:
         job.update(line)
@@ -663,3 +627,8 @@ def test_update_short_job(short_job):
     assert job.mem_eff is None
     assert job.gpu is None
     assert job.gpu_mem is None
+
+    assert list(job.get_node_entries("JobID")) == ["8205464"]
+    assert list(job.get_node_entries("JobID", True)) == ["8205464"]
+    assert list(job.get_node_entries("CPUEff")) == [6.2]
+    assert list(job.get_node_entries("State")) == ["FAILED"]

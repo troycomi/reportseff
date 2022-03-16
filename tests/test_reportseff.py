@@ -141,7 +141,8 @@ def test_process_failure(mocker, mock_inquirer):
     # remove header
     output = result.output.split("\n")
     assert output[0] == "Error processing entry: " + (
-        "{'AdminComment': '', 'AllocCPUS': '16', 'Elapsed': '00:00:00', 'JobID': '23000233', "
+        "{'AdminComment': '', 'AllocCPUS': '16', "
+        "'Elapsed': '00:00:00', 'JobID': '23000233', "
         "'JobIDRaw': '23000233', 'MaxRSS': '', 'NNodes': '1', "
         "'REQMEM': '4000Mc', 'State': 'CANCELLED by 129319', "
         "'TotalCPU': '6-00:00:00'}"

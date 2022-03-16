@@ -123,6 +123,46 @@ def some_jobs():
     return jobs
 
 
+@pytest.fixture
+def some_multi_core_jobs(
+    single_core, multi_node, single_gpu, multi_gpu, multi_node_multi_gpu, short_job
+):
+    """A collection of jobs with multiple cores/gpus."""
+    jobs = []
+
+    job = job_module.Job("8205464", "8205464", None)
+    for line in short_job:
+        job.update(line)
+    jobs.append(job)
+
+    job = job_module.Job("8189521", "8189521", None)
+    for line in multi_node_multi_gpu:
+        job.update(line)
+    jobs.append(job)
+
+    job = job_module.Job("8189521", "8189521", None)
+    for line in multi_gpu:
+        job.update(line)
+    jobs.append(job)
+
+    job = job_module.Job("8197399", "8197399", None)
+    for line in single_gpu:
+        job.update(line)
+    jobs.append(job)
+
+    job = job_module.Job("8205048", "8205048", None)
+    for line in multi_node:
+        job.update(line)
+    jobs.append(job)
+
+    job = job_module.Job("39895850", "39889258_1426", None)
+    for line in single_core:
+        job.update(line)
+    jobs.append(job)
+
+    return jobs
+
+
 def test_renderer_init(renderer):
     """Initialized renderer produces correct columns."""
     assert renderer.formatters == [
@@ -175,6 +215,7 @@ def test_renderer_validate_formatters(renderer):
     renderer.formatters = output_renderer.build_formatters("JobID,JOBid,jObId")
     assert renderer.validate_formatters(["JobID"]) == "JobID JobID JobID".split()
     assert renderer.formatters == "JobID JobID JobID".split()
+
     renderer.formatters = output_renderer.build_formatters("JobID,GPU%>10")
     assert (
         renderer.validate_formatters(["JobID", "GPU", "GPUEff", "GPUMem"])
@@ -186,6 +227,40 @@ def test_renderer_validate_formatters(renderer):
     assert renderer.formatters[2].alignment == ">"
     assert renderer.formatters[1].width == 10
     assert renderer.formatters[2].width == 10
+
+
+def test_renderer_validate_formatters_with_node(renderer):
+    """Validating formatters with GPUs can alter formatters."""
+    min_gpu = min_required + ["GPU", "GPUEff", "GPUMem"]
+    # normal function
+    renderer.node = False
+    renderer.gpu = False
+    renderer.formatters = output_renderer.build_formatters("State")
+    assert renderer.validate_formatters(min_gpu) == ["State"]
+    assert renderer.formatters == ["State"]
+
+    # add in job id
+    renderer.node = True
+    renderer.gpu = False
+    renderer.formatters = output_renderer.build_formatters("State")
+    assert renderer.validate_formatters(min_gpu) == ["State"]
+    assert renderer.formatters == ["JobID", "State"]
+
+    # add in both gpus, gpu implies node
+    renderer.node = True
+    renderer.gpu = True
+    renderer.formatters = output_renderer.build_formatters("State")
+    assert renderer.validate_formatters(min_gpu) == ["State"]
+    assert renderer.formatters == ["JobID", "State", "GPUEff", "GPUMem"]
+    assert renderer.formatters[0].alignment == "<"  # switched by node reporting
+
+    # since format alread has jobid and gpumem, will not override
+    renderer.node = True
+    renderer.gpu = True
+    renderer.formatters = output_renderer.build_formatters("GPUMEM,State,JobID:>")
+    assert renderer.validate_formatters(min_gpu) == "GPUMem State JobID".split()
+    assert renderer.formatters == ["GPUMem", "State", "JobID"]
+    assert renderer.formatters[2].alignment == "<"  # switched by node reporting
 
 
 def test_renderer_correct_columns(renderer):
@@ -222,8 +297,6 @@ def test_renderer_format_jobs(some_jobs):
     ansi_escape = re.compile(r"\x1B[@-_][0-?]*[ -/]*[@-~]")
     # check removed codes
     codes = ansi_escape.findall(result)
-    for i, c in enumerate(codes):
-        print(f"{i} -> {repr(c)}")
     for code in codes[1::2]:  # normal
         assert code == "\x1b[0m"
     for code in codes[0:10:20]:
@@ -248,6 +321,96 @@ def test_renderer_format_jobs(some_jobs):
     assert lines[4].split() == "24371658 CANCELLED 00:00:00 --- 1Gn 0.0%".split()
     assert lines[5].split() == "24371659 TIMEOUT 00:21:00 19.0% 2Gn 105.0%".split()
     assert lines[6].split() == "24371660 OTHER 00:12:05 74.5% 2Gn 60.4%".split()
+
+
+def test_renderer_format_jobs_multi_node(some_multi_core_jobs):
+    """Can render output as table with colored entries."""
+    renderer = output_renderer.OutputRenderer(
+        min_required,
+        "JobID,State,CPUEff,TimeEff,MemEff,GPU",
+    )
+    result = renderer.format_jobs(some_multi_core_jobs)
+    ansi_escape = re.compile(r"\x1B[@-_][0-?]*[ -/]*[@-~]")
+    result = ansi_escape.sub("", result)
+    lines = result.split("\n")
+    assert lines[0].split() == "JobID State CPUEff TimeEff MemEff GPUEff GPUMem".split()
+    assert lines[1].split() == "8205464 FAILED 6.2% 0.0% 0.0% --- ---".split()
+    assert lines[2].split() == "8189521 CANCELLED 10.5% 83.0% 26.0% 5.5% 30.1%".split()
+    assert lines[3].split() == "8189521 CANCELLED 10.5% 83.0% 26.3% 3.5% 30.1%".split()
+    assert lines[4].split() == "8197399 COMPLETED 95.4% 21.1% 9.5% 29.4% 99.8%".split()
+    assert lines[5].split() == "8205048 COMPLETED 4.6% 4.1% 1.1% --- ---".split()
+    assert (
+        lines[6].split() == "39889258_1426 COMPLETED 99.7% 76.7% 3.6% --- ---".split()
+    )
+
+
+def test_renderer_format_jobs_multi_node_with_nodes(some_multi_core_jobs):
+    """Can render output as table with colored entries."""
+    renderer = output_renderer.OutputRenderer(
+        min_required,
+        "JobID,State,CPUEff,TimeEff,MemEff,GPU",
+        node=True,
+    )
+    result = renderer.format_jobs(some_multi_core_jobs)
+    ansi_escape = re.compile(r"\x1B[@-_][0-?]*[ -/]*[@-~]")
+    result = ansi_escape.sub("", result)
+    lines = result.split("\n")
+    assert lines[0].split() == "JobID State CPUEff TimeEff MemEff GPUEff GPUMem".split()
+    assert lines[1].split() == "8205464 FAILED 6.2% 0.0% 0.0% --- ---".split()
+    assert lines[2].split() == "8189521 CANCELLED 10.5% 83.0% 26.0% 5.5% 30.1%".split()
+    assert lines[3].split() == "tiger-i19g10 10.5% 25.8% 7.5% 30.1%".split()
+    assert lines[4].split() == "tiger-i19g9 10.5% 26.3% 3.5% 30.1%".split()
+    assert lines[5].split() == "8189521 CANCELLED 10.5% 83.0% 26.3% 3.5% 30.1%".split()
+    assert lines[6].split() == "8197399 COMPLETED 95.4% 21.1% 9.5% 29.4% 99.8%".split()
+    assert lines[7].split() == "8205048 COMPLETED 4.6% 4.1% 1.1% --- ---".split()
+    assert lines[8].split() == "tiger-h19c1n15 18.6% 4.5%".split()
+    assert lines[9].split() == "tiger-h26c2n13 0.0% 0.0%".split()
+    assert lines[10].split() == "tiger-i26c2n11 0.0% 0.0%".split()
+    assert lines[11].split() == "tiger-i26c2n15 0.0% 0.0%".split()
+    assert (
+        lines[12].split() == "39889258_1426 COMPLETED 99.7% 76.7% 3.6% --- ---".split()
+    )
+
+
+def test_renderer_format_jobs_multi_node_with_nodes_and_gpu(some_multi_core_jobs):
+    """Can render output as table with colored entries."""
+    renderer = output_renderer.OutputRenderer(
+        min_required, "JobID,State,CPUEff,TimeEff,MemEff,GPU", node=True, gpu=True
+    )
+    result = renderer.format_jobs(some_multi_core_jobs)
+    ansi_escape = re.compile(r"\x1B[@-_][0-?]*[ -/]*[@-~]")
+    result = ansi_escape.sub("", result)
+    lines = result.split("\n")
+    assert lines[0].split() == "JobID State CPUEff TimeEff MemEff GPUEff GPUMem".split()
+    assert lines[1].split() == "8205464 FAILED 6.2% 0.0% 0.0% --- ---".split()
+    assert lines[2].split() == "8189521 CANCELLED 10.5% 83.0% 26.0% 5.5% 30.1%".split()
+    assert lines[3].split() == "tiger-i19g10 10.5% 25.8% 7.5% 30.1%".split()
+    assert lines[4].split() == "0 7.5% 30.1%".split()
+    assert lines[5].split() == "1 7.5% 30.1%".split()
+    assert lines[6].split() == "2 7.2% 30.1%".split()
+    assert lines[7].split() == "3 7.8% 30.1%".split()
+    assert lines[8].split() == "tiger-i19g9 10.5% 26.3% 3.5% 30.1%".split()
+    assert lines[9].split() == "0 3.5% 30.1%".split()
+    assert lines[10].split() == "1 3.5% 30.1%".split()
+    assert lines[11].split() == "2 3.2% 30.1%".split()
+    assert lines[12].split() == "3 3.8% 30.1%".split()
+    assert lines[13].split() == "8189521 CANCELLED 10.5% 83.0% 26.3% 3.5% 30.1%".split()
+    assert lines[14].split() == "tiger-i19g9 10.5% 26.3% 3.5% 30.1%".split()
+    assert lines[15].split() == "0 3.5% 30.1%".split()
+    assert lines[16].split() == "1 3.5% 30.1%".split()
+    assert lines[17].split() == "2 3.2% 30.1%".split()
+    assert lines[18].split() == "3 3.8% 30.1%".split()
+    assert lines[19].split() == "8197399 COMPLETED 95.4% 21.1% 9.5% 29.4% 99.8%".split()
+    assert lines[20].split() == "tiger-i23g14 95.4% 9.5% 29.4% 99.8%".split()
+    assert lines[21].split() == "3 29.4% 99.8%".split()
+    assert lines[22].split() == "8205048 COMPLETED 4.6% 4.1% 1.1% --- ---".split()
+    assert lines[23].split() == "tiger-h19c1n15 18.6% 4.5%".split()
+    assert lines[24].split() == "tiger-h26c2n13 0.0% 0.0%".split()
+    assert lines[25].split() == "tiger-i26c2n11 0.0% 0.0%".split()
+    assert lines[26].split() == "tiger-i26c2n15 0.0% 0.0%".split()
+    assert (
+        lines[27].split() == "39889258_1426 COMPLETED 99.7% 76.7% 3.6% --- ---".split()
+    )
 
 
 def test_format_jobs_empty(some_jobs):

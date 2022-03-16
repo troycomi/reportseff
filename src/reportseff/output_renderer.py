@@ -1,7 +1,7 @@
 """Module for rendering tabulated values."""
 import copy
 import re
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, Generator, List, Optional, Tuple, Union
 
 import click
 
@@ -25,13 +25,19 @@ class OutputRenderer:
         self,
         valid_titles: List,
         format_str: str = "JobID%>,State,Elapsed%>,CPUEff,MemEff",
+        node: bool = False,
+        gpu: bool = False,
     ) -> None:
         """Initialize renderer with format string and list of valid titles.
 
         Args:
             valid_titles: List of valid options for format tokens
             format_str: comma separated list of format tokens
+            node: bool indicating if node-level data should be reported
+            gpu: in addition to node, should each GPU be reported
         """
+        self.node = node
+        self.gpu = gpu
         # values required for proper parsing, need not be included in output
         self.required = ["JobID", "JobIDRaw", "State", "AdminComment"]
         # values derived from other values, list includes all dependent values
@@ -56,6 +62,7 @@ class OutputRenderer:
 
     def validate_formatters(self, valid_titles: List) -> List:
         """Validate titles of formatters attribute.
+
         Expands GPU to GPUEff and GPUMem in formatters
 
         Args:
@@ -66,6 +73,12 @@ class OutputRenderer:
         """
         result = [fmt.validate_title(valid_titles) for fmt in self.formatters]
 
+        if self.node:
+            if "JobID" not in self.formatters:
+                self.formatters.insert(0, ColumnFormatter("JobID"))
+            # ensure alignment is <, regardless of inputs
+            self.formatters[self.formatters.index("JobID")].alignment = "<"
+
         if "GPU" in self.formatters:
             ind = self.formatters.index("GPU")
             self.formatters[ind].title = "GPUEff"
@@ -73,6 +86,17 @@ class OutputRenderer:
             gpu_mem.title = "GPUMem"
             gpu_mem.color_function = lambda x: render_eff(x, "mid")
             self.formatters.insert(ind + 1, gpu_mem)
+
+        if (
+            self.gpu
+            and "GPUEff" not in self.formatters
+            and "GPUMem" not in self.formatters
+        ):
+            # need to assign color functions as that normally happens before this
+            formatter = ColumnFormatter("GPUEff")
+            self.formatters.append(formatter)
+            formatter = ColumnFormatter("GPUMem")
+            self.formatters.append(formatter)
 
         return result
 
@@ -110,16 +134,30 @@ class OutputRenderer:
 
         else:
             for fmt in self.formatters:
-                fmt.compute_width(jobs)
+                fmt.compute_width(jobs, self.node, self.gpu)
 
             result += " ".join([fmt.format_title() for fmt in self.formatters])
             if len(jobs) != 0:
                 result += "\n"
 
-        result += "\n".join(
-            " ".join([fmt.format_job(job) for fmt in self.formatters]).rstrip()
-            for job in jobs
-        )
+        if self.node:
+            # join each row by newlines
+            result += "\n".join(
+                # join each column entry by spaces
+                " ".join(str(column) for column in columns).rstrip()
+                # for each job
+                for job in jobs
+                # columns is a tuple of generators from format_node_job
+                for columns in zip(
+                    *(fmt.format_node_job(job, self.gpu) for fmt in self.formatters)
+                )
+            )
+
+        else:
+            result += "\n".join(
+                " ".join(fmt.format_job(job) for fmt in self.formatters).rstrip()
+                for job in jobs
+            )
 
         return result
 
@@ -165,7 +203,7 @@ class ColumnFormatter:
             self.color_function = color_state
         elif fold_title in ("cpueff", "gpueff", "gpu"):
             self.color_function = lambda x: render_eff(x, "high")
-        elif fold_title in ("timeeff", "memeff", "gpueff"):
+        elif fold_title in ("timeeff", "memeff", "gpumem"):
             self.color_function = lambda x: render_eff(x, "mid")
 
     def __eq__(self, other: Any) -> bool:
@@ -223,7 +261,12 @@ class ColumnFormatter:
             "Run sacct --helpformat for a list of allowed values."
         )
 
-    def compute_width(self, jobs: List[Job]) -> None:
+    def compute_width(
+        self,
+        jobs: List[Job],
+        node: bool = False,
+        gpu: bool = False,
+    ) -> None:
         """Set width for this column based on job listing.
 
         Determine the max width of all entries if the width attribute is unset.
@@ -231,16 +274,32 @@ class ColumnFormatter:
 
         Args:
             jobs: List of job objects to consider
+            node: If True, report individual node stats
+            gpu: If True, report individual gpu stats
         """
         if self.width is not None:
             return
 
         self.width = len(self.title)
-        for job in jobs:
-            entry = job.get_entry(self.title)
-            if isinstance(entry, str):
-                width = len(entry)
-                self.width = self.width if self.width > width else width
+        if len(jobs) > 0:
+            if node:
+                width = max(
+                    len(str(entry))
+                    for job in jobs
+                    for entry in job.get_node_entries(self.title, gpu)
+                )
+            else:
+                width = max(
+                    len(
+                        str(
+                            job.get_entry(
+                                self.title,
+                            )
+                        )
+                    )
+                    for job in jobs
+                )
+            self.width = max(self.width, width)
 
         self.width += 2  # add some boarder
 
@@ -264,6 +323,23 @@ class ColumnFormatter:
         """
         value = job.get_entry(self.title)
         return self.format_entry(*self.color_function(value))
+
+    def format_node_job(
+        self, job: Job, gpu: bool = False
+    ) -> Generator[str, None, None]:
+        """Format the provided job for printing with individual node stats.
+
+        Args:
+            job: the Job to format
+            gpu: If True, report individual gpu stats
+
+        Returns:
+            generator with values for the job
+        """
+        return (
+            self.format_entry(*self.color_function(value))
+            for value in job.get_node_entries(self.title, gpu)
+        )
 
     def format_entry(self, entry: str, color: Optional[str] = None) -> str:
         """Format the entry to match width, alignment, and color.

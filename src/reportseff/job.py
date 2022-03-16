@@ -1,10 +1,10 @@
 """Module for reprsenting scheduler jobs."""
-from datetime import timedelta
-import re
-import json
-import gzip
 import base64
-from typing import Any, Dict, Optional, Union
+from datetime import timedelta
+import gzip
+import json
+import re
+from typing import Any, Dict, Generator, Optional, Union
 
 
 multiple_map = {
@@ -65,7 +65,9 @@ class Job:
         self.mem_eff: Optional[float] = None
         self.gpu: Optional[float] = None
         self.gpu_mem: Optional[float] = None
-        self.other_entries: Dict[str, str] = {}
+        self.other_entries: Dict[str, Any] = {}
+        # safe to cache now
+        self.other_entries["JobID"] = self.name()
         self.comment_data: Dict = {}
 
     def __eq__(self, other: Any) -> bool:
@@ -100,11 +102,13 @@ class Job:
             self.state = entry["State"].split()[0]
 
         if self.state == "PENDING":
+            self._cache_entries()
             return
 
         # main job id
         if self.jobid == entry["JobID"]:
             self._update_main_job(entry)
+            self._cache_entries()
 
         elif self.state != "RUNNING":
             for k, value in entry.items():
@@ -118,7 +122,9 @@ class Job:
         Args:
             entry: the entry where the jobid matches exactly, e.g. not batch or ex
         """
-        self.other_entries = entry
+        for k, value in entry.items():
+            if k not in self.other_entries or not self.other_entries[k]:
+                self.other_entries[k] = value
         self.time = entry["Elapsed"] if "Elapsed" in entry else None
         requested = (
             _parse_slurm_timedelta(entry["Timelimit"]) if "Timelimit" in entry else 1
@@ -150,7 +156,17 @@ class Job:
             self._parse_admin_comment(entry["AdminComment"])
 
     def _parse_admin_comment(self, comment: str) -> None:
-        """use admin command to override efficiency values"""
+        """Use admin command to override efficiency values.
+
+        Decodes and parses admincommand from jobstats.
+
+        Args:
+            comment: The AdminComment field.
+
+        Raises:
+            ValueError: if the comment doesn't start with JS1.
+            ValueError: if the comment can't be decoded.
+        """
         comment_type = comment[:3]
         if comment_type not in ("JS1",):
             raise ValueError(f"Unknown comment type '{comment_type}'")
@@ -170,17 +186,17 @@ class Job:
 
         for node, value in data["nodes"].items():
             self.comment_data[node] = {
-                "cpu_eff": value["total_time"]
+                "CPUEff": value["total_time"]
                 / value["cpus"]
                 / data["total_time"]
                 * 100,
-                "mem_eff": value["used_memory"] / value["total_memory"] * 100,
+                "MemEff": value["used_memory"] / value["total_memory"] * 100,
             }
             if data["gpus"]:
                 self.comment_data[node]["gpus"] = {
                     gpu: {
-                        "gpu_eff": value["gpu_utilization"][gpu],
-                        "mem_eff": round(
+                        "GPUEff": value["gpu_utilization"][gpu],
+                        "GPUMem": round(
                             value["gpu_used_memory"][gpu]
                             / value["gpu_total_memory"][gpu]
                             * 100,
@@ -189,18 +205,25 @@ class Job:
                     }
                     for gpu in value["gpu_utilization"]
                 }
-                self.comment_data[node]["gpu_eff"] = average(
-                    "gpu_eff", self.comment_data[node]["gpus"]
+                self.comment_data[node]["GPUEff"] = average(
+                    "GPUEff", self.comment_data[node]["gpus"]
                 )
-                self.comment_data[node]["gpu_mem_eff"] = average(
-                    "mem_eff", self.comment_data[node]["gpus"]
+                self.comment_data[node]["GPUMem"] = average(
+                    "GPUMem", self.comment_data[node]["gpus"]
                 )
 
-        self.cpu = average("cpu_eff")
-        self.mem_eff = average("mem_eff")
+        self.cpu = average("CPUEff")
+        self.mem_eff = average("MemEff")
         if data["gpus"]:
-            self.gpu = average("gpu_eff")
-            self.gpu_mem = average("gpu_mem_eff")
+            self.gpu = average("GPUEff")
+            self.gpu_mem = average("GPUMem")
+
+    def _cache_entries(self) -> None:
+        self.other_entries["State"] = self.state
+        self.other_entries["TimeEff"] = self.time_eff
+        self.other_entries["CPUEff"] = self.cpu if self.cpu else "---"
+        self.other_entries["GPUEff"] = self.gpu if self.gpu else "---"
+        self.other_entries["GPUMem"] = self.gpu_mem if self.gpu_mem else "---"
 
     def name(self) -> str:
         """The name of the job.
@@ -221,25 +244,51 @@ class Job:
         Returns:
             The value of that attribute or "---" if not found
         """
-        if key == "JobID":
-            return self.name()
-        if key == "State":
-            return self.state
         if key == "MemEff":
             if self.mem_eff:  # set by admin comment
                 return self.mem_eff
             if self.totalmem:
                 return round(self.stepmem / self.totalmem * 100, 1)
             return "---"
-        if key == "TimeEff":
-            return self.time_eff
-        if key == "CPUEff":
-            return self.cpu if self.cpu else "---"
-        if key == "GPUEff":
-            return self.gpu if self.gpu else "---"
-        if key == "GPUMem":
-            return self.gpu_mem if self.gpu_mem else "---"
         return self.other_entries.get(key, "---")
+
+    def get_node_entries(
+        self, key: str, gpu: bool = False
+    ) -> Generator[Any, None, None]:
+        """Get an attribute by name for each node in job.
+
+        Args:
+            key: the attribute to query
+            gpu: True if gpu values should also be split
+
+        Yields:
+            A generator with values for provided attribute.  If the key does
+            not change in nodes/gpus it will yield an empty string
+        """
+        yield self.get_entry(key)
+        if len(self.comment_data) > 1 or (gpu and self.gpu):
+            for node, data in self.comment_data.items():
+                # get node-level data
+                if key == "JobID":
+                    yield f"  {node}"
+                else:
+                    to_yield = data.get(key, "")
+                    to_yield = (
+                        to_yield if isinstance(to_yield, str) else round(to_yield, 1)
+                    )
+                    yield to_yield
+                if gpu and self.gpu:  # has gpus to report
+                    for gpu_name, gpu_data in data["gpus"].items():
+                        if key == "JobID":
+                            yield f"    {gpu_name}"
+                        else:
+                            to_yield = gpu_data.get(key, "")
+                            to_yield = (
+                                to_yield
+                                if isinstance(to_yield, str)
+                                else round(to_yield, 1)
+                            )
+                            yield to_yield
 
 
 def _parse_slurm_timedelta(delta: str) -> int:

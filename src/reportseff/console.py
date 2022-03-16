@@ -65,6 +65,21 @@ from .output_renderer import OutputRenderer
     "hours, and minutes can use case-insensitive abbreviations. "
     "Minutes is the minimum resolution, while weeks is the coarsest.",
 )
+@click.option(
+    "--node/--no-node",
+    "-n/-N",
+    default=False,
+    help="Report node-level statistics. Adds `jobid` to format for proper display.",
+)
+@click.option(
+    "--node-and-gpu/--no-node-gpu",
+    "-g/-G",
+    default=False,
+    help=(
+        "Report each GPU for each node. "
+        "Sets `node` and adds `GPU` to format automatically."
+    ),
+)
 @click.version_option(version=__version__)
 @click.argument("jobs", nargs=-1)
 def main(
@@ -77,6 +92,8 @@ def main(
     not_state: str,
     since: str,
     jobs: tuple,
+    node: bool,
+    node_and_gpu: bool,
 ) -> None:
     """Main entry point for reportseff."""
     if format_str.startswith("+"):
@@ -91,6 +108,8 @@ def main(
         not_state=not_state,
         since=since,
         debug=debug,
+        node=node,
+        node_and_gpu=node_and_gpu,
     )
 
     if entries > 20:
@@ -108,6 +127,8 @@ def get_jobs(
     state: str = "",
     not_state: str = "",
     since: str = "",
+    node: bool = False,
+    node_and_gpu: bool = False,
 ) -> Tuple[str, int]:
     """Helper method to get jobs from db_inquirer.
 
@@ -120,7 +141,7 @@ def get_jobs(
     """
     job_collection = JobCollection()
 
-    inquirer, renderer = get_implementation(format_str)
+    inquirer, renderer = get_implementation(format_str, node, node_and_gpu)
 
     inquirer.set_state(state)
     inquirer.set_not_state(not_state)
@@ -151,7 +172,11 @@ def get_jobs(
     return renderer.format_jobs(found_jobs), len(found_jobs)
 
 
-def get_implementation(format_str: str) -> Tuple[BaseInquirer, OutputRenderer]:
+def get_implementation(
+    format_str: str,
+    node: bool = False,
+    node_and_gpu: bool = False,
+) -> Tuple[BaseInquirer, OutputRenderer]:
     """Get system-specific objects.
 
     Args:
@@ -163,7 +188,12 @@ def get_implementation(format_str: str) -> Tuple[BaseInquirer, OutputRenderer]:
     """
     if which("sacct") is not None:
         inquirer = SacctInquirer()
-        renderer = OutputRenderer(inquirer.get_valid_formats(), format_str)
+        renderer = OutputRenderer(
+            inquirer.get_valid_formats(),
+            format_str,
+            node=node or node_and_gpu,
+            gpu=node_and_gpu,
+        )
     else:
         click.secho("No supported scheduling systems found!", fg="red", err=True)
         sys.exit(1)

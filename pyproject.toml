@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "reportseff"
-version = "1.0.2"
+version = "2.0.0"
 description= "Tablular seff output"
 authors = ["Troy Comi <troycomi@gmail.com>"]
 license = "MIT"
@@ -11,15 +11,15 @@ keywords= ["slurm","seff"]
 
 [tool.poetry.dependencies]
 python = ">=3.7,<4.0"
-importlib-metadata = {version = "^4.8.2", python = "<3.8"}
 click = ">=7.1.2"
+importlib-metadata = {version = "^4.8.2", python = "<3.8"}
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.5"
 pytest-mock = "^3.6.1"
 coverage = {extras = ["toml"], version = "^6.0.2"}
 pytest-cov = "^3.0.0"
-black = "^21.9b0"
+black = { version = "*", allow-prereleases = true }
 flake8 = "^3.7.9"
 flake8-bandit = ">=2.1.2"
 flake8-black = ">=0.2.3"
