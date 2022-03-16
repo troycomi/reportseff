@@ -65,7 +65,7 @@ def test_update_main_job():
     assert job.time == "00:10:00"
     assert job.time_eff == 50.0
     assert job.cpu == 90.0
-    assert job.totalmem == 1 * 1024 ** 2
+    assert job.totalmem == 1 * 1024**2
 
     job = job_module.Job("24371655", "24371655", None)
     job.update(
@@ -86,7 +86,7 @@ def test_update_main_job():
     assert job.time == "00:10:00"
     assert job.time_eff == 50.0
     assert job.cpu == 90.0
-    assert job.totalmem == 1 * 1024 ** 2
+    assert job.totalmem == 1 * 1024**2
 
     job = job_module.Job("24371655", "24371655", None)
     job.update(
@@ -182,7 +182,7 @@ def test_update_main_job():
     assert job.time == "00:00:00"
     assert job.time_eff == 0.0
     assert job.cpu is None
-    assert job.totalmem == 1024 ** 2
+    assert job.totalmem == 1024**2
 
 
 def test_update_part_job():
@@ -286,7 +286,7 @@ def test_parsemem_nodes():
             for alloc in (1, 2, 4):
                 assert (
                     job_module.parsemem(f"{mem}{multiple}n", alloc, -1)
-                    == mem * 1024 ** exp * alloc
+                    == mem * 1024**exp * alloc
                 ), f"{mem}{multiple}n"
 
 
@@ -297,7 +297,7 @@ def test_parsemem_cpus():
             for alloc in (1, 2, 4):
                 assert (
                     job_module.parsemem(f"{mem}{multiple}c", -1, alloc)
-                    == mem * 1024 ** exp * alloc
+                    == mem * 1024**exp * alloc
                 ), f"{mem}{multiple}c"
 
 
@@ -305,7 +305,7 @@ def test_parsememstep():
     """Can parse memory for steps and handle odd formats."""
     for exp, multiple in enumerate("K M G T E".split()):
         for mem in (2, 4, 6):
-            assert job_module.parsemem(f"{mem}{multiple}") == mem * 1024 ** exp
+            assert job_module.parsemem(f"{mem}{multiple}") == mem * 1024**exp
 
     with pytest.raises(ValueError) as e:
         job_module.parsemem("18GG")

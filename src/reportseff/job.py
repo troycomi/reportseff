@@ -8,11 +8,11 @@ from typing import Any, Dict, Generator, Optional, Union
 
 
 multiple_map = {
-    "K": 1024 ** 0,
-    "M": 1024 ** 1,
-    "G": 1024 ** 2,
-    "T": 1024 ** 3,
-    "E": 1024 ** 4,
+    "K": 1024**0,
+    "M": 1024**1,
+    "G": 1024**2,
+    "T": 1024**3,
+    "E": 1024**4,
 }
 
 state_colors = {
