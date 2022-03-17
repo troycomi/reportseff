@@ -1,5 +1,6 @@
 """Test sacct implementation of db inqurirer."""
 import datetime
+import subprocess
 
 import pytest
 
@@ -175,11 +176,11 @@ def test_sacct_get_valid_formats(sacct, mocker):
 
 def test_sacct_get_db_output(sacct, mocker):
     """get_db_output returns subprocess output as dictionary."""
-    mock_sacct = mocker.MagicMock()
-    mock_sacct.returncode = 1
-
-    mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=mock_sacct)
-    with pytest.raises(Exception) as exception:
+    mocker.patch(
+        "reportseff.db_inquirer.subprocess.run",
+        side_effect=subprocess.CalledProcessError(1, "test"),
+    )
+    with pytest.raises(RuntimeError) as exception:
         sacct.get_db_output("c1 c2".split(), "j1 j2 j3".split())
     assert "Error running sacct!" in str(exception)
 
@@ -197,7 +198,7 @@ def test_sacct_get_db_output(sacct, mocker):
     ]
     mock_sub.assert_called_once_with(
         args="sacct -P -n --format=c1,c2 --jobs=j1,j2,j3".split(),
-        stdout=mocker.ANY,
+        capture_output=True,
         encoding=mocker.ANY,
         check=mocker.ANY,
         shell=False,
@@ -267,10 +268,10 @@ def test_sacct_set_user(sacct):
 
 def test_sacct_get_db_output_user(sacct, mocker):
     """User and since affects subprocess call."""
-    mock_sacct = mocker.MagicMock()
-    mock_sacct.returncode = 1
-
-    mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=mock_sacct)
+    mocker.patch(
+        "reportseff.db_inquirer.subprocess.run",
+        side_effect=subprocess.CalledProcessError(1, "test"),
+    )
     mock_date = mocker.MagicMock()
     mock_date.today.return_value = datetime.date(2018, 1, 20)
     mock_date.side_effect = datetime.date
@@ -294,7 +295,7 @@ def test_sacct_get_db_output_user(sacct, mocker):
     ]
     mock_sub.assert_called_once_with(
         args=("sacct -P -n --format=c1,c2 --user=user --starttime=011318").split(),
-        stdout=mocker.ANY,
+        capture_output=True,
         encoding=mocker.ANY,
         check=mocker.ANY,
         text=True,
@@ -323,7 +324,7 @@ def test_sacct_get_db_output_since(sacct, mocker):
     ]
     mock_sub.assert_called_once_with(
         args=("sacct -P -n --format=c1,c2 --jobs= --starttime=time ").split(),
-        stdout=mocker.ANY,
+        capture_output=True,
         encoding=mocker.ANY,
         check=mocker.ANY,
         text=True,
@@ -459,10 +460,10 @@ def test_sacct_set_since(sacct, mocker):
 
 def test_sacct_get_db_output_user_state(sacct, mocker):
     """Can set user and state at the same time."""
-    mock_sacct = mocker.MagicMock()
-    mock_sacct.returncode = 1
-
-    mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=mock_sacct)
+    mocker.patch(
+        "reportseff.db_inquirer.subprocess.run",
+        side_effect=subprocess.CalledProcessError(1, "test"),
+    )
     mock_date = mocker.MagicMock()
     mock_date.today.return_value = datetime.date(2018, 1, 20)
     mock_date.side_effect = datetime.date
@@ -488,7 +489,7 @@ def test_sacct_get_db_output_user_state(sacct, mocker):
         args=(
             "sacct -P -n --format=c1,c2,State --user=user --starttime=011318"
         ).split(),
-        stdout=mocker.ANY,
+        capture_output=True,
         encoding=mocker.ANY,
         check=mocker.ANY,
         text=True,

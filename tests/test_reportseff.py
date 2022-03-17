@@ -1,4 +1,6 @@
 """Test cli usage."""
+import subprocess
+
 from click.testing import CliRunner
 import pytest
 
@@ -553,10 +555,10 @@ def test_sacct_error(mocker, mock_inquirer):
     """Subprocess errors in sacct are reported."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
-    sub_result = mocker.MagicMock()
-    sub_result.returncode = 1
-    sub_result.stdout = ""
-    mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
+    mocker.patch(
+        "reportseff.db_inquirer.subprocess.run",
+        side_effect=subprocess.CalledProcessError(1, "test"),
+    )
     result = runner.invoke(console.main, "--no-color 9999999")
 
     assert result.exit_code == 1

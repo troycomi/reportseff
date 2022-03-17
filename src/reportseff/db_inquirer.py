@@ -142,17 +142,19 @@ class SacctInquirer(BaseInquirer):
             if self.since:
                 args += [f"--starttime={self.since}"]
 
-        cmd_result = subprocess.run(
-            args=args,
-            stdout=subprocess.PIPE,
-            encoding="utf8",
-            check=True,
-            text=True,
-            shell=False,
-        )
+        try:
+            cmd_result = subprocess.run(
+                args=args,
+                capture_output=True,
+                encoding="utf8",
+                check=True,
+                text=True,
+                shell=False,
+            )
+            cmd_result.check_returncode()
 
-        if cmd_result.returncode != 0:
-            raise RuntimeError("Error running sacct!")
+        except subprocess.CalledProcessError as error:
+            raise RuntimeError(f"Error running sacct!\n{error.stderr}") from error
 
         lines = cmd_result.stdout.split("\n")
         if debug_cmd is not None:
