@@ -140,21 +140,19 @@ class JobCollection:
         """
         self.jobs[jobid] = Job(job, jobid, filename)
 
-    def process_entry(self, entry: Dict, user_provided: bool = False) -> None:
+    def process_entry(self, entry: Dict, add_job: bool = False) -> None:
         """Update the jobs collection with information from the provided entry.
 
         Args:
             entry: the accout entry from a db inquirer
-            user_provided: switch to indicate the jobs are from a user query
-                if true, will short logic to ensure the entry matches a requested
-                job
+            add_job: if true, will add the job to the collection if it doesn't exist
         """
         job_id = entry["JobID"].split(".")[0]
         job_id_raw = entry["JobIDRaw"].split(".")[0]
         if job_id not in self.jobs:
             match = self.job_regex.match(job_id)
             # job is in jobs
-            if match and (match.group("job") in self.jobs or user_provided):
+            if match and (match.group("job") in self.jobs or add_job):
                 self.add_job(match.group("job"), job_id)
             # check if the job_id is an array job
             elif job_id_raw in self.jobs:

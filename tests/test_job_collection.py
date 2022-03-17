@@ -360,7 +360,7 @@ def test_process_entry_array_user(jobs):
             "State": "PENDING",
             "TotalCPU": "00:00:00",
         },
-        user_provided=True,
+        add_job=True,
     )
     expected_job = Job("14729857", "14729857_[737-999]", None)
     expected_job.state = "PENDING"

@@ -50,6 +50,10 @@ class BaseInquirer(ABC):
         """
 
     @abstractmethod
+    def all_users(self) -> None:
+        """Ignore provided jobs, query for all users."""
+
+    @abstractmethod
     def set_state(self, state: str) -> None:
         """Set the state to include output jobs.
 
@@ -74,6 +78,14 @@ class BaseInquirer(ABC):
                 will subract that amount from the current time
         """
 
+    @abstractmethod
+    def has_since(self) -> bool:
+        """Tests if `since` has been set.
+
+        Returns:
+            True if set_since has been called on this inquirer
+        """
+
 
 class SacctInquirer(BaseInquirer):
     """Implementation of BaseInquirer for the sacct slurm function."""
@@ -85,6 +97,7 @@ class SacctInquirer(BaseInquirer):
         self.state: Optional[Set] = None
         self.not_state: Optional[Set] = None
         self.since: Optional[str] = None
+        self.query_all_users: bool = False
 
     def get_valid_formats(self) -> List[str]:
         """Get the valid formatting options supported by the inquirer.
@@ -137,6 +150,8 @@ class SacctInquirer(BaseInquirer):
                 start_date = datetime.date.today() - datetime.timedelta(days=7)
                 self.since = start_date.strftime("%m%d%y")  # MMDDYY
             args += [f"--user={self.user}", f"--starttime={self.since}"]
+        elif self.query_all_users:
+            args += ["--allusers", f"--starttime={self.since}"]
         else:
             args += ["--jobs=" + ",".join(jobs)]
             if self.since:
@@ -179,6 +194,10 @@ class SacctInquirer(BaseInquirer):
             user: user name
         """
         self.user = user
+
+    def all_users(self) -> None:
+        """Query for all users if `since` is set."""
+        self.query_all_users = True
 
     def set_state(self, state: str) -> None:
         """Set the state to include output jobs.
@@ -259,6 +278,14 @@ class SacctInquirer(BaseInquirer):
 
         else:
             self.since = since
+
+    def has_since(self) -> bool:
+        """Check if since has been set.
+
+        Returns:
+            True if since has been set properly
+        """
+        return bool(self.since)
 
 
 def get_states_as_set(state_list: str) -> Set:

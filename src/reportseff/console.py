@@ -148,9 +148,15 @@ def get_jobs(
 
     inquirer.set_since(since)
 
+    add_jobs = False
+
     try:
         if user:
             inquirer.set_user(user)
+            add_jobs = True
+        elif inquirer.has_since() and not jobs:  # since is set
+            inquirer.all_users()
+            add_jobs = True
         else:
             job_collection.set_jobs(jobs)
 
@@ -161,7 +167,7 @@ def get_jobs(
     db_output = get_db_output(inquirer, renderer, job_collection, debug)
     for entry in db_output:
         try:
-            job_collection.process_entry(entry, user_provided=(user != ""))
+            job_collection.process_entry(entry, add_job=add_jobs)
         except Exception as error:
             click.echo(f"Error processing entry: {entry}", err=True)
             raise error
