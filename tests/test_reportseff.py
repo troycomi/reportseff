@@ -45,7 +45,7 @@ def test_directory_input(mocker, mock_inquirer):
     mocker.patch.object(JobCollection, "set_out_dir", new=set_jobs)
     result = runner.invoke(
         console.main,
-        "--no-color",
+        ["--no-color"],
     )
 
     assert result.exit_code == 0
@@ -81,7 +81,7 @@ def test_directory_input_exception(mocker, mock_inquirer):
         raise ValueError("Testing EXCEPTION")
 
     mocker.patch.object(JobCollection, "set_out_dir", new=set_jobs)
-    result = runner.invoke(console.main, "--no-color")
+    result = runner.invoke(console.main, ["--no-color"])
 
     assert result.exit_code == 1
     assert "Testing EXCEPTION" in result.output
@@ -100,7 +100,7 @@ def test_debug_option(mocker, mock_inquirer):
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
     result = runner.invoke(
         console.main,
-        "--no-color --debug 23000233",
+        "--no-color --debug 23000233".split(),
     )
 
     assert result.exit_code == 0
@@ -136,7 +136,7 @@ def test_process_failure(mocker, mock_inquirer):
     )
     result = runner.invoke(
         console.main,
-        "--no-color 23000233 --format JobID%>,State,Elapsed%>,CPUEff,MemEff",
+        "--no-color 23000233 --format JobID%>,State,Elapsed%>,CPUEff,MemEff".split(),
     )
 
     assert result.exit_code != 0
@@ -166,7 +166,7 @@ def test_short_output(mocker, mock_inquirer):
     mocker.patch.object(OutputRenderer, "format_jobs", return_value="output")
 
     mock_click = mocker.patch("reportseff.console.click.echo")
-    result = runner.invoke(console.main, "--no-color 23000233")
+    result = runner.invoke(console.main, "--no-color 23000233".split())
 
     assert result.exit_code == 0
     mock_click.assert_called_once_with("output", color=False)
@@ -185,7 +185,7 @@ def test_long_output(mocker, mock_inquirer):
     mocker.patch("reportseff.console.len", return_value=21)
     mocker.patch.object(OutputRenderer, "format_jobs", return_value="output")
     mock_click = mocker.patch("reportseff.console.click.echo_via_pager")
-    result = runner.invoke(console.main, "--no-color 23000233")
+    result = runner.invoke(console.main, "--no-color 23000233".split())
 
     assert result.exit_code == 0
     mock_click.assert_called_once_with("output", color=False)
@@ -208,7 +208,7 @@ def test_simple_job(mocker, mock_inquirer):
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
     result = runner.invoke(
         console.main,
-        "--no-color 24418435 --format JobID%>,State,Elapsed%>,CPUEff,MemEff",
+        "--no-color 24418435 --format JobID%>,State,Elapsed%>,CPUEff,MemEff".split(),
     )
 
     assert result.exit_code == 0
@@ -238,7 +238,7 @@ def test_simple_user(mocker, mock_inquirer):
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
     result = runner.invoke(
         console.main,
-        "--no-color --user test --format JobID%>,State,Elapsed%>,CPUEff,MemEff",
+        "--no-color --user test --format JobID%>,State,Elapsed%>,CPUEff,MemEff".split(),
     )
 
     assert result.exit_code == 0
@@ -253,13 +253,13 @@ def test_format_add(mocker, mock_inquirer):
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
     mock_jobs = mocker.patch("reportseff.console.get_jobs", return_value=("Testing", 1))
-    result = runner.invoke(console.main, "--no-color --format=test")
+    result = runner.invoke(console.main, "--no-color --format=test".split())
 
     assert result.exit_code == 0
     assert mock_jobs.call_args[1]["format_str"] == "test"
 
     # test adding onto end
-    result = runner.invoke(console.main, "--no-color --format=+test")
+    result = runner.invoke(console.main, "--no-color --format=+test".split())
 
     assert result.exit_code == 0
     assert (
@@ -289,8 +289,10 @@ def test_since(mocker, mock_inquirer):
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
     result = runner.invoke(
         console.main,
-        "--no-color --since 200406 24418435 25569410 "
-        "--format JobID%>,State,Elapsed%>,CPUEff,MemEff",
+        (
+            "--no-color --since 200406 24418435 25569410 "
+            "--format JobID%>,State,Elapsed%>,CPUEff,MemEff"
+        ).split(),
     )
 
     assert result.exit_code == 0
@@ -323,7 +325,10 @@ def test_since_all_users(mocker, mock_inquirer):
     )
     result = runner.invoke(
         console.main,
-        "--no-color --since 200406 " "--format JobID%>,State,Elapsed%>,CPUEff,MemEff",
+        (
+            "--no-color --since 200406 "
+            "--format JobID%>,State,Elapsed%>,CPUEff,MemEff"
+        ).split(),
     )
 
     assert result.exit_code == 0
@@ -369,8 +374,10 @@ def test_simple_state(mocker, mock_inquirer):
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
     result = runner.invoke(
         console.main,
-        "--no-color --state completed "
-        "25569410 24418435 --format JobID%>,State,Elapsed%>,CPUEff,MemEff",
+        (
+            "--no-color --state completed "
+            "25569410 24418435 --format JobID%>,State,Elapsed%>,CPUEff,MemEff"
+        ).split(),
     )
 
     assert result.exit_code == 0
@@ -402,8 +409,10 @@ def test_simple_not_state(mocker, mock_inquirer):
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
     result = runner.invoke(
         console.main,
-        "--no-color --not-state Running "
-        "25569410 24418435 --format JobID%>,State,Elapsed%>,CPUEff,MemEff",
+        (
+            "--no-color --not-state Running "
+            "25569410 24418435 --format JobID%>,State,Elapsed%>,CPUEff,MemEff"
+        ).split(),
     )
 
     assert result.exit_code == 0
@@ -435,8 +444,10 @@ def test_invalid_not_state(mocker, mock_inquirer):
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
     result = runner.invoke(
         console.main,
-        "--no-color --not-state unning "
-        "25569410 24418435 --format JobID%>,State,Elapsed%>,CPUEff,MemEff",
+        (
+            "--no-color --not-state unning "
+            "25569410 24418435 --format JobID%>,State,Elapsed%>,CPUEff,MemEff"
+        ).split(),
     )
 
     assert result.exit_code == 0
@@ -469,7 +480,9 @@ def test_no_state(mocker, mock_inquirer):
         "|1|21:14:43|25569410.0|25569410.0|62328K|1|4000Mc|RUNNING|19:28:36\n"
     )
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
-    result = runner.invoke(console.main, "--no-color --state ZZ 25569410 24418435")
+    result = runner.invoke(
+        console.main, "--no-color --state ZZ 25569410 24418435".split()
+    )
 
     assert result.exit_code == 0
     # remove header
@@ -504,7 +517,7 @@ def test_array_job_raw_id(mocker, mock_inquirer):
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
     result = runner.invoke(
         console.main,
-        "--no-color 24221219 --format JobID%>,State,Elapsed%>,CPUEff,MemEff",
+        "--no-color 24221219 --format JobID%>,State,Elapsed%>,CPUEff,MemEff".split(),
     )
 
     assert result.exit_code == 0
@@ -543,7 +556,9 @@ def test_array_job_single(mocker, mock_inquirer):
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
     result = runner.invoke(
         console.main,
-        "--no-color 24220929_421 --format JobID%>,State,Elapsed%>,CPUEff,MemEff",
+        (
+            "--no-color 24220929_421 --format " "JobID%>,State,Elapsed%>,CPUEff,MemEff"
+        ).split(),
     )
 
     assert result.exit_code == 0
@@ -582,7 +597,7 @@ def test_array_job_base(mocker, mock_inquirer):
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
     result = runner.invoke(
         console.main,
-        "--no-color 24220929 --format JobID%>,State,Elapsed%>,CPUEff,MemEff",
+        "--no-color 24220929 --format JobID%>,State,Elapsed%>,CPUEff,MemEff".split(),
     )
 
     assert result.exit_code == 0
@@ -607,7 +622,7 @@ def test_sacct_error(mocker, mock_inquirer):
         "reportseff.db_inquirer.subprocess.run",
         side_effect=subprocess.CalledProcessError(1, "test"),
     )
-    result = runner.invoke(console.main, "--no-color 9999999")
+    result = runner.invoke(console.main, "--no-color 9999999".split())
 
     assert result.exit_code == 1
     assert "Error running sacct!" in result.output
@@ -621,7 +636,7 @@ def test_empty_sacct(mocker, mock_inquirer):
     sub_result.returncode = 0
     sub_result.stdout = ""
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
-    result = runner.invoke(console.main, "--no-color 9999999")
+    result = runner.invoke(console.main, "--no-color 9999999".split())
 
     assert result.exit_code == 0
     output = result.output.split("\n")[:-1]
@@ -650,7 +665,7 @@ def test_failed_no_mem(mocker, mock_inquirer):
         "COMPLETED|00:00:00\n"
     )
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
-    result = runner.invoke(console.main, "--no-color 23000381")
+    result = runner.invoke(console.main, "--no-color 23000381".split())
 
     assert result.exit_code == 0
     # remove header
@@ -669,7 +684,7 @@ def test_canceled_by_other(mocker, mock_inquirer):
         "|16|00:00:00|23000233|23000233||1|4000Mc|CANCELLED by 129319|00:00:00\n"
     )
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
-    result = runner.invoke(console.main, "--no-color 23000233 --state CA")
+    result = runner.invoke(console.main, "--no-color 23000233 --state CA".split())
 
     assert result.exit_code == 0
     # remove header
@@ -700,7 +715,7 @@ def test_zero_runtime(mocker, mock_inquirer):
         "COMPLETED|00:00:00\n"
     )
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
-    result = runner.invoke(console.main, "--no-color 23000210")
+    result = runner.invoke(console.main, "--no-color 23000210".split())
 
     assert result.exit_code == 0
     # remove header
@@ -713,7 +728,7 @@ def test_no_systems(mocker, mock_inquirer):
     """When no scheduling system is found, raise error."""
     mocker.patch("reportseff.console.which", return_value=None)
     runner = CliRunner()
-    result = runner.invoke(console.main, "--no-color 23000210")
+    result = runner.invoke(console.main, "--no-color 23000210".split())
 
     assert result.exit_code == 1
     # remove header
