@@ -256,14 +256,14 @@ def test_format_add(mocker, mock_inquirer):
     result = runner.invoke(console.main, "--no-color --format=test".split())
 
     assert result.exit_code == 0
-    assert mock_jobs.call_args[1]["format_str"] == "test"
+    assert mock_jobs.call_args[0][0].format_str == "test"
 
     # test adding onto end
     result = runner.invoke(console.main, "--no-color --format=+test".split())
 
     assert result.exit_code == 0
     assert (
-        mock_jobs.call_args[1]["format_str"]
+        mock_jobs.call_args[0][0].format_str
         == "JobID%>,State,Elapsed%>,TimeEff,CPUEff,MemEff,test"
     )
 

@@ -1,7 +1,7 @@
 """CLI for reportseff."""
 from shutil import which
 import sys
-from typing import Dict, List, Tuple
+from typing import Any, Dict, List, Tuple
 
 import click
 
@@ -9,6 +9,7 @@ from . import __version__
 from .db_inquirer import BaseInquirer, SacctInquirer
 from .job_collection import JobCollection
 from .output_renderer import OutputRenderer
+from .parameters import ReportseffParameters
 
 
 @click.command()
@@ -80,56 +81,28 @@ from .output_renderer import OutputRenderer
         "Sets `node` and adds `GPU` to format automatically."
     ),
 )
+@click.option(
+    "--parsable",
+    "-p",
+    is_flag=True,
+    default=False,
+    help="Output will be '|' delmited without a '|' at the end.",
+)
 @click.version_option(version=__version__)
 @click.argument("jobs", nargs=-1)
-def main(
-    modified_sort: bool,
-    color: bool,
-    format_str: str,
-    debug: bool,
-    user: str,
-    state: str,
-    not_state: str,
-    since: str,
-    jobs: tuple,
-    node: bool,
-    node_and_gpu: bool,
-) -> None:
+def main(**kwargs: Any) -> None:
     """Main entry point for reportseff."""
-    if format_str.startswith("+"):
-        format_str = "JobID%>,State,Elapsed%>,TimeEff,CPUEff,MemEff," + format_str[1:]
+    args = ReportseffParameters(**kwargs)
 
-    output, entries = get_jobs(
-        jobs=jobs,
-        format_str=format_str,
-        user=user,
-        modified_sort=modified_sort,
-        state=state,
-        not_state=not_state,
-        since=since,
-        debug=debug,
-        node=node,
-        node_and_gpu=node_and_gpu,
-    )
+    output, entries = get_jobs(args)
 
     if entries > 20:
-        click.echo_via_pager(output, color=color)
+        click.echo_via_pager(output, color=args.color)
     else:
-        click.echo(output, color=color)
+        click.echo(output, color=args.color)
 
 
-def get_jobs(
-    jobs: tuple,
-    format_str: str = "",
-    user: str = "",
-    debug: bool = False,
-    modified_sort: bool = False,
-    state: str = "",
-    not_state: str = "",
-    since: str = "",
-    node: bool = False,
-    node_and_gpu: bool = False,
-) -> Tuple[str, int]:
+def get_jobs(args: ReportseffParameters) -> Tuple[str, int]:
     """Helper method to get jobs from db_inquirer.
 
     Returns:
@@ -141,30 +114,32 @@ def get_jobs(
     """
     job_collection = JobCollection()
 
-    inquirer, renderer = get_implementation(format_str, node, node_and_gpu)
+    inquirer, renderer = get_implementation(
+        args.format_str, args.node, args.node_and_gpu
+    )
 
-    inquirer.set_state(state)
-    inquirer.set_not_state(not_state)
+    inquirer.set_state(args.state)
+    inquirer.set_not_state(args.not_state)
 
-    inquirer.set_since(since)
+    inquirer.set_since(args.since)
 
     add_jobs = False
 
     try:
-        if user:
-            inquirer.set_user(user)
+        if args.user:
+            inquirer.set_user(args.user)
             add_jobs = True
-        elif inquirer.has_since() and not jobs:  # since is set
+        elif inquirer.has_since() and not args.jobs:  # since is set
             inquirer.all_users()
             add_jobs = True
         else:
-            job_collection.set_jobs(jobs)
+            job_collection.set_jobs(args.jobs)
 
     except ValueError as error:
         click.secho(str(error), fg="red", err=True)
         sys.exit(1)
 
-    db_output = get_db_output(inquirer, renderer, job_collection, debug)
+    db_output = get_db_output(inquirer, renderer, job_collection, args.debug)
     for entry in db_output:
         try:
             job_collection.process_entry(entry, add_job=add_jobs)
@@ -172,7 +147,7 @@ def get_jobs(
             click.echo(f"Error processing entry: {entry}", err=True)
             raise error
 
-    found_jobs = job_collection.get_sorted_jobs(modified_sort)
+    found_jobs = job_collection.get_sorted_jobs(args.modified_sort)
     found_jobs = [j for j in found_jobs if j.state]
 
     return renderer.format_jobs(found_jobs), len(found_jobs)
