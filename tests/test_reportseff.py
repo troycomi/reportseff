@@ -445,7 +445,7 @@ def test_invalid_not_state(mocker, mock_inquirer):
     result = runner.invoke(
         console.main,
         (
-            "--no-color --not-state unning "
+            "--no-color --not-state cunning "
             "25569410 24418435 --format JobID%>,State,Elapsed%>,CPUEff,MemEff"
         ).split(),
     )
@@ -453,7 +453,7 @@ def test_invalid_not_state(mocker, mock_inquirer):
     assert result.exit_code == 0
     # remove header
     output = result.output.split("\n")
-    assert output[0] == "Unknown state UNNING"
+    assert output[0] == "Unknown state CUNNING"
     assert output[1] == "No valid states provided to exclude"
     # output 2 is header
     assert output[3].split() == ["24418435", "COMPLETED", "01:27:42", "99.8%", "47.7%"]
@@ -629,7 +629,7 @@ def test_sacct_error(mocker, mock_inquirer):
 
 
 def test_empty_sacct(mocker, mock_inquirer):
-    """Emtpy sacct results produce just the header line."""
+    """Empty sacct results produce just the header line."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
     sub_result = mocker.MagicMock()

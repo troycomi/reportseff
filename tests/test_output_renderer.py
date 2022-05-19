@@ -254,7 +254,7 @@ def test_renderer_validate_formatters_with_node(renderer):
     assert renderer.formatters == ["JobID", "State", "GPUEff", "GPUMem"]
     assert renderer.formatters[0].alignment == "<"  # switched by node reporting
 
-    # since format alread has jobid and gpumem, will not override
+    # since format already has jobid and gpumem, will not override
     renderer.node = True
     renderer.gpu = True
     renderer.formatters = output_renderer.build_formatters("GPUMEM,State,JobID:>")
@@ -421,7 +421,7 @@ def test_format_jobs_empty(some_jobs):
 
 
 def test_format_jobs_single_str(some_jobs):
-    """A single format string left aligns and supresses title for piping."""
+    """A single format string left aligns and suppresses title for piping."""
     renderer = output_renderer.OutputRenderer(min_required, "JobID%>")
     assert len(renderer.formatters) == 1
     assert renderer.formatters[0].alignment == ">"

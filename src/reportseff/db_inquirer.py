@@ -28,7 +28,7 @@ class BaseInquirer(ABC):
         jobs: List[str],
         debug_cmd: Optional[Callable],
     ) -> List[Dict[str, str]]:
-        """Query the databse with the supplied columns.
+        """Query the database with the supplied columns.
 
         Args:
             columns: validated format names as strings
@@ -75,7 +75,7 @@ class BaseInquirer(ABC):
 
         Args:
             since: the string for filtering.  If specified as time=amount
-                will subract that amount from the current time
+                will subtract that amount from the current time
         """
 
     @abstractmethod
@@ -128,7 +128,7 @@ class SacctInquirer(BaseInquirer):
         jobs: List[str],
         debug_cmd: Optional[Callable] = None,
     ) -> List[Dict[str, str]]:
-        """Query the databse with the supplied columns.
+        """Query the database with the supplied columns.
 
         Args:
             columns: validated format names as strings
@@ -138,7 +138,7 @@ class SacctInquirer(BaseInquirer):
         Returns:
             List of rows, where each row is a dictionary
             with the columns as keys and entries as values
-            Output order is not guarunteed to match the jobs list
+            Output order is not guaranteed to match the jobs list
 
         Raises:
             RuntimeError: if sacct doesn't return properly
@@ -234,7 +234,7 @@ class SacctInquirer(BaseInquirer):
 
         Args:
             since: the string for filtering.  If specified as time=amount
-                will subract that amount from the current time
+                will subtract that amount from the current time
         """
         if not since:
             return

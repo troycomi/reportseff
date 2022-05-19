@@ -193,7 +193,7 @@ class ColumnFormatter:
 
         self.width = None
         if match.group("width"):
-            self.width = int(match.group("width"))  # none will be calcualted later
+            self.width = int(match.group("width"))  # none will be calculated later
 
         self.end = match.group("end")
 
