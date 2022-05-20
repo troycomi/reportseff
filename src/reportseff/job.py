@@ -1,4 +1,4 @@
-"""Module for reprsenting scheduler jobs."""
+"""Module for representing scheduler jobs."""
 import base64
 from datetime import timedelta
 import gzip
@@ -348,7 +348,7 @@ def parsemem(mem: str, nodes: int = 1, cpus: int = 1) -> float:
     Returns:
         The number of bytes for the job.
         if mem is empty, return 0.
-        if mem ends with n or c, scale by the provided nodes or cpus respecitvely
+        if mem ends with n or c, scale by the provided nodes or cpus respectively
         the multiple of memory (e.g. M or G) is always scaled if provided
 
     Raises:

@@ -5,7 +5,7 @@ import nox
 
 
 locations = "src", "tests", "noxfile.py"
-nox.options.sessions = "lint", "safety", "mypy", "pytype", "tests"
+nox.options.sessions = "lint", "safety", "mypy", "pytype", "tests", "tests_old_click"
 package = "reportseff"
 
 

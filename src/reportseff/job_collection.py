@@ -144,7 +144,7 @@ class JobCollection:
         """Update the jobs collection with information from the provided entry.
 
         Args:
-            entry: the accout entry from a db inquirer
+            entry: the account entry from a db inquirer
             add_job: if true, will add the job to the collection if it doesn't exist
         """
         job_id = entry["JobID"].split(".")[0]

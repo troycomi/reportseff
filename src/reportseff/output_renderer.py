@@ -27,6 +27,7 @@ class OutputRenderer:
         format_str: str = "JobID%>,State,Elapsed%>,CPUEff,MemEff",
         node: bool = False,
         gpu: bool = False,
+        parsable: bool = False,
     ) -> None:
         """Initialize renderer with format string and list of valid titles.
 
@@ -35,6 +36,7 @@ class OutputRenderer:
             format_str: comma separated list of format tokens
             node: bool indicating if node-level data should be reported
             gpu: in addition to node, should each GPU be reported
+            parsable: should output be rendered in a parsable format
         """
         self.node = node
         self.gpu = gpu
@@ -49,6 +51,8 @@ class OutputRenderer:
             "GPUMem": [],
             "GPUEff": [],
         }
+
+        self.parsable = parsable
 
         # build formatters
         self.formatters = build_formatters(format_str)
@@ -124,19 +128,26 @@ class OutputRenderer:
             Formatted table as single string
         """
         result = ""
+        delimiter = "|" if self.parsable else " "
+
         if len(self.formatters) == 0:
             return result
 
         if len(self.formatters) == 1:
             # if only one formatter is present, override the alignment
-            self.formatters[0].alignment = "<"
-            # skip adding the title
+            self.formatters[0].no_formatting()
+            # skip adding the title to result
 
         else:
             for fmt in self.formatters:
-                fmt.compute_width(jobs, self.node, self.gpu)
+                if self.parsable:
+                    fmt.no_formatting()
+                else:
+                    fmt.compute_width(jobs, self.node, self.gpu)
 
-            result += " ".join([fmt.format_title() for fmt in self.formatters])
+            result += delimiter.join(
+                fmt.format_title(bold=not self.parsable) for fmt in self.formatters
+            )
             if len(jobs) != 0:
                 result += "\n"
 
@@ -144,7 +155,7 @@ class OutputRenderer:
             # join each row by newlines
             result += "\n".join(
                 # join each column entry by spaces
-                " ".join(str(column) for column in columns).rstrip()
+                delimiter.join(str(column) for column in columns).rstrip()
                 # for each job
                 for job in jobs
                 # columns is a tuple of generators from format_node_job
@@ -155,7 +166,7 @@ class OutputRenderer:
 
         else:
             result += "\n".join(
-                " ".join(fmt.format_job(job) for fmt in self.formatters).rstrip()
+                delimiter.join(fmt.format_job(job) for fmt in self.formatters).rstrip()
                 for job in jobs
             )
 
@@ -193,11 +204,11 @@ class ColumnFormatter:
 
         self.width = None
         if match.group("width"):
-            self.width = int(match.group("width"))  # none will be calcualted later
+            self.width = int(match.group("width"))  # none will be calculated later
 
         self.end = match.group("end")
 
-        self.color_function: Callable[[str], Tuple[str, Any]] = lambda x: (x, None)
+        self.color_function: Callable[[str], Tuple[str, Any]] = lambda x: (str(x), None)
         fold_title = self.title.casefold()
         if fold_title == "state":
             self.color_function = color_state
@@ -289,28 +300,28 @@ class ColumnFormatter:
                     for entry in job.get_node_entries(self.title, gpu)
                 )
             else:
-                width = max(
-                    len(
-                        str(
-                            job.get_entry(
-                                self.title,
-                            )
-                        )
-                    )
-                    for job in jobs
-                )
+                width = max(len(str(job.get_entry(self.title))) for job in jobs)
             self.width = max(self.width, width)
 
         self.width += 2  # add some boarder
 
-    def format_title(self) -> str:
+    def no_formatting(self) -> None:
+        """Set the formatter to just display the entries."""
+        self.alignment = "<"
+        self.width = None
+        self.color_function = lambda x: (str(x), None)
+
+    def format_title(self, bold: bool = True) -> str:
         """Format title of column for printing.
+
+        Args:
+            bold: if true, the resulting string will be styled bold
 
         Returns:
             the formatted title
         """
         result = self.format_entry(self.title)
-        return click.style(result, bold=True)
+        return click.style(result, bold=bold)
 
     def format_job(self, job: Job) -> str:
         """Format the provided job for printing.
