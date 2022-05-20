@@ -115,7 +115,7 @@ def get_jobs(args: ReportseffParameters) -> Tuple[str, int]:
     job_collection = JobCollection()
 
     inquirer, renderer = get_implementation(
-        args.format_str, args.node, args.node_and_gpu
+        args.format_str, args.node, args.node_and_gpu, args.parsable
     )
 
     inquirer.set_state(args.state)
@@ -157,6 +157,7 @@ def get_implementation(
     format_str: str,
     node: bool = False,
     node_and_gpu: bool = False,
+    parsable: bool = False,
 ) -> Tuple[BaseInquirer, OutputRenderer]:
     """Get system-specific objects.
 
@@ -174,6 +175,7 @@ def get_implementation(
             format_str,
             node=node or node_and_gpu,
             gpu=node_and_gpu,
+            parsable=parsable,
         )
     else:
         click.secho("No supported scheduling systems found!", fg="red", err=True)

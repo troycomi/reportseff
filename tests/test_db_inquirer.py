@@ -198,11 +198,11 @@ def test_sacct_get_db_output(sacct, mocker):
     ]
     mock_sub.assert_called_once_with(
         args="sacct -P -n --format=c1,c2 --jobs=j1,j2,j3".split(),
-        capture_output=True,
+        stdout=mocker.ANY,
         encoding=mocker.ANY,
         check=mocker.ANY,
         shell=False,
-        text=True,
+        universal_newlines=True,
     )
 
     debug = []
@@ -295,10 +295,10 @@ def test_sacct_get_db_output_user(sacct, mocker):
     ]
     mock_sub.assert_called_once_with(
         args=("sacct -P -n --format=c1,c2 --user=user --starttime=011318").split(),
-        capture_output=True,
+        stdout=mocker.ANY,
         encoding=mocker.ANY,
         check=mocker.ANY,
-        text=True,
+        universal_newlines=True,
         shell=False,
     )
 
@@ -324,10 +324,10 @@ def test_sacct_get_db_output_since(sacct, mocker):
     ]
     mock_sub.assert_called_once_with(
         args=("sacct -P -n --format=c1,c2 --jobs= --starttime=time ").split(),
-        capture_output=True,
+        stdout=mocker.ANY,
         encoding=mocker.ANY,
         check=mocker.ANY,
-        text=True,
+        universal_newlines=True,
         shell=False,
     )
 
@@ -489,10 +489,10 @@ def test_sacct_get_db_output_user_state(sacct, mocker):
         args=(
             "sacct -P -n --format=c1,c2,State --user=user --starttime=011318"
         ).split(),
-        capture_output=True,
+        stdout=mocker.ANY,
         encoding=mocker.ANY,
         check=mocker.ANY,
-        text=True,
+        universal_newlines=True,
         shell=False,
     )
 

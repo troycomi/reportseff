@@ -114,7 +114,7 @@ class SacctInquirer(BaseInquirer):
             stdout=subprocess.PIPE,
             encoding="utf8",
             check=True,
-            text=True,
+            universal_newlines=True,
             shell=False,
         )
         if cmd_result.returncode != 0:
@@ -160,10 +160,10 @@ class SacctInquirer(BaseInquirer):
         try:
             cmd_result = subprocess.run(
                 args=args,
-                capture_output=True,
+                stdout=subprocess.PIPE,
                 encoding="utf8",
                 check=True,
-                text=True,
+                universal_newlines=True,
                 shell=False,
             )
             cmd_result.check_returncode()
