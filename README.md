@@ -6,6 +6,8 @@
 
 > A python script for tabular display of slurm efficiency information
 
+![Example](https://github.com/troycomi/reportseff/raw/main/imgs/example.png)
+
 ## Usage
 
 ### Installation
