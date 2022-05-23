@@ -10,8 +10,8 @@
 
 ### Installation
 
-`reportseff` runs on python >= 3.7.
-The only external dependency is click (>= 7.0).
+`reportseff` runs on python >= 3.6.
+The only external dependency is click (>= 6.7).
 Calling
 
 ```sh
@@ -91,9 +91,9 @@ current directory. Combine with `watch` to monitor job progress:
 
 ```txt
                 JobID           State          Elapsed   CPUEff   MemEff
-  split_ubam_24418960          RUNNING        02:56:14    ---      ---
+   split_ubam_24418960          RUNNING        02:56:14    ---      ---
 fastq_to_ubam_24419971          RUNNING        01:29:29    ---      ---
-  split_ubam_24419972          RUNNING        01:29:29    ---      ---
+   split_ubam_24419972          RUNNING        01:29:29    ---      ---
 fastq_to_ubam_24393600         COMPLETED     1-02:00:47   58.3%    41.1%
     map_fastq_24419330          RUNNING        02:14:53    ---      ---
     map_fastq_24419323          RUNNING        02:15:24    ---      ---
@@ -143,23 +143,28 @@ all elements in the array will be displayed.
 are displayed.
 - From current directory.  If no argument is supplied, `reportseff` will attempt
 to find slurm output files in the current directory as described above.
+If a user is provided, instead `reportseff` will show recent jobs for that user.
+If only `since` is set, all recent jobs for all users will be shown (if allowed).
 - Supplying a directory as a single argument will override the current
 directory to check for slurm outputs.
 
 ### Options
 
-- --color/--no-color: Force color output or not.  By default, will force color
+- `--color/--no-color`: Force color output or not.  By default, will force color
   output.  With the no-color flag, click will strip color codes for everything
   besides stdout.
-- --modified-sort: Instead of sorting by filename/jobid, sort by last
+- `--modified-sort`: Instead of sorting by filename/jobid, sort by last
   modification time of the slurm output file.
-- --debug: Write sacct result to stderr.
-- --user: Ignore job arguments and instead query sacct with provided user.
+- `--debug`: Write sacct result to stderr.
+- `--user/-u`: Ignore job arguments and instead query sacct with provided user.
   Returns all jobs from the last week.
-- --state: Output only jobs with states matching one of the provided options.
+- `--state/-s`: Output only jobs with states matching one of the provided options.
   Accepts comma separated values of job codes (e.g. 'R') or full names
   (e.g. RUNNING).  Case insensitive.
-- --format: Provide a comma separated list of columns to produce. Prefixing the
+- `--not-state/-S`: Output only jobs with states not matching any of the provided options.
+  Accepts comma separated values of job codes (e.g. 'R') or full names
+  (e.g. RUNNING).  Case insensitive.
+- `--format`: Provide a comma separated list of columns to produce. Prefixing the
   argument with `+` adds the specified values to the defaults.  Values can
   be any valid column name to sacct and the custom efficiency values: TimeEff,
   cpuEff, MemEff.  Can also optionally set alignment (<, ^, >) and maximum width.
@@ -168,9 +173,15 @@ directory to check for slurm outputs.
   - JobId aligned right, width set automatically
   - State with width 10 (center aligned by default)
   - MemEff aligned left, width 5
-- --since: Limit results to those occurring after the specified time.  Accepts
+- `--since`: Limit results to those occurring after the specified time.  Accepts
   sacct formats and a comma separated list of key/value pairs.  To get jobs in
   the last hour and a half, can pass `h=1,m=30`.
+- `--node/-n`: Display information for multi-node jobs; requires additional
+  sacct fields from jobstats.
+- `--node-and-gpu/-g`: Display information for multi-node jobs and GPU information;
+  requires additional sacct fields from jobstats.
+- `--parsable/-p`: Ignore formatting and output as a `|` delimited table.  Useful
+  for piping into more complex analyses.
 
 ## Contributions
 
