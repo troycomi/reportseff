@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "reportseff"
-version = "2.2.1"
+version = "2.2.2"
 description= "Tablular seff output"
 authors = ["Troy Comi <troycomi@gmail.com>"]
 license = "MIT"
