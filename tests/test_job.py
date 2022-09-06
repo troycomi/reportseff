@@ -319,8 +319,8 @@ def test_parsememstep():
 
 def test_unknown_admin_comment(job):
     """Unknown comment types raise informative errors."""
-    with pytest.raises(ValueError, match="Unknown comment type 'JX1'"):
-        job._parse_admin_comment("JX1:asdfasdf")
+    with pytest.raises(ValueError, match="Unknown comment type 'JS0'"):
+        job._parse_admin_comment("JS0:asdfasdf")
 
     # invalid gzip file
     with pytest.raises(ValueError, match="Cannot decode comment 'JS1:asdfasdf'"):
@@ -329,6 +329,9 @@ def test_unknown_admin_comment(job):
     # invalid base 64
     with pytest.raises(ValueError, match="Cannot decode comment 'JS1:asd&asdf'"):
         job._parse_admin_comment("JS1:asd&asdf")
+
+    # valid, not updated
+    job._parse_admin_comment('\'{"arrayTaskId":4294967294...')
 
 
 def test_single_core(single_core):

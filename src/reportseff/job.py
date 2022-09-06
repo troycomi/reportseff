@@ -168,6 +168,11 @@ class Job:
             ValueError: if the comment can't be decoded.
         """
         comment_type = comment[:3]
+
+        if not comment_type.startswith("JS"):
+            # ignore comments that aren't from jobstats (JS)
+            return
+
         if comment_type not in ("JS1",):
             raise ValueError(f"Unknown comment type '{comment_type}'")
         data = {}
