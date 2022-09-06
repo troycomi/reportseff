@@ -185,6 +185,31 @@ def test_update_main_job():
     assert job.totalmem == 1024**2
 
 
+def test_update_main_job_unlimited():
+    """Updating jobs changes expected properties."""
+    job = job_module.Job("11741520", "11741520", None)
+    job.update(
+        {
+            "AdminComment": "",
+            "AllocCPUS": "4",
+            "Elapsed": "03:22:47",
+            "JobID": "11741520",
+            "JobIDRaw": "11741520",
+            "MaxRSS": "",
+            "NNodes": "1",
+            "REQMEM": "7Gc",
+            "State": "COMPLETED",
+            "Timelimit": "UNLIMITED",
+            "TotalCPU": "01:15:11",
+        }
+    )
+    assert job.state == "COMPLETED"
+    assert job.time == "03:22:47"
+    assert job.time_eff == "---"
+    assert job.cpu == 9.3
+    assert job.totalmem == 4 * 7 * 1024**2
+
+
 def test_update_part_job():
     """Can update job with batch to add to stepmem."""
     job = job_module.Job("24371655", "24371655", None)

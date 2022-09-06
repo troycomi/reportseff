@@ -126,9 +126,11 @@ class Job:
             if k not in self.other_entries or not self.other_entries[k]:
                 self.other_entries[k] = value
         self.time = entry["Elapsed"] if "Elapsed" in entry else None
-        requested = (
-            _parse_slurm_timedelta(entry["Timelimit"]) if "Timelimit" in entry else 1
-        )
+
+        requested = 0
+        if "Timelimit" in entry and entry["Timelimit"] != "UNLIMITED":
+            requested = _parse_slurm_timedelta(entry["Timelimit"])
+
         wall = _parse_slurm_timedelta(entry["Elapsed"]) if "Elapsed" in entry else 0
 
         if requested != 0:
