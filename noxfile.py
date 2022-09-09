@@ -15,10 +15,19 @@ def install_with_constraints(session, *args, **kwargs):
         session.run(
             "poetry",
             "export",
-            "--dev",
+            "--with",
+            "dev",
             "--format=requirements.txt",
             "--without-hashes",
             f"--output={requirements.name}",
+            external=True,
+        )
+        # strip extras
+        session.run(
+            "sed",
+            "-i",
+            r"s/\[.*\]//g",
+            f"{requirements.name}",
             external=True,
         )
         session.install(f"--constraint={requirements.name}", *args, **kwargs)
@@ -28,7 +37,7 @@ def install_with_constraints(session, *args, **kwargs):
 def tests(session):
     """Run test suite with pytest and coverage."""
     args = session.posargs
-    session.run("poetry", "install", "--no-dev", external=True)
+    session.run("poetry", "install", "--only", "main", external=True)
     install_with_constraints(
         session, "coverage[toml]", "pytest", "pytest-cov", "pytest-mock"
     )
@@ -41,7 +50,6 @@ def tests_old_click(session):
     args = session.posargs
     session.install(".")
     session.run("pip", "install", "click==6.7")
-    # session.run("poetry", "install", "--no-dev", external=True)
     install_with_constraints(
         session, "coverage[toml]", "pytest", "pytest-cov", "pytest-mock"
     )
@@ -80,7 +88,8 @@ def safety(session):
         session.run(
             "poetry",
             "export",
-            "--dev",
+            "--with",
+            "dev",
             "--format=requirements.txt",
             "--without-hashes",
             f"--output={requirements.name}",
@@ -110,7 +119,7 @@ def pytype(session):
 def typeguard(session):
     """Runtime type checking during unit tests."""
     args = session.posargs
-    session.run("poetry", "install", "--no-dev", external=True)
+    session.run("poetry", "install", "--only", "main", external=True)
     install_with_constraints(session, "pytest", "pytest-mock", "typeguard")
     session.run("pytest", f"--typeguard-packages={package}", *args)
 

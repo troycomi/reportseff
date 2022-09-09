@@ -210,6 +210,33 @@ def test_update_main_job_unlimited():
     assert job.totalmem == 4 * 7 * 1024**2
 
 
+def test_update_main_job_partition_limit():
+    """Updating jobs changes expected properties."""
+    job = job_module.Job("341", "341", None)
+    job.update(
+        {
+            "AdminComment": "",
+            "AllocCPUS": "1",
+            "Elapsed": "00:00:00",
+            "JobID": "341",
+            "JobIDRaw": "341",
+            "MaxRSS": "",
+            "NNodes": "1",
+            "Partition": "mainqueue",
+            "QOS": "normal",
+            "REQMEM": "4000G",
+            "State": "CANCELLED by 1001",
+            "Timelimit": "Partition_Limit",
+            "TotalCPU": "00:00:00",
+        }
+    )
+    assert job.state == "CANCELLED"
+    assert job.time == "00:00:00"
+    assert job.time_eff == "---"
+    assert job.cpu is None
+    assert job.totalmem == 4 * 1000 * 1024**2
+
+
 def test_update_part_job():
     """Can update job with batch to add to stepmem."""
     job = job_module.Job("24371655", "24371655", None)

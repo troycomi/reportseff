@@ -128,7 +128,10 @@ class Job:
         self.time = entry["Elapsed"] if "Elapsed" in entry else None
 
         requested = 0
-        if "Timelimit" in entry and entry["Timelimit"] != "UNLIMITED":
+        if "Timelimit" in entry and entry["Timelimit"] not in (
+            "UNLIMITED",
+            "Partition_Limit",
+        ):
             requested = _parse_slurm_timedelta(entry["Timelimit"])
 
         wall = _parse_slurm_timedelta(entry["Elapsed"]) if "Elapsed" in entry else 0
