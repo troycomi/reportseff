@@ -15,7 +15,7 @@ def test_get_columns(jobs):
     """Default get columns are reasonable."""
     assert jobs.get_columns() == (
         "JobIDRaw,JobID,State,AllocCPUS,TotalCPU,Elapsed,Timelimit,"
-        "REQMEM,MaxRSS,NNodes,NTasks"
+        "REQMEM,MaxRSS,NNodes,NTasks,Partition"
     ).split(",")
 
 
@@ -179,6 +179,110 @@ def test_process_line(jobs, mocker):
                 "MaxRSS": "1372K",
                 "NNodes": "1",
                 "NTasks": "1",
+            }
+        ),
+    ]
+
+
+def test_process_line_partition_timelimit_not_set(jobs, mocker):
+    """When partition limits is not set, forward to job."""
+    jobs.jobs = {"24371655": Job("24371655", "24371655", "test_24371655")}
+    mock_update = mocker.patch.object(Job, "update")
+    jobs.process_entry(
+        dict(
+            zip(
+                jobs.get_columns(),
+                "24371655|24371655|COMPLETED|1|"
+                "01:29:47|01:29:56|Partition_Limit|1Gn||1||mainqueue".split("|"),
+            )
+        )
+    )
+
+    assert mock_update.call_args_list == [
+        mocker.call(
+            {
+                "JobIDRaw": "24371655",
+                "JobID": "24371655",
+                "State": "COMPLETED",
+                "AllocCPUS": "1",
+                "REQMEM": "1Gn",
+                "TotalCPU": "01:29:47",
+                "Elapsed": "01:29:56",
+                "Timelimit": "Partition_Limit",
+                "MaxRSS": "",
+                "NNodes": "1",
+                "NTasks": "",
+                "Partition": "mainqueue",
+            }
+        ),
+    ]
+
+
+def test_process_line_partition_timelimit(jobs, mocker):
+    """When partition limits is set, replace with limit."""
+    jobs.jobs = {"24371655": Job("24371655", "24371655", "test_24371655")}
+    mock_update = mocker.patch.object(Job, "update")
+    jobs.set_partition_limits({"mainqueue": "01:02:03"})
+    jobs.process_entry(
+        dict(
+            zip(
+                jobs.get_columns(),
+                "24371655|24371655|COMPLETED|1|"
+                "01:29:47|01:29:56|Partition_Limit|1Gn||1||mainqueue".split("|"),
+            )
+        )
+    )
+
+    assert mock_update.call_args_list == [
+        mocker.call(
+            {
+                "JobIDRaw": "24371655",
+                "JobID": "24371655",
+                "State": "COMPLETED",
+                "AllocCPUS": "1",
+                "REQMEM": "1Gn",
+                "TotalCPU": "01:29:47",
+                "Elapsed": "01:29:56",
+                "Timelimit": "01:02:03",
+                "MaxRSS": "",
+                "NNodes": "1",
+                "NTasks": "",
+                "Partition": "mainqueue",
+            }
+        ),
+    ]
+
+
+def test_process_line_partition_timelimit_no_match(jobs, mocker):
+    """When partition limits is set, but not matching, forward limit."""
+    jobs.jobs = {"24371655": Job("24371655", "24371655", "test_24371655")}
+    mock_update = mocker.patch.object(Job, "update")
+    jobs.set_partition_limits({"mainqueue2": "01:02:03"})
+    jobs.process_entry(
+        dict(
+            zip(
+                jobs.get_columns(),
+                "24371655|24371655|COMPLETED|1|"
+                "01:29:47|01:29:56|Partition_Limit|1Gn||1||mainqueue".split("|"),
+            )
+        )
+    )
+
+    assert mock_update.call_args_list == [
+        mocker.call(
+            {
+                "JobIDRaw": "24371655",
+                "JobID": "24371655",
+                "State": "COMPLETED",
+                "AllocCPUS": "1",
+                "REQMEM": "1Gn",
+                "TotalCPU": "01:29:47",
+                "Elapsed": "01:29:56",
+                "Timelimit": "Partition_Limit",
+                "MaxRSS": "",
+                "NNodes": "1",
+                "NTasks": "",
+                "Partition": "mainqueue",
             }
         ),
     ]

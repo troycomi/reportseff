@@ -24,6 +24,7 @@ class JobCollection:
             "MaxRSS",
             "NNodes",
             "NTasks",
+            "Partition",
         ]
 
         self.job_file_regex = re.compile(
@@ -34,6 +35,7 @@ class JobCollection:
         self.jobs: Dict[str, Job] = {}
         self.renderer: Optional[OutputRenderer] = None
         self.dir_name = ""
+        self.partition_timelimits: dict = {}
 
     def get_columns(self) -> List[str]:
         """The list of columns requested from inquirer.
@@ -161,6 +163,14 @@ class JobCollection:
             else:
                 return
 
+        # handle partition limit for timelimit
+        if (
+            "Timelimit" in entry
+            and entry["Timelimit"] == "Partition_Limit"
+            and entry["Partition"] in self.partition_timelimits
+        ):
+            entry["Timelimit"] = self.partition_timelimits[entry["Partition"]]
+
         self.jobs[job_id].update(entry)
 
     def get_sorted_jobs(self, change_sort: bool) -> List[Job]:
@@ -195,3 +205,11 @@ class JobCollection:
             return sorted(self.jobs.values(), key=get_time, reverse=True)
 
         return sorted(self.jobs.values(), key=get_file_name)
+
+    def set_partition_limits(self, limits: dict) -> None:
+        """Set partition limits from db inquirer.
+
+        Args:
+            limits: dict of partition to partition timelimit
+        """
+        self.partition_timelimits = limits

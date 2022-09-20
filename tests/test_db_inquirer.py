@@ -500,3 +500,80 @@ def test_sacct_get_db_output_user_state(sacct, mocker):
     debug = []
     sacct.get_db_output("c1 c2 State".split(), "j1 j2 j3".split(), debug.append)
     assert debug[0] == ("c1j1|c2j1|RUNNING\nc1j2|c2j2|RUNNING\nc1j3|c2j3|COMPLETED\n")
+
+
+def test_partition_timelimit_failure(sacct, mocker):
+    """Get error when scontrol fails."""
+    mock_sacct = mocker.MagicMock()
+    mock_sacct.returncode = 1
+    mock_sacct.stdout = ""
+    mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=mock_sacct)
+
+    with pytest.raises(RuntimeError) as exception:
+        sacct.get_partition_timelimits()
+
+    assert "Error retrieving information from scontrol" in str(exception.value)
+
+
+def test_partition_timelimit(sacct, mocker):
+    """Can process scontrol output."""
+    mock_sacct = mocker.MagicMock()
+    mock_sacct.returncode = 0
+    mock_sacct.stdout = (
+        "PartitionName=cpu\n"
+        "   AllowGroups=ALL AllowAccounts=ALL AllowQos=ALL\n"
+        "   MaxNodes=UNLIMITED MaxTime=15-00:00:00 MinNodes=0\n"
+        "\n"
+        "PartitionName=datascience\n"
+        "   AllowGroups=ALL AllowAccounts=ALL AllowQos=ALL\n"
+        "   MaxNodes=UNLIMITED MaxTime=MAXTIME MinNodes=0\n"
+        "\n"
+        "PartitionName=gpu\n"
+        "   AllowGroups=ALL AllowAccounts=ALL AllowQos=ALL\n"
+        "   MaxNodes=UNLIMITED MaxTime=12-00:00:00 MinNodes=0\n"
+    )
+    mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=mock_sacct)
+
+    limits = sacct.get_partition_timelimits()
+    assert limits == {
+        "cpu": "15-00:00:00",
+        "datascience": "MAXTIME",
+        "gpu": "12-00:00:00",
+    }
+
+
+def test_partition_timelimit_issue_11(sacct, mocker):
+    """Can process scontrol output from issue 11."""
+    mock_sacct = mocker.MagicMock()
+    mock_sacct.returncode = 0
+    mock_sacct.stdout = (
+        "PartitionName=mainqueue\n"
+        "   AllowGroups=ALL AllowAccounts=ALL AllowQos=ALL\n"
+        "   AllocNodes=ALL Default=YES QoS=N/A\n"
+        "   DefaultTime=NONE DisableRootJobs=NO ExclusiveUser=NO GraceTime=0\n"
+        "   MaxNodes=UNLIMITED MaxTime=UNLIMITED MinNodes=0 LLN=NO\n"
+        "   Nodes=bignode\n"
+        "   PriorityJobFactor=1 PriorityTier=1 RootOnly=NO ReqResv=NO\n"
+        "   OverTimeLimit=NONE PreemptMode=OFF\n"
+        "   State=UP TotalCPUs=128 TotalNodes=1 SelectTypeParameters=NONE\n"
+        "   JobDefaults=(null)\n"
+        "   DefMemPerNode=UNLIMITED MaxMemPerNode=UNLIMITED\n"
+        "PartitionName=mainqueue2\n"
+        "   AllowGroups=ALL AllowAccounts=ALL AllowQos=ALL\n"
+        "   AllocNodes=ALL Default=YES QoS=N/A\n"
+        "   DefaultTime=NONE DisableRootJobs=NO ExclusiveUser=NO GraceTime=0\n"
+        "   MaxNodes=UNLIMITED MaxTime=10-00:00:00 MinNodes=0 LLN=NO\n"
+        "   Nodes=bignode\n"
+        "   PriorityJobFactor=1 PriorityTier=1 RootOnly=NO ReqResv=NO\n"
+        "   OverTimeLimit=NONE PreemptMode=OFF\n"
+        "   State=UP TotalCPUs=128 TotalNodes=1 SelectTypeParameters=NONE\n"
+        "   JobDefaults=(null)\n"
+        "   DefMemPerNode=UNLIMITED MaxMemPerNode=UNLIMITED\n"
+    )
+    mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=mock_sacct)
+
+    limits = sacct.get_partition_timelimits()
+    assert limits == {
+        "mainqueue": "UNLIMITED",
+        "mainqueue2": "10-00:00:00",
+    }

@@ -139,6 +139,7 @@ def get_jobs(args: ReportseffParameters) -> Tuple[str, int]:
         click.secho(str(error), fg="red", err=True)
         sys.exit(1)
 
+    job_collection.set_partition_limits(inquirer.get_partition_timelimits())
     db_output = get_db_output(inquirer, renderer, job_collection, args.debug)
     for entry in db_output:
         try:

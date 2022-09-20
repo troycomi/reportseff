@@ -20,7 +20,13 @@ def mock_inquirer(mocker):
             "REQMEM,NNodes,MaxRSS,Timelimit"
         ).split(",")
 
+    def mock_partition_timelimits(self):
+        return {}
+
     mocker.patch.object(SacctInquirer, "get_valid_formats", new=mock_valid)
+    mocker.patch.object(
+        SacctInquirer, "get_partition_timelimits", new=mock_partition_timelimits
+    )
 
 
 def test_directory_input(mocker, mock_inquirer):

@@ -1,6 +1,7 @@
 """Abstract and concrete implementations of scheduler databases."""
 from abc import ABC, abstractmethod
 import datetime
+import re
 import subprocess
 from typing import Callable, Dict, List, Optional, Set
 
@@ -84,6 +85,14 @@ class BaseInquirer(ABC):
 
         Returns:
             True if set_since has been called on this inquirer
+        """
+
+    @abstractmethod
+    def get_partition_timelimits(self) -> dict:
+        """Get partition time limits.
+
+        Returns:
+            dict mapping partition names to maximum timelimits.
         """
 
 
@@ -286,6 +295,42 @@ class SacctInquirer(BaseInquirer):
             True if since has been set properly
         """
         return bool(self.since)
+
+    def get_partition_timelimits(self) -> dict:
+        """Get partition time limits.
+
+        Returns:
+            dict mapping partition names to maximum timelimits.
+
+        Raises:
+            RuntimeError: if scontrol raises an error
+        """
+        command_args = "scontrol show partition".split()
+        cmd_result = subprocess.run(
+            args=command_args,
+            stdout=subprocess.PIPE,
+            encoding="utf8",
+            check=True,
+            universal_newlines=True,
+            shell=False,
+        )
+        if cmd_result.returncode != 0:
+            raise RuntimeError("Error retrieving information from scontrol")
+
+        partition_name = re.compile(r"^PartitionName=(?P<name>\S+)$")
+        time_limit = re.compile(r"MaxTime=(?P<time>\S+)")
+
+        partition = ""
+        result = {}
+        for line in cmd_result.stdout.split():
+            match = re.match(partition_name, line)
+            if match:
+                partition = match.group("name")
+            match = re.match(time_limit, line)
+            if match:
+                result[partition] = match.group("time")
+
+        return result
 
 
 def get_states_as_set(state_list: str) -> Set:
