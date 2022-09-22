@@ -167,6 +167,7 @@ class JobCollection:
         if (
             "Timelimit" in entry
             and entry["Timelimit"] == "Partition_Limit"
+            and "Partition" in entry
             and entry["Partition"] in self.partition_timelimits
         ):
             entry["Timelimit"] = self.partition_timelimits[entry["Partition"]]
