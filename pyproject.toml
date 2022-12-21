@@ -25,7 +25,7 @@ flake8-bandit = "^2.1.2"
 flake8-black = "^0.2.5"
 flake8-bugbear = "^21.9.2"
 flake8-import-order = "^0.18.1"
-safety = "^1.10.3"
+safety = "^2.2.0"
 mypy = "^0.910"
 types-click = "^7.1.7"
 pytype = {version = "^2021.10.11", python = "3.7"}
