@@ -18,6 +18,7 @@ class ReportseffParameters:
     not_state: str = ""
     parsable: bool = False
     since: str = ""
+    until: str = ""
     state: str = ""
     user: str = ""
 
@@ -33,6 +34,7 @@ class ReportseffParameters:
         not_state: str = "",
         parsable: bool = False,
         since: str = "",
+        until: str = "",
         state: str = "",
         user: str = "",
     ) -> None:
@@ -49,6 +51,7 @@ class ReportseffParameters:
             not_state: states to remove
             parsable: if output should be parsable
             since: display jobs since a specific time
+            until: display jobs until a specific time
             state: stats to display
             user: the user to report for
         """
@@ -62,6 +65,7 @@ class ReportseffParameters:
         self.not_state = not_state
         self.parsable = parsable
         self.since = since
+        self.until = until
         self.state = state
         self.user = user
 
