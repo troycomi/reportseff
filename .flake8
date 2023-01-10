@@ -1,7 +1,7 @@
 [flake8]
 select = ANN,B,B9,BLK,C,D,DAR,E,F,I,W
 max-complexity = 10
-ignore = E203,W503,E501,ANN101
+ignore = E203,W503,E501,ANN101,ANN401
 max-line-length = 80
 application-import-names= reportseff,tests
 import-order-style = google
