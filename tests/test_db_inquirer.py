@@ -336,6 +336,35 @@ def test_sacct_get_db_output_since(sacct, mocker):
     assert debug[0] == ("c1j1|c2j1\nc1j2|c2j2\nc1j3|c2j3\n")
 
 
+def test_sacct_get_db_output_until(sacct, mocker):
+    """Subprocess call is affected by until argument."""
+    mock_sacct = mocker.MagicMock()
+    mock_sacct.returncode = 0
+    mock_sacct.stdout = "c1j1|c2j1\nc1j2|c2j2\nc1j3|c2j3\n"
+    mock_sub = mocker.patch(
+        "reportseff.db_inquirer.subprocess.run", return_value=mock_sacct
+    )
+    sacct.set_until("time")
+    result = sacct.get_db_output("c1 c2".split(), {})
+    assert result == [
+        {"c1": "c1j1", "c2": "c2j1"},
+        {"c1": "c1j2", "c2": "c2j2"},
+        {"c1": "c1j3", "c2": "c2j3"},
+    ]
+    mock_sub.assert_called_once_with(
+        args=("sacct -P -n --format=c1,c2 --jobs= --endtime=time ").split(),
+        stdout=mocker.ANY,
+        encoding=mocker.ANY,
+        check=mocker.ANY,
+        universal_newlines=True,
+        shell=False,
+    )
+
+    debug = []
+    sacct.get_db_output("c1 c2".split(), "j1 j2 j3".split(), debug.append)
+    assert debug[0] == ("c1j1|c2j1\nc1j2|c2j2\nc1j3|c2j3\n")
+
+
 def test_sacct_set_state(sacct, capsys):
     """Decodes state properly and sets to upper."""
     sacct.set_state("BF,ca,cD,Dl,F,NF,OOM,PD,PR,R,RQ,RS,RV,S,TO")
@@ -384,6 +413,78 @@ def test_sacct_set_state(sacct, capsys):
         "No valid states provided to include",
         "",
     }
+
+
+def test_sacct_set_until(sacct, mocker):
+    """Can set since with various formats."""
+    # no equal sign, retain argument
+    sacct.set_until("022399")
+    assert sacct.until == "022399"
+    # also no error checking
+    sacct.set_until("asdf")
+    assert sacct.until == "asdf"
+
+    # has an equal sign, handles year, month, day, hour, minute
+    mock_date = mocker.MagicMock()
+    mock_date.today.return_value = datetime.datetime(2018, 1, 20, 10, 15, 20)
+    mock_date.side_effect = lambda *args, **kw: datetime.date(*args, **kw)
+    mocker.patch("reportseff.db_inquirer.datetime.datetime", mock_date)
+
+    sacct.set_until("w=2")
+    assert sacct.until == "2018-01-06T10:15"
+
+    sacct.set_until("W=2")
+    assert sacct.until == "2018-01-06T10:15"
+
+    sacct.set_until("weeks=2")
+    assert sacct.until == "2018-01-06T10:15"
+
+    sacct.set_until("d=2")
+    assert sacct.until == "2018-01-18T10:15"
+
+    sacct.set_until("D=2")
+    assert sacct.until == "2018-01-18T10:15"
+
+    sacct.set_until("days=2")
+    assert sacct.until == "2018-01-18T10:15"
+
+    sacct.set_until("H=-4")
+    assert sacct.until == "2018-01-20T14:15"
+
+    sacct.set_until("h=4")
+    assert sacct.until == "2018-01-20T06:15"
+
+    sacct.set_until("hours=4")
+    assert sacct.until == "2018-01-20T06:15"
+
+    sacct.set_until("M=3")
+    assert sacct.until == "2018-01-20T10:12"
+
+    sacct.set_until("m=3")
+    assert sacct.until == "2018-01-20T10:12"
+
+    sacct.set_until("minutes=3")
+    assert sacct.until == "2018-01-20T10:12"
+
+    # unknown code, don't add
+    sacct.set_until("z=3")
+    assert sacct.until == "2018-01-20T10:15"
+
+    # can't parse arg to int, don't add
+    sacct.set_until("M=z")
+    assert sacct.until == "2018-01-20T10:15"
+
+    # can't parse args without =, ignore
+    sacct.set_until("a,M=3,z")
+    assert sacct.until == "2018-01-20T10:12"
+
+    # handle multiple
+    sacct.set_until("w=2,d=1,h=3,m=4,z,H=a")
+    assert sacct.until == "2018-01-05T07:11"
+
+    # last repeat wins
+    sacct.set_until("m=300,mInUtes=3")
+    assert sacct.until == "2018-01-20T10:12"
 
 
 def test_sacct_set_since(sacct, mocker):

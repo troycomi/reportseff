@@ -67,6 +67,15 @@ from .parameters import ReportseffParameters
     "Minutes is the minimum resolution, while weeks is the coarsest.",
 )
 @click.option(
+    "--until",
+    default="",
+    help="Only include jobs before this time. Can be valid sacct "
+    "or as a comma separated list of time deltas, e.g. d=2,h=1 "
+    "means 2 days, 1 hour before current time. Weeks, days, "
+    "hours, and minutes can use case-insensitive abbreviations. "
+    "Minutes is the minimum resolution, while weeks is the coarsest.",
+)
+@click.option(
     "--node/--no-node",
     "-n/-N",
     default=False,
@@ -122,6 +131,7 @@ def get_jobs(args: ReportseffParameters) -> Tuple[str, int]:
     inquirer.set_not_state(args.not_state)
 
     inquirer.set_since(args.since)
+    inquirer.set_until(args.until)
 
     add_jobs = False
 

@@ -33,7 +33,7 @@ def install_with_constraints(session, *args, **kwargs):
         session.install(f"--constraint={requirements.name}", *args, **kwargs)
 
 
-@nox.session(python=["3.6", "3.7", "3.8", "3.9"])
+@nox.session(python=["3.7", "3.8", "3.9"])
 def tests(session):
     """Run test suite with pytest and coverage."""
     args = session.posargs
@@ -44,7 +44,7 @@ def tests(session):
     session.run("pytest", "--cov", *args)
 
 
-@nox.session(python=["3.6", "3.7", "3.8", "3.9"])
+@nox.session(python=["3.7", "3.8", "3.9"])
 def tests_old_click(session):
     """Run test suite with pytest and coverage, using click 6.7."""
     args = session.posargs
