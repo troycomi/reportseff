@@ -233,7 +233,10 @@ class Job:
         self.other_entries["TimeEff"] = self.time_eff
         self.other_entries["CPUEff"] = self.cpu if self.cpu else "---"
         self.other_entries["GPUEff"] = self.gpu if self.gpu is not None else "---"
-        self.other_entries["GPUMem"] = self.gpu_mem if self.gpu_mem is not None else "---"
+        if self.gpu_mem is not None:
+            self.other_entries["GPUMem"] = self.gpu_mem
+        else:
+            self.other_entries["GPUMem"] = "---"
 
     def name(self) -> str:
         """The name of the job.
