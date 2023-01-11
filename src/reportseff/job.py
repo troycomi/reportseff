@@ -232,8 +232,8 @@ class Job:
         self.other_entries["State"] = self.state
         self.other_entries["TimeEff"] = self.time_eff
         self.other_entries["CPUEff"] = self.cpu if self.cpu else "---"
-        self.other_entries["GPUEff"] = self.gpu if self.gpu else "---"
-        self.other_entries["GPUMem"] = self.gpu_mem if self.gpu_mem else "---"
+        self.other_entries["GPUEff"] = self.gpu if self.gpu is not None else "---"
+        self.other_entries["GPUMem"] = self.gpu_mem if self.gpu_mem is not None else "---"
 
     def name(self) -> str:
         """The name of the job.
@@ -276,7 +276,7 @@ class Job:
             not change in nodes/gpus it will yield an empty string
         """
         yield self.get_entry(key)
-        if len(self.comment_data) > 1 or (gpu and self.gpu):
+        if len(self.comment_data) > 1 or (gpu and self.gpu is not None):
             for node, data in self.comment_data.items():
                 # get node-level data
                 if key == "JobID":
@@ -287,7 +287,7 @@ class Job:
                         to_yield if isinstance(to_yield, str) else round(to_yield, 1)
                     )
                     yield to_yield
-                if gpu and self.gpu:  # has gpus to report
+                if gpu and self.gpu is not None:  # has gpus to report
                     for gpu_name, gpu_data in data["gpus"].items():
                         if key == "JobID":
                             yield f"    {gpu_name}"
