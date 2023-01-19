@@ -253,6 +253,7 @@ def test_simple_user(mocker, mock_inquirer):
     assert output[0].split() == ["24418435", "COMPLETED", "01:27:42", "99.8%", "47.7%"]
     assert output[1].split() == ["25569410", "COMPLETED", "21:14:48", "91.7%", "1.6%"]
 
+
 def test_simple_partition(mocker, mock_inquirer):
     """Can limit outputs by partition."""
     mocker.patch("reportseff.console.which", return_value=True)
@@ -274,7 +275,8 @@ def test_simple_partition(mocker, mock_inquirer):
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
     result = runner.invoke(
         console.main,
-        "--no-color --partition partition --format JobID%>,State,Elapsed%>,CPUEff,MemEff".split(),
+        "--no-color --partition partition "
+        "--format JobID%>,State,Elapsed%>,CPUEff,MemEff".split(),
     )
 
     assert result.exit_code == 0

@@ -18,6 +18,7 @@ def test_sacct_init(sacct):
     assert sacct.default_args == ["sacct", "-P", "-n"]
     assert sacct.user is None
 
+
 def test_sacct_get_valid_formats(sacct, mocker):
     """Check valid parsing of help format."""
     mock_sacct = mocker.MagicMock
@@ -265,7 +266,6 @@ def test_sacct_set_user(sacct):
     assert sacct.user == "user"
 
 
-
 def test_sacct_get_db_output_user(sacct, mocker):
     """User and since affects subprocess call."""
     mocker.patch(
@@ -312,6 +312,7 @@ def test_sacct_set_partition(sacct):
     sacct.set_partition("partition")
     assert sacct.partition == "partition"
 
+
 def test_sacct_get_db_output_partition(sacct, mocker):
     """User and since affects subprocess call."""
     mocker.patch(
@@ -340,7 +341,10 @@ def test_sacct_get_db_output_partition(sacct, mocker):
         {"c1": "c1j3", "c2": "c2j3"},
     ]
     mock_sub.assert_called_once_with(
-        args=("sacct -P -n --format=c1,c2 --allusers --partition=partition --starttime=011318").split(),
+        args=(
+            "sacct -P -n --format=c1,c2 --allusers "
+            "--partition=partition --starttime=011318"
+        ).split(),
         stdout=mocker.ANY,
         encoding=mocker.ANY,
         check=mocker.ANY,
