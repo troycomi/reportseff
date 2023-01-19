@@ -52,6 +52,11 @@ from .parameters import ReportseffParameters
     help="Ignore jobs, return all jobs in last week from user",
 )
 @click.option(
+    "--partition",
+    default="",
+    help="Ignore jobs, return all jobs in last week from partition",
+)
+@click.option(
     "-s", "--state", default="", help="Only include jobs with the specified states"
 )
 @click.option(
@@ -138,6 +143,9 @@ def get_jobs(args: ReportseffParameters) -> Tuple[str, int]:
     try:
         if args.user:
             inquirer.set_user(args.user)
+            add_jobs = True
+        elif args.partition:
+            inquirer.set_partition(args.partition)
             add_jobs = True
         elif inquirer.has_since() and not args.jobs:  # since is set
             inquirer.all_users()

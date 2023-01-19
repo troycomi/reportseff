@@ -66,6 +66,14 @@ class BaseInquirer(ABC):
         """
 
     @abstractmethod
+    def set_partition(self, partition: str) -> None:
+        """Set the collection of jobs based on the provided user.
+
+        Args:
+            partition: partition name
+        """
+
+    @abstractmethod
     def all_users(self) -> None:
         """Ignore provided jobs, query for all users."""
 
@@ -143,6 +151,7 @@ class SacctInquirer(BaseInquirer):
         self.since: Optional[str] = None
         self.until: Optional[str] = None
         self.query_all_users: bool = False
+        self.partition: Optional[str] = None
 
     def get_valid_formats(self) -> List[str]:
         """Get the valid formatting options supported by the inquirer.
@@ -185,6 +194,15 @@ class SacctInquirer(BaseInquirer):
             args += [f"--user={self.user}", f"--starttime={self.since}"]
         elif self.query_all_users:
             args += ["--allusers", f"--starttime={self.since}"]
+        elif self.partition:
+            if not self.since:
+                start_date = datetime.date.today() - datetime.timedelta(days=7)
+                self.since = start_date.strftime("%m%d%y")  # MMDDYY
+            args += [
+                "--allusers",
+                f"--partition={self.partition}",
+                f"--starttime={self.since}",
+            ]
         else:
             args += ["--jobs=" + ",".join(jobs)]
             if self.since:
@@ -253,6 +271,14 @@ class SacctInquirer(BaseInquirer):
             user: user name
         """
         self.user = user
+
+    def set_partition(self, partition: str) -> None:
+        """Set the collection of jobs based on the provided partition.
+
+        Args:
+            partition: partition name
+        """
+        self.partition = partition
 
     def all_users(self) -> None:
         """Query for all users if `since` is set."""
