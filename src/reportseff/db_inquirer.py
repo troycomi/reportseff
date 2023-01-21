@@ -67,7 +67,7 @@ class BaseInquirer(ABC):
 
     @abstractmethod
     def set_partition(self, partition: str) -> None:
-        """Set the collection of jobs based on the provided user.
+        """Set the collection of jobs based on the provided partition.
 
         Args:
             partition: partition name
