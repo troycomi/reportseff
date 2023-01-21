@@ -194,19 +194,13 @@ class SacctInquirer(BaseInquirer):
             args += [f"--user={self.user}", f"--starttime={self.since}"]
         elif self.query_all_users:
             args += ["--allusers", f"--starttime={self.since}"]
-        elif self.partition:
-            if not self.since:
-                start_date = datetime.date.today() - datetime.timedelta(days=7)
-                self.since = start_date.strftime("%m%d%y")  # MMDDYY
-            args += [
-                "--allusers",
-                f"--partition={self.partition}",
-                f"--starttime={self.since}",
-            ]
         else:
             args += ["--jobs=" + ",".join(jobs)]
             if self.since:
                 args += [f"--starttime={self.since}"]
+
+        if self.partition:
+            args += [f"--partition={self.partition}"]
         if self.until:
             args += [f"--endtime={self.until}"]
         return args

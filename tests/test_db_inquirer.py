@@ -314,19 +314,7 @@ def test_sacct_set_partition(sacct):
 
 
 def test_sacct_get_db_output_partition(sacct, mocker):
-    """User and since affects subprocess call."""
-    mocker.patch(
-        "reportseff.db_inquirer.subprocess.run",
-        side_effect=subprocess.CalledProcessError(1, "test"),
-    )
-    mock_date = mocker.MagicMock()
-    mock_date.today.return_value = datetime.date(2018, 1, 20)
-    mock_date.side_effect = datetime.date
-    mocker.patch("reportseff.db_inquirer.datetime.date", mock_date)
-    with pytest.raises(Exception) as exception:
-        sacct.get_db_output("c1 c2".split(), "j1 j2 j3".split())
-    assert "Error running sacct!" in str(exception)
-
+    """Subprocess call is affected by partition argument."""
     mock_sacct = mocker.MagicMock()
     mock_sacct.returncode = 0
     mock_sacct.stdout = "c1j1|c2j1\nc1j2|c2j2\nc1j3|c2j3\n"
@@ -341,10 +329,7 @@ def test_sacct_get_db_output_partition(sacct, mocker):
         {"c1": "c1j3", "c2": "c2j3"},
     ]
     mock_sub.assert_called_once_with(
-        args=(
-            "sacct -P -n --format=c1,c2 --allusers "
-            "--partition=partition --starttime=011318"
-        ).split(),
+        args=("sacct -P -n --format=c1,c2 --jobs= --partition=partition").split(),
         stdout=mocker.ANY,
         encoding=mocker.ANY,
         check=mocker.ANY,
