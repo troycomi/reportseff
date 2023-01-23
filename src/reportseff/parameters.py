@@ -21,6 +21,7 @@ class ReportseffParameters:
     until: str = ""
     state: str = ""
     user: str = ""
+    partition: str = ""
 
     def __init__(
         self,
@@ -37,6 +38,7 @@ class ReportseffParameters:
         until: str = "",
         state: str = "",
         user: str = "",
+        partition: str = "",
     ) -> None:
         """Create a new parameter object.
 
@@ -54,6 +56,7 @@ class ReportseffParameters:
             until: display jobs until a specific time
             state: stats to display
             user: the user to report for
+            partition: the partition to report for
         """
         self.color = color
         self.debug = debug
@@ -68,6 +71,7 @@ class ReportseffParameters:
         self.until = until
         self.state = state
         self.user = user
+        self.partition = partition
 
         if self.format_str.startswith("+"):
             self.format_str = (

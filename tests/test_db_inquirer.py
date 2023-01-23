@@ -307,6 +307,41 @@ def test_sacct_get_db_output_user(sacct, mocker):
     assert debug[0] == ("c1j1|c2j1\nc1j2|c2j2\nc1j3|c2j3\n")
 
 
+def test_sacct_set_partition(sacct):
+    """Can set partition."""
+    sacct.set_partition("partition")
+    assert sacct.partition == "partition"
+
+
+def test_sacct_get_db_output_partition(sacct, mocker):
+    """Subprocess call is affected by partition argument."""
+    mock_sacct = mocker.MagicMock()
+    mock_sacct.returncode = 0
+    mock_sacct.stdout = "c1j1|c2j1\nc1j2|c2j2\nc1j3|c2j3\n"
+    mock_sub = mocker.patch(
+        "reportseff.db_inquirer.subprocess.run", return_value=mock_sacct
+    )
+    sacct.set_partition("partition")
+    result = sacct.get_db_output("c1 c2".split(), {})
+    assert result == [
+        {"c1": "c1j1", "c2": "c2j1"},
+        {"c1": "c1j2", "c2": "c2j2"},
+        {"c1": "c1j3", "c2": "c2j3"},
+    ]
+    mock_sub.assert_called_once_with(
+        args=("sacct -P -n --format=c1,c2 --jobs= --partition=partition").split(),
+        stdout=mocker.ANY,
+        encoding=mocker.ANY,
+        check=mocker.ANY,
+        universal_newlines=True,
+        shell=False,
+    )
+
+    debug = []
+    sacct.get_db_output("c1 c2".split(), "j1 j2 j3".split(), debug.append)
+    assert debug[0] == ("c1j1|c2j1\nc1j2|c2j2\nc1j3|c2j3\n")
+
+
 def test_sacct_get_db_output_since(sacct, mocker):
     """Subprocess call is affected by since argument."""
     mock_sacct = mocker.MagicMock()
