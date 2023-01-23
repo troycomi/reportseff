@@ -114,7 +114,9 @@ class Job:
             for k, value in entry.items():
                 if k not in self.other_entries or not self.other_entries[k]:
                     self.other_entries[k] = value
-            self.stepmem += parsemem(entry["MaxRSS"]) if "MaxRSS" in entry else 0
+            # self.stepmem += parsemem(entry["MaxRSS"]) if "MaxRSS" in entry else 0
+            mem = parsemem(entry["MaxRSS"]) if "MaxRSS" in entry else 0
+            self.stepmem = max(self.stepmem, mem)
 
     def _update_main_job(self, entry: Dict) -> None:
         """Update properties for the main job.
