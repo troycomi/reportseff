@@ -63,7 +63,7 @@ def test_directory_input(mocker, mock_inquirer):
         "01:27:42",
         "48.7%",
         "99.8%",
-        "47.7%",
+        "47.6%",
     ]
 
 
@@ -220,7 +220,7 @@ def test_simple_job(mocker, mock_inquirer):
     assert result.exit_code == 0
     # remove header
     output = result.output.split("\n")[1:]
-    assert output[0].split() == ["24418435", "COMPLETED", "01:27:42", "99.8%", "47.7%"]
+    assert output[0].split() == ["24418435", "COMPLETED", "01:27:42", "99.8%", "47.6%"]
 
 
 def test_simple_user(mocker, mock_inquirer):
@@ -250,8 +250,8 @@ def test_simple_user(mocker, mock_inquirer):
     assert result.exit_code == 0
     # remove header
     output = result.output.split("\n")[1:]
-    assert output[0].split() == ["24418435", "COMPLETED", "01:27:42", "99.8%", "47.7%"]
-    assert output[1].split() == ["25569410", "COMPLETED", "21:14:48", "91.7%", "1.6%"]
+    assert output[0].split() == ["24418435", "COMPLETED", "01:27:42", "99.8%", "47.6%"]
+    assert output[1].split() == ["25569410", "COMPLETED", "21:14:48", "91.7%", "1.5%"]
 
 
 def test_simple_partition(mocker, mock_inquirer):
@@ -282,8 +282,8 @@ def test_simple_partition(mocker, mock_inquirer):
     assert result.exit_code == 0
     # remove header
     output = result.output.split("\n")[1:]
-    assert output[0].split() == ["24418435", "COMPLETED", "01:27:42", "99.8%", "47.7%"]
-    assert output[1].split() == ["25569410", "COMPLETED", "21:14:48", "91.7%", "1.6%"]
+    assert output[0].split() == ["24418435", "COMPLETED", "01:27:42", "99.8%", "47.6%"]
+    assert output[1].split() == ["25569410", "COMPLETED", "21:14:48", "91.7%", "1.5%"]
 
 
 def test_format_add(mocker, mock_inquirer):
@@ -336,8 +336,8 @@ def test_since(mocker, mock_inquirer):
     assert result.exit_code == 0
     # remove header
     output = result.output.split("\n")[1:]
-    assert output[0].split() == ["24418435", "COMPLETED", "01:27:42", "99.8%", "47.7%"]
-    assert output[1].split() == ["25569410", "COMPLETED", "21:14:48", "91.7%", "1.6%"]
+    assert output[0].split() == ["24418435", "COMPLETED", "01:27:42", "99.8%", "47.6%"]
+    assert output[1].split() == ["25569410", "COMPLETED", "21:14:48", "91.7%", "1.5%"]
 
 
 def test_since_all_users(mocker, mock_inquirer):
@@ -372,8 +372,8 @@ def test_since_all_users(mocker, mock_inquirer):
     assert result.exit_code == 0
     # remove header
     output = result.output.split("\n")[1:]
-    assert output[0].split() == ["24418435", "COMPLETED", "01:27:42", "99.8%", "47.7%"]
-    assert output[1].split() == ["25569410", "COMPLETED", "21:14:48", "91.7%", "1.6%"]
+    assert output[0].split() == ["24418435", "COMPLETED", "01:27:42", "99.8%", "47.6%"]
+    assert output[1].split() == ["25569410", "COMPLETED", "21:14:48", "91.7%", "1.5%"]
 
     mock_sub.assert_called_once_with(
         args=(
@@ -423,8 +423,8 @@ def test_since_all_users_partition(mocker, mock_inquirer):
     assert result.exit_code == 0
     # remove header
     output = result.output.split("\n")[1:]
-    assert output[0].split() == ["24418435", "COMPLETED", "01:27:42", "99.8%", "47.7%"]
-    assert output[1].split() == ["25569410", "COMPLETED", "21:14:48", "91.7%", "1.6%"]
+    assert output[0].split() == ["24418435", "COMPLETED", "01:27:42", "99.8%", "47.6%"]
+    assert output[1].split() == ["25569410", "COMPLETED", "21:14:48", "91.7%", "1.5%"]
 
     mock_sub.assert_called_once_with(
         args=(
@@ -474,7 +474,7 @@ def test_parsable(mocker, mock_inquirer):
     # remove header
     output = result.output.split("\n")[1:]
     # no color/bold codes and | delimited
-    assert output[0].split("|") == ["24418435", "COMPLETED", "01:27:42", "99.8", "47.7"]
+    assert output[0].split("|") == ["24418435", "COMPLETED", "01:27:42", "99.8", "47.6"]
     # other is suppressed by state filter
     assert output[1].split("|") == ["25569410", "RUNNING", "21:14:48", "---", "---"]
 
@@ -509,7 +509,7 @@ def test_simple_state(mocker, mock_inquirer):
     assert result.exit_code == 0
     # remove header
     output = result.output.split("\n")[1:]
-    assert output[0].split() == ["24418435", "COMPLETED", "01:27:42", "99.8%", "47.7%"]
+    assert output[0].split() == ["24418435", "COMPLETED", "01:27:42", "99.8%", "47.6%"]
     # other is suppressed by state filter
     assert output[1].split() == []
 
@@ -544,7 +544,7 @@ def test_simple_not_state(mocker, mock_inquirer):
     assert result.exit_code == 0
     # remove header
     output = result.output.split("\n")[1:]
-    assert output[0].split() == ["24418435", "COMPLETED", "01:27:42", "99.8%", "47.7%"]
+    assert output[0].split() == ["24418435", "COMPLETED", "01:27:42", "99.8%", "47.6%"]
     # other is suppressed by state filter
     assert output[1].split() == []
 
@@ -582,7 +582,7 @@ def test_invalid_not_state(mocker, mock_inquirer):
     assert output[0] == "Unknown state CUNNING"
     assert output[1] == "No valid states provided to exclude"
     # output 2 is header
-    assert output[3].split() == ["24418435", "COMPLETED", "01:27:42", "99.8%", "47.7%"]
+    assert output[3].split() == ["24418435", "COMPLETED", "01:27:42", "99.8%", "47.6%"]
     assert output[4].split() == ["25569410", "RUNNING", "21:14:48", "---", "---"]
     assert output[5].split() == []
 
@@ -860,3 +860,67 @@ def test_no_systems(mocker, mock_inquirer):
     # remove header
     output = result.output.split("\n")
     assert output[0] == "No supported scheduling systems found!"
+
+
+def test_issue_16(mocker, mock_inquirer):
+    """Incorrect memory usage for multi-node jobs."""
+    mocker.patch("reportseff.console.which", return_value=True)
+    runner = CliRunner()
+    sub_result = mocker.MagicMock()
+    sub_result.returncode = 0
+    sub_result.stdout = (
+        "|16|07:36:03|65638294|65638294||2|32G|COMPLETED|6-23:59:00|4-23:56:21\n"
+        "|1|07:36:03|65638294.batch|65638294.batch|1147220K|1||COMPLETED||07:30:20\n"
+        "|16|07:36:03|65638294.extern|65638294.extern|0|2||COMPLETED||00:00.001\n"
+        "|15|00:00:11|65638294.0|65638294.0|0|1||COMPLETED||00:11.830\n"
+        "|15|00:02:15|65638294.1|65638294.1|4455540K|1||COMPLETED||31:09.458\n"
+        "|15|00:00:10|65638294.2|65638294.2|0|1||COMPLETED||00:00:04\n"
+        "|15|00:00:08|65638294.3|65638294.3|0|1||COMPLETED||00:09.602\n"
+        "|15|00:00:07|65638294.4|65638294.4|0|1||COMPLETED||00:56.827\n"
+        "|15|00:00:06|65638294.5|65638294.5|0|1||COMPLETED||00:03.512\n"
+        "|15|00:00:08|65638294.6|65638294.6|0|1||COMPLETED||00:08.520\n"
+        "|15|00:00:13|65638294.7|65638294.7|0|1||COMPLETED||01:02.013\n"
+        "|15|00:00:02|65638294.8|65638294.8|0|1||COMPLETED||00:03.639\n"
+        "|15|00:00:06|65638294.9|65638294.9|0|1||COMPLETED||00:08.683\n"
+        "|15|00:00:08|65638294.10|65638294.10|0|1||COMPLETED||00:57.438\n"
+        "|15|00:00:06|65638294.11|65638294.11|0|1||COMPLETED||00:03.642\n"
+        "|15|00:00:09|65638294.12|65638294.12|0|1||COMPLETED||00:10.271\n"
+        "|15|00:01:24|65638294.13|65638294.13|4149700K|1||COMPLETED||17:18.067\n"
+        "|15|00:00:01|65638294.14|65638294.14|0|1||COMPLETED||00:03.302\n"
+        "|15|00:00:10|65638294.15|65638294.15|0|1||COMPLETED||00:14.615\n"
+        "|15|00:06:45|65638294.16|65638294.16|4748052K|1||COMPLETED||01:36:40\n"
+        "|15|00:00:10|65638294.17|65638294.17|0|1||COMPLETED||00:03.864\n"
+        "|15|00:00:09|65638294.18|65638294.18|0|1||COMPLETED||00:48.987\n"
+        "|15|01:32:53|65638294.19|65638294.19|7734356K|1||COMPLETED||23:09:33\n"
+        "|15|00:00:01|65638294.20|65638294.20|0|1||COMPLETED||00:03.520\n"
+        "|15|00:00:07|65638294.21|65638294.21|0|1||COMPLETED||00:50.015\n"
+        "|15|00:55:17|65638294.22|65638294.22|8074500K|1||COMPLETED||13:45:29\n"
+        "|15|00:00:13|65638294.23|65638294.23|0|1||COMPLETED||00:04.413\n"
+        "|15|00:00:12|65638294.24|65638294.24|0|1||COMPLETED||00:49.100\n"
+        "|15|00:57:41|65638294.25|65638294.25|7883152K|1||COMPLETED||14:20:36\n"
+        "|15|00:00:01|65638294.26|65638294.26|0|1||COMPLETED||00:03.953\n"
+        "|15|00:00:05|65638294.27|65638294.27|0|1||COMPLETED||00:47.223\n"
+        "|15|01:00:17|65638294.28|65638294.28|7715752K|1||COMPLETED||14:59:40\n"
+        "|15|00:00:06|65638294.29|65638294.29|0|1||COMPLETED||00:04.341\n"
+        "|15|00:00:07|65638294.30|65638294.30|0|1||COMPLETED||00:50.416\n"
+        "|15|01:22:31|65638294.31|65638294.31|7663264K|1||COMPLETED||20:33:59\n"
+        "|15|00:00:05|65638294.32|65638294.32|0|1||COMPLETED||00:04.199\n"
+        "|15|00:00:08|65638294.33|65638294.33|0|1||COMPLETED||00:50.009\n"
+        "|15|01:32:23|65638294.34|65638294.34|7764884K|1||COMPLETED||23:01:52\n"
+        "|15|00:00:06|65638294.35|65638294.35|0|1||COMPLETED||00:04.527\n"
+    )
+    mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
+    result = runner.invoke(console.main, "--no-color 65638294".split())
+
+    assert result.exit_code == 0
+    # remove header
+    output = result.output.split("\n")[1:-1]
+    assert output[0].split() == [
+        "65638294",
+        "COMPLETED",
+        "07:36:03",
+        "4.5%",
+        "98.6%",
+        "24.1%",
+    ]
+    assert len(output) == 1
