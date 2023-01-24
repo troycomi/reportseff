@@ -29,8 +29,8 @@ from .parameters import ReportseffParameters
     "format_str",
     default="JobID%>,State,Elapsed%>,TimeEff,CPUEff,MemEff",
     help="Comma-separated list of columns to include. Options "
-    "are any valid sacct input along with CPUEff, MemEff, and "
-    "TimeEff.  In systems with jobstat caching, GPU usage can be "
+    "are any valid sacct input along with CPUEff, MemEff, Energy, "
+    "and TimeEff.  In systems with jobstat caching, GPU usage can be "
     "added with GPUEff, GPUMem or GPU (for both). "
     "A width and alignment may optionally be provided "
     'after "%", e.g. JobID%>15 aligns job id right with max '

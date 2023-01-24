@@ -65,6 +65,7 @@ class Job:
         self.mem_eff: Optional[float] = None
         self.gpu: Optional[float] = None
         self.gpu_mem: Optional[float] = None
+        self.energy: int = 0
         self.other_entries: Dict[str, Any] = {}
         # safe to cache now
         self.other_entries["JobID"] = self.name()
@@ -114,9 +115,14 @@ class Job:
             for k, value in entry.items():
                 if k not in self.other_entries or not self.other_entries[k]:
                     self.other_entries[k] = value
-            # self.stepmem += parsemem(entry["MaxRSS"]) if "MaxRSS" in entry else 0
             mem = parsemem(entry["MaxRSS"]) if "MaxRSS" in entry else 0
             self.stepmem = max(self.stepmem, mem)
+
+            if "TRESUsageOutAve" in entry:
+                self.energy = max(
+                    self.energy,
+                    _parse_energy(entry["TRESUsageOutAve"]),
+                )
 
     def _update_main_job(self, entry: Dict) -> None:
         """Update properties for the main job.
@@ -265,6 +271,10 @@ class Job:
             if self.totalmem:
                 return round(self.stepmem / self.totalmem * 100, 1)
             return "---"
+
+        if key == "Energy":
+            return self.energy
+
         return self.other_entries.get(key, "---")
 
     def get_node_entries(
@@ -385,3 +395,19 @@ def parsemem(mem: str, nodes: int = 1, cpus: int = 1) -> float:
         else:
             memory *= cpus
     return memory
+
+
+def _parse_energy(tres: str) -> int:
+    """Parse energy usage from tres entry.
+
+    Args:
+        tres: the tres entry from sacct
+
+    Returns:
+        The energy usage for the job.  If missing, will return 0.
+    """
+    for entry in tres.split(","):
+        tokens = entry.split("=")
+        if tokens[0] == "energy":
+            return int(tokens[1])
+    return 0
