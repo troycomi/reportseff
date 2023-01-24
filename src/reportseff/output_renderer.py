@@ -50,6 +50,7 @@ class OutputRenderer:
             "GPU": [],
             "GPUMem": [],
             "GPUEff": [],
+            "Energy": ["TRESUsageOutAve"],
         }
 
         self.parsable = parsable

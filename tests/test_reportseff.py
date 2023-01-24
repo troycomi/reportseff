@@ -924,3 +924,90 @@ def test_issue_16(mocker, mock_inquirer):
         "24.1%",
     ]
     assert len(output) == 1
+
+
+def test_energy_reporting(mocker, mock_inquirer):
+    """Include energy reporting with the `energy` format code."""
+    mocker.patch("reportseff.console.which", return_value=True)
+    runner = CliRunner()
+    sub_result = mocker.MagicMock()
+    sub_result.returncode = 0
+    sub_result.stdout = (
+        "|32|00:01:09|37403870_1|37403937||1|32000M|"
+        "COMPLETED||00:02:00|00:47.734\n"
+        "|32|00:01:09|37403870_1.batch|37403937.batch|6300K|1||"
+        "COMPLETED|energy=33,fs/disk=0||00:47.733\n"
+        "|32|00:01:09|37403870_1.extern|37403937.extern|4312K|1||"
+        "COMPLETED|energy=33,fs/disk=0||00:00.001\n"
+        "|32|00:01:21|37403870_2|37403938||1|32000M|"
+        "COMPLETED||00:02:00|00:41.211\n"
+        "|32|00:01:21|37403870_2.batch|37403938.batch|6316K|1||"
+        "COMPLETED|energy=32,fs/disk=0||00:41.210\n"
+        "|32|00:01:21|37403870_2.extern|37403938.extern|4312K|1||"
+        "COMPLETED|energy=32,fs/disk=0||00:00:00\n"
+        "|32|00:01:34|37403870_3|37403939||1|32000M|"
+        "COMPLETED||00:02:00|00:51.669\n"
+        "|32|00:01:34|37403870_3.batch|37403939.batch|6184K|1||"
+        "COMPLETED|energy=30,fs/disk=0||00:51.667\n"
+        "|32|00:01:35|37403870_3.extern|37403939.extern|4312K|1||"
+        "COMPLETED|fs/disk=0,energy=30||00:00.001\n"
+        "|32|00:01:11|37403870_4|37403870||1|32000M|"
+        "COMPLETED||00:02:00|01:38.184\n"
+        "|32|00:01:11|37403870_4.batch|37403870.batch|6300K|1||"
+        "COMPLETED|fs/disk=0||01:38.183\n"
+        "|32|00:01:11|37403870_4.extern|37403870.extern|4312K|1||"
+        "COMPLETED|energy=27,fs/disk=0||00:00.001\n"
+    )
+    mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
+    result = runner.invoke(console.main, "--no-color --format=+energy 37403870".split())
+
+    print(result.output)
+    assert result.exit_code == 0
+    # remove header
+    output = result.output.split("\n")[:-1]
+    assert output[0].split() == [
+        "JobID",
+        "State",
+        "Elapsed",
+        "TimeEff",
+        "CPUEff",
+        "MemEff",
+        "Energy",
+    ]
+    assert output[1].split() == [
+        "37403870_1",
+        "COMPLETED",
+        "00:01:09",
+        "57.5%",
+        "2.1%",
+        "0.0%",
+        "33",
+    ]
+    assert output[2].split() == [
+        "37403870_2",
+        "COMPLETED",
+        "00:01:21",
+        "67.5%",
+        "1.6%",
+        "0.0%",
+        "32",
+    ]
+    assert output[3].split() == [
+        "37403870_3",
+        "COMPLETED",
+        "00:01:34",
+        "78.3%",
+        "1.7%",
+        "0.0%",
+        "30",
+    ]
+    assert output[4].split() == [
+        "37403870_4",
+        "COMPLETED",
+        "00:01:11",
+        "59.2%",
+        "4.3%",
+        "0.0%",
+        "27",
+    ]
+    assert len(output) == 5
