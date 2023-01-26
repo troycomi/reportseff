@@ -74,6 +74,14 @@ class BaseInquirer(ABC):
         """
 
     @abstractmethod
+    def set_extra_args(self, extra_args: str) -> None:
+        """Set extra arguments to be forwarded to sacct
+
+        Args:
+            extra_args: list of arguments
+        """
+
+    @abstractmethod
     def all_users(self) -> None:
         """Ignore provided jobs, query for all users."""
 
@@ -152,6 +160,7 @@ class SacctInquirer(BaseInquirer):
         self.until: Optional[str] = None
         self.query_all_users: bool = False
         self.partition: Optional[str] = None
+        self.extra_args: Optional[str] = None
 
     def get_valid_formats(self) -> List[str]:
         """Get the valid formatting options supported by the inquirer.
@@ -203,6 +212,8 @@ class SacctInquirer(BaseInquirer):
             args += [f"--partition={self.partition}"]
         if self.until:
             args += [f"--endtime={self.until}"]
+        if self.extra_args:
+            args += [f"{self.extra_args}"]
         return args
 
     def get_db_output(
@@ -273,6 +284,14 @@ class SacctInquirer(BaseInquirer):
             partition: partition name
         """
         self.partition = partition
+
+    def set_extra_args(self, extra_args: str) -> None:
+        """Set extra arguments to be forwarded to sacct
+
+        Args:
+            extra_args: list of arguments
+        """
+        self.extra_args = extra_args
 
     def all_users(self) -> None:
         """Query for all users if `since` is set."""

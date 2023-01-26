@@ -57,6 +57,11 @@ from .parameters import ReportseffParameters
     help="Only include jobs with the specified partition",
 )
 @click.option(
+    "--extra_args",
+    default="",
+    help="Extra arguments to forward to sacct",
+)
+@click.option(
     "-s", "--state", default="", help="Only include jobs with the specified states"
 )
 @click.option(
@@ -139,6 +144,9 @@ def get_jobs(args: ReportseffParameters) -> Tuple[str, int]:
     inquirer.set_until(args.until)
 
     inquirer.set_partition(args.partition)
+
+    inquirer.set_extra_args(args.extra_args)
+
     add_jobs = False
 
     try:
