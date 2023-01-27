@@ -3,6 +3,8 @@ from abc import ABC, abstractmethod
 import datetime
 import re
 import subprocess
+import shlex
+
 from typing import Callable, Dict, List, Optional, Set
 
 import click
@@ -213,7 +215,7 @@ class SacctInquirer(BaseInquirer):
         if self.until:
             args += [f"--endtime={self.until}"]
         if self.extra_args:
-            args += [f"{self.extra_args}"]
+            args += shlex.split(self.extra_args)
         return args
 
     def get_db_output(
