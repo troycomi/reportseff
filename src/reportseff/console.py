@@ -57,7 +57,7 @@ from .parameters import ReportseffParameters
     help="Only include jobs with the specified partition",
 )
 @click.option(
-    "--extra_args",
+    "--extra-args",
     default="",
     help="Extra arguments to forward to sacct",
 )
