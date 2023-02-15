@@ -70,7 +70,7 @@ from .parameters import ReportseffParameters
 @click.option(
     "--since",
     default="",
-    help="Only include jobs before this time. Can be valid sacct "
+    help="Only include jobs after this time. Can be valid sacct "
     "or as a comma separated list of time deltas, e.g. d=2,h=1 "
     "means 2 days, 1 hour before current time. Weeks, days, "
     "hours, and minutes can use case-insensitive abbreviations. "

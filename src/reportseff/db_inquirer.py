@@ -2,9 +2,8 @@
 from abc import ABC, abstractmethod
 import datetime
 import re
-import subprocess
 import shlex
-
+import subprocess
 from typing import Callable, Dict, List, Optional, Set
 
 import click
@@ -77,7 +76,7 @@ class BaseInquirer(ABC):
 
     @abstractmethod
     def set_extra_args(self, extra_args: str) -> None:
-        """Set extra arguments to be forwarded to sacct
+        """Set extra arguments to be forwarded to sacct.
 
         Args:
             extra_args: list of arguments
@@ -202,14 +201,14 @@ class SacctInquirer(BaseInquirer):
             if not self.since:
                 start_date = datetime.date.today() - datetime.timedelta(days=7)
                 self.since = start_date.strftime("%m%d%y")  # MMDDYY
-            args += [f"--user={self.user}", f"--starttime={self.since}"]
+            args += [f"--user={self.user}"]
         elif self.query_all_users:
-            args += ["--allusers", f"--starttime={self.since}"]
+            args += ["--allusers"]
         else:
             args += ["--jobs=" + ",".join(jobs)]
-            if self.since:
-                args += [f"--starttime={self.since}"]
 
+        if self.since:
+            args += [f"--starttime={self.since}"]
         if self.partition:
             args += [f"--partition={self.partition}"]
         if self.until:
@@ -288,7 +287,7 @@ class SacctInquirer(BaseInquirer):
         self.partition = partition
 
     def set_extra_args(self, extra_args: str) -> None:
-        """Set extra arguments to be forwarded to sacct
+        """Set extra arguments to be forwarded to sacct.
 
         Args:
             extra_args: list of arguments

@@ -713,3 +713,17 @@ def test_partition_timelimit_issue_11(sacct, mocker):
         "mainqueue": "UNLIMITED",
         "mainqueue2": "10-00:00:00",
     }
+
+
+def test_extra_args_setting(sacct):
+    """Setting extra args are properly handled."""
+    sacct.set_extra_args('-D --units M --nodelist "node1 node2"')
+    assert sacct.extra_args == '-D --units M --nodelist "node1 node2"'
+    assert sacct.set_sacct_args(["123"]) == [
+        "--jobs=123",
+        "-D",
+        "--units",
+        "M",
+        "--nodelist",
+        "node1 node2",
+    ]
