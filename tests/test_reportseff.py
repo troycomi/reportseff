@@ -1,4 +1,5 @@
 """Test cli usage."""
+import shlex
 import subprocess
 
 from click.testing import CliRunner
@@ -1011,3 +1012,16 @@ def test_energy_reporting(mocker, mock_inquirer):
         "27",
     ]
     assert len(output) == 5
+
+
+def test_extra_args(mocker, mock_inquirer):
+    """Can add extra arguments for sacct."""
+    mocker.patch("reportseff.console.which", return_value=True)
+    runner = CliRunner()
+    mocker.patch("reportseff.console.get_jobs", return_value=("Testing", 1))
+    result = runner.invoke(
+        console.main,
+        shlex.split("--no-color --extra-args='-D --units M --nodelist=node1,node2'"),
+    )
+
+    assert result.exit_code == 0

@@ -57,6 +57,11 @@ from .parameters import ReportseffParameters
     help="Only include jobs with the specified partition",
 )
 @click.option(
+    "--extra-args",
+    default="",
+    help="Extra arguments to forward to sacct",
+)
+@click.option(
     "-s", "--state", default="", help="Only include jobs with the specified states"
 )
 @click.option(
@@ -65,7 +70,7 @@ from .parameters import ReportseffParameters
 @click.option(
     "--since",
     default="",
-    help="Only include jobs before this time. Can be valid sacct "
+    help="Only include jobs after this time. Can be valid sacct "
     "or as a comma separated list of time deltas, e.g. d=2,h=1 "
     "means 2 days, 1 hour before current time. Weeks, days, "
     "hours, and minutes can use case-insensitive abbreviations. "
@@ -139,6 +144,9 @@ def get_jobs(args: ReportseffParameters) -> Tuple[str, int]:
     inquirer.set_until(args.until)
 
     inquirer.set_partition(args.partition)
+
+    inquirer.set_extra_args(args.extra_args)
+
     add_jobs = False
 
     try:

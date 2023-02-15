@@ -22,6 +22,7 @@ class ReportseffParameters:
     state: str = ""
     user: str = ""
     partition: str = ""
+    extra_args: str = ""
 
     def __init__(
         self,
@@ -39,6 +40,7 @@ class ReportseffParameters:
         state: str = "",
         user: str = "",
         partition: str = "",
+        extra_args: str = "",
     ) -> None:
         """Create a new parameter object.
 
@@ -57,6 +59,7 @@ class ReportseffParameters:
             state: stats to display
             user: the user to report for
             partition: the partition to report for
+            extra_args: extra arguments to forward to sacct
         """
         self.color = color
         self.debug = debug
@@ -72,6 +75,7 @@ class ReportseffParameters:
         self.state = state
         self.user = user
         self.partition = partition
+        self.extra_args = extra_args
 
         if self.format_str.startswith("+"):
             self.format_str = (
