@@ -687,3 +687,19 @@ def test_short_job(short_job):
     assert list(job.get_node_entries("JobID", True)) == ["8205464"]
     assert list(job.get_node_entries("CPUEff")) == [6.2]
     assert list(job.get_node_entries("State")) == ["FAILED"]
+
+
+def test_bad_gpu(bad_gpu):
+    """Jobs failing due to gpu are parsed properly."""
+    job = job_module.Job("45352405", "45352405", None)
+    for line in bad_gpu:
+        job.update(line)
+
+    assert job.cpu == 99.5
+    assert job.mem_eff == 39.1
+    assert job.gpu == 0
+    assert job.gpu_mem == 1.0
+
+    assert list(job.get_node_entries("JobID")) == ["45352405"]
+    assert list(job.get_node_entries("CPUEff")) == [99.5]
+    assert list(job.get_node_entries("State")) == ["CANCELLED"]

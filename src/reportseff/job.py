@@ -213,7 +213,9 @@ class Job:
             if data["gpus"]:
                 self.comment_data[node]["gpus"] = {
                     gpu: {
-                        "GPUEff": value["gpu_utilization"][gpu],
+                        "GPUEff": value["gpu_utilization"][gpu]
+                        if "gpu_utilization" in value
+                        else 0,
                         "GPUMem": round(
                             value["gpu_used_memory"][gpu]
                             / value["gpu_total_memory"][gpu]
@@ -221,7 +223,7 @@ class Job:
                             1,
                         ),
                     }
-                    for gpu in value["gpu_utilization"]
+                    for gpu in value["gpu_used_memory"]
                 }
                 self.comment_data[node]["GPUEff"] = average(
                     "GPUEff", self.comment_data[node]["gpus"]

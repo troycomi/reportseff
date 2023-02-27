@@ -266,3 +266,19 @@ def short_job():
         ),
         to_sacct_dict("|8|00:00:02|8205464.0|8205464.0|0|1||FAILED||00:01.587"),
     ]
+
+
+@pytest.fixture
+def bad_gpu():
+    """job with a failure due to bad gpu."""
+    return [
+        to_sacct_dict(
+            "JS1:H4sIAMMP3WMC/12NQQrDIBRE7/LXthj1q9/LhFAlFLSGRhdFvHuTphTS5TDz3jR4ZB9WcA18iHG6RC5n3GPJZYpjCik/X+CUIEXaCNIM6hr8rxi0sUSEKNgXKfcUwAmjub4Sg9tSN/3AYF7qeJY2kOAsbrxUSIL3Y3TyHxuDUiuJovf+f2Ok/WD7SX8DnGNK388AAAA=|1|07:42:18|45352405|45352405||1|4G|CANCELLED by 349394|23:00:00|07:40:23"
+        ),
+        to_sacct_dict(
+            "|1|07:42:20|45352405.batch|45352405.batch|1644460K|1||CANCELLED||07:40:23"
+        ),
+        to_sacct_dict(
+            "|1|07:42:19|45352405.extern|45352405.extern|104K|1||COMPLETED||00:00:00"
+        ),
+    ]
