@@ -52,7 +52,7 @@ def test_directory_input(mocker, mock_inquirer):
     mocker.patch.object(JobCollection, "set_out_dir", new=set_jobs)
     result = runner.invoke(
         console.main,
-        ["--no-color"],
+        ["--no-color", "--slurm-format", "%A.out"],
     )
 
     assert result.exit_code == 0

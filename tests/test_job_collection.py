@@ -326,6 +326,55 @@ def test_set_out_dir(jobs, mocker):
     }
 
 
+def test_set_custom_seff_format(jobs, mocker):
+    """Can change the slurm output file matching."""
+    mocker.patch("reportseff.job_collection.os.path.exists", return_value=True)
+    mocker.patch("reportseff.job_collection.os.path.isfile", return_value=True)
+    mocker.patch(
+        "reportseff.job_collection.os.listdir",
+        return_value=[
+            "asdf",
+            "base_1",
+            "base_1_1.out",
+            "base_2_1",
+            "base_2_1.out",
+            "3.out",
+            "4_1.out",
+        ],
+    )
+
+    with pytest.raises(ValueError) as exception:
+        jobs.set_custom_seff_format("%n.out")
+    assert "Unable to determine jobid from %n.out." in str(exception)
+
+    jobs.set_custom_seff_format("%j.out")
+    assert jobs.job_file_regex.pattern == r"^(?P<jobid>(?P<job>[0-9]+))\.out$"
+
+    jobs.set_out_dir("test")
+    assert jobs.jobs == {
+        "3": Job("3", "3", "3.out"),
+    }
+    jobs.jobs = {}
+
+    jobs.set_custom_seff_format("%x%n_%A_%a")
+    assert jobs.job_file_regex.pattern == r"^.*_(?P<jobid>(?P<job>[0-9]+)_[0-9]+)$"
+
+    jobs.set_out_dir("test")
+    assert jobs.jobs == {
+        "2_1": Job("2", "2_1", "base_2_1"),
+    }
+    jobs.jobs = {}
+
+    jobs.set_custom_seff_format("%x_%A.out")
+    assert jobs.job_file_regex.pattern == r"^.*_(?P<jobid>(?P<job>[0-9]+))\.out$"
+
+    jobs.set_out_dir("test")
+    assert jobs.jobs == {
+        "1": Job("1", "1", "4_1.out"),
+    }
+    jobs.jobs = {}
+
+
 def test_process_seff_file(jobs):
     """Can parse job names from slurm output file names."""
     # no matches

@@ -20,6 +20,7 @@ class ReportseffParameters:
     since: str = ""
     until: str = ""
     state: str = ""
+    slurm_format: str = ""
     user: str = ""
     partition: str = ""
     extra_args: str = ""
@@ -38,6 +39,7 @@ class ReportseffParameters:
         since: str = "",
         until: str = "",
         state: str = "",
+        slurm_format: str = "",
         user: str = "",
         partition: str = "",
         extra_args: str = "",
@@ -57,6 +59,7 @@ class ReportseffParameters:
             since: display jobs since a specific time
             until: display jobs until a specific time
             state: stats to display
+            slurm_format: format string passed to sbatch
             user: the user to report for
             partition: the partition to report for
             extra_args: extra arguments to forward to sacct
@@ -73,6 +76,7 @@ class ReportseffParameters:
         self.since = since
         self.until = until
         self.state = state
+        self.slurm_format = slurm_format
         self.user = user
         self.partition = partition
         self.extra_args = extra_args

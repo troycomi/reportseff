@@ -28,7 +28,7 @@ class JobCollection:
         ]
 
         self.job_file_regex = re.compile(
-            r"^.*?[_-](?P<jobid>(?P<job>[0-9]+)(_[0-9]+)?)(.out)?$"
+            r"^.*?[_-](?P<jobid>(?P<job>[0-9]+)(_[0-9]+)?)(\.out)?$"
         )
         self.job_regex = re.compile(r"^(?P<jobid>(?P<job>[0-9]+)(_[][\-0-9]+)?)$")
 
@@ -131,6 +131,51 @@ class JobCollection:
         match = self.job_file_regex.match(filename)
         if match:
             self.add_job(match.group("job"), match.group("jobid"), filename)
+
+    def set_custom_seff_format(self, filename_pattern: str) -> None:
+        """Set the slurm output file parser to a custom value.
+
+        Args:
+            filename_pattern: the pattern passed to sbatch
+
+        Raises:
+            ValueError: the jobid cannot be determined from the provided pattern
+        """
+        pattern = re.escape(filename_pattern)
+        # if %j is present, use that for jobid and job
+        if "%j" in pattern:
+            pattern = pattern.replace("%j", r"(?P<jobid>(?P<job>[0-9]+))")
+        # if %a is present, it must follow %A to match expected slurm outputs
+        elif "%A_%a" in pattern:
+            pattern = pattern.replace(
+                "%A_%a",
+                r"(?P<jobid>(?P<job>[0-9]+)_[0-9]+)",
+            )
+        # if %A alone is present, use that for jobid and job
+        elif "%A" in pattern:
+            pattern = pattern.replace(
+                "%A",
+                r"(?P<jobid>(?P<job>[0-9]+))",
+            )
+        else:
+            raise ValueError(
+                f"Unable to determine jobid from {filename_pattern}. "
+                "Pattern should include one of ('%j', '%A', '%A_%a')"
+            )
+
+        tokens = re.split(r"(%[^%])", pattern)
+        # combine sequential tokens
+        processed_tokens = [""]
+        for token in tokens:
+            if not token:
+                continue
+            if token.startswith("%") and processed_tokens[-1].startswith(".*"):
+                continue
+            if token.startswith("%"):
+                processed_tokens.append(".*")
+            else:
+                processed_tokens.append(token)
+        self.job_file_regex = re.compile("^" + "".join(processed_tokens) + "$")
 
     def add_job(self, job: str, jobid: str, filename: Optional[str] = None) -> None:
         """Add a job to the collection.

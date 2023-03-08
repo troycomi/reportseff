@@ -208,6 +208,9 @@ directory to check for slurm outputs.
   - JobId aligned right, width set automatically
   - State with width 10 (center aligned by default)
   - MemEff aligned left, width 5
+- `--slurm-format`: The filename pattern passed to sbatch during job submission.
+  Overrides the default regex for job id parsing from filenames.  E.g. to match
+  filenames like `123456.out` set `--slurm-format %j.out`.
 - `--since`: Limit results to those occurring after the specified time.  Accepts
   sacct formats and a comma separated list of key/value pairs.  To get jobs in
   the last hour and a half, can pass `h=1,m=30`.

@@ -43,6 +43,14 @@ from .parameters import ReportseffParameters
     "otherwise alignment may be misinterpreted.",
 )
 @click.option(
+    "--slurm-format",
+    default="",
+    help="Filename pattern passed to sbatch.  By default, will handle "
+    "patterns like slurm_%j.out, %x_%j, or slurm_%A_%a.  In particular, the "
+    "filename is expected to start with '_'.  Setting this to the same entry "
+    "as used in sbatch will allow parsing slurm outputs like `1234.out`.",
+)
+@click.option(
     "--debug", default=False, is_flag=True, help="Print raw db query to stderr"
 )
 @click.option(
@@ -132,6 +140,9 @@ def get_jobs(args: ReportseffParameters) -> Tuple[str, int]:
         Exception: if there is an error processing entries
     """
     job_collection = JobCollection()
+
+    if args.slurm_format:
+        job_collection.set_custom_seff_format(args.slurm_format)
 
     inquirer, renderer = get_implementation(
         args.format_str, args.node, args.node_and_gpu, args.parsable
