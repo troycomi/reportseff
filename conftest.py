@@ -282,3 +282,19 @@ def bad_gpu():
             "|1|07:42:19|45352405.extern|45352405.extern|104K|1||COMPLETED||00:00:00"
         ),
     ]
+
+
+@pytest.fixture
+def bad_gpu_used():
+    """job with a failure due to gpu with no utilization."""
+    return [
+        to_sacct_dict(
+            "JS1:H4sIAN7HCGQC/1WOQQ6DIBBF7zJrawYGRvAyxlRiSFBMi4vWcPeitk1c/sy8//4GcxzcE9oNBhdCfwuoR7nHFFMfuslN8fGCViORYGUQsYL16Yb/RZGyDbNhNNUXSn5y0FpGZFNzBfdlLQYhKxiXtbsWb1BsRhtrSWkrSztdcj6hi/JkGk2sSMuDEEYSSqFY849IPvh3n3ycd6L82FrnnK8jDQmpDqAslPkDhnD5Hg8BAAA=|12|23:05:24|46044267|46044267||1|48000M|TIMEOUT|23:00:00|11-02:46:01"
+        ),
+        to_sacct_dict(
+            "|12|23:05:55|46044267.batch|46044267.batch|42475564K|1||CANCELLED||11-02:46:01"
+        ),
+        to_sacct_dict(
+            "|12|23:05:24|46044267.extern|46044267.extern|0|1||COMPLETED||00:00:00"
+        ),
+    ]

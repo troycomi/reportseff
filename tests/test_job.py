@@ -703,3 +703,19 @@ def test_bad_gpu(bad_gpu):
     assert list(job.get_node_entries("JobID")) == ["45352405"]
     assert list(job.get_node_entries("CPUEff")) == [99.5]
     assert list(job.get_node_entries("State")) == ["CANCELLED"]
+
+
+def test_bad_gpu_utilization(bad_gpu_used):
+    """Jobs with no gpu utilization are parsed properly."""
+    job = job_module.Job("46044267", "46044267", None)
+    for line in bad_gpu_used:
+        job.update(line)
+
+    assert job.cpu == 96.2
+    assert job.mem_eff == 86.4
+    assert job.gpu == 4.8
+    assert job.gpu_mem == 11.1
+
+    assert list(job.get_node_entries("JobID")) == ["46044267"]
+    assert list(job.get_node_entries("CPUEff")) == [96.2]
+    assert list(job.get_node_entries("State")) == ["TIMEOUT"]

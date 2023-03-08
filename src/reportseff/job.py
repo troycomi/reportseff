@@ -175,32 +175,25 @@ class Job:
 
         Args:
             comment: The AdminComment field.
-
-        Raises:
-            ValueError: if the comment doesn't start with JS1.
-            ValueError: if the comment can't be decoded.
         """
-        comment_type = comment[:3]
+        data = _parse_admin_comment_to_dict(comment)
 
-        if not comment_type.startswith("JS"):
-            # ignore comments that aren't from jobstats (JS)
+        if data is None:
             return
-
-        if comment_type not in ("JS1",):
-            raise ValueError(f"Unknown comment type '{comment_type}'")
-        data = {}
-        try:
-            data = json.loads(gzip.decompress(base64.b64decode(comment[4:])))
-        except BaseException as exception:
-            raise ValueError(f"Cannot decode comment '{comment}'") from exception
 
         def average(value: str, data: Optional[dict] = None) -> float:
             if data is None:
                 data = self.comment_data
             return round(
-                sum(v[value] for v in data.values()) / len(data),
+                sum(v[value] for v in data.values() if value in v) / len(data),
                 1,
             )
+
+        def get_gpu_value(comment_data: dict, key: str, gpu_number: int) -> float:
+            if key in comment_data:
+                if gpu_number in comment_data[key]:
+                    return comment_data[key][gpu_number]
+            return 0
 
         for node, value in data["nodes"].items():
             self.comment_data[node] = {
@@ -210,20 +203,18 @@ class Job:
                 * 100,
                 "MemEff": value["used_memory"] / value["total_memory"] * 100,
             }
-            if data["gpus"]:
+            if data["gpus"] and "gpu_total_memory" in value:
                 self.comment_data[node]["gpus"] = {
                     gpu: {
-                        "GPUEff": value["gpu_utilization"][gpu]
-                        if "gpu_utilization" in value
-                        else 0,
+                        "GPUEff": get_gpu_value(value, "gpu_utilization", gpu),
                         "GPUMem": round(
-                            value["gpu_used_memory"][gpu]
-                            / value["gpu_total_memory"][gpu]
+                            get_gpu_value(value, "gpu_used_memory", gpu)
+                            / get_gpu_value(value, "gpu_total_memory", gpu)
                             * 100,
                             1,
                         ),
                     }
-                    for gpu in value["gpu_used_memory"]
+                    for gpu in value["gpu_total_memory"]
                 }
                 self.comment_data[node]["GPUEff"] = average(
                     "GPUEff", self.comment_data[node]["gpus"]
@@ -304,7 +295,9 @@ class Job:
                         to_yield if isinstance(to_yield, str) else round(to_yield, 1)
                     )
                     yield to_yield
-                if gpu and self.gpu is not None:  # has gpus to report
+                if (
+                    gpu and self.gpu is not None and "gpus" in data
+                ):  # has gpus to report
                     for gpu_name, gpu_data in data["gpus"].items():
                         if key == "JobID":
                             yield f"    {gpu_name}"
@@ -413,3 +406,31 @@ def _parse_energy(tres: str) -> int:
         if tokens[0] == "energy":
             return int(tokens[1])
     return 0
+
+
+def _parse_admin_comment_to_dict(comment: str) -> Optional[dict]:
+    """Attempt to parse AdminComment.
+
+    Args:
+        comment: The AdminComment field.
+
+    Returns:
+        the decoded dict
+        None if the comment isn't recognized but can be ignored
+
+    Raises:
+        ValueError: if the comment doesn't start with JS1.
+        ValueError: if the comment can't be decoded.
+    """
+    comment_type = comment[:3]
+
+    if not comment_type.startswith("JS"):
+        # ignore comments that aren't from jobstats (JS)
+        return None
+
+    if comment_type not in ("JS1",):
+        raise ValueError(f"Unknown comment type '{comment_type}'")
+    try:
+        return json.loads(gzip.decompress(base64.b64decode(comment[4:])))
+    except BaseException as exception:
+        raise ValueError(f"Cannot decode comment '{comment}'") from exception
