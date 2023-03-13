@@ -47,8 +47,9 @@ from .parameters import ReportseffParameters
     default="",
     help="Filename pattern passed to sbatch.  By default, will handle "
     "patterns like slurm_%j.out, %x_%j, or slurm_%A_%a.  In particular, the "
-    "filename is expected to start with '_'.  Setting this to the same entry "
-    "as used in sbatch will allow parsing slurm outputs like `1234.out`.",
+    "jobid is expected to start with '_'.  Setting this to the same entry "
+    "as used in sbatch will allow parsing slurm outputs like `1234.out`.  "
+    "Array jobs must have %A_%a to properly interface with sacct.",
 )
 @click.option(
     "--debug", default=False, is_flag=True, help="Print raw db query to stderr"

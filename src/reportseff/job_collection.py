@@ -88,7 +88,10 @@ class JobCollection:
             self.process_seff_file(file)
 
         if len(self.jobs) == 0:
-            raise ValueError(f"{working_directory} contains no valid output files!")
+            raise ValueError(
+                f"{working_directory} contains no valid output files!"
+                "\nDo you need to set a custom format with `--slurm-format`?"
+            )
         self.dir_name = working_directory
 
     def set_jobs(self, jobs: tuple) -> None:
