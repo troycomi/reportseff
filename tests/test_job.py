@@ -719,3 +719,40 @@ def test_bad_gpu_utilization(bad_gpu_used):
     assert list(job.get_node_entries("JobID")) == ["46044267"]
     assert list(job.get_node_entries("CPUEff")) == [96.2]
     assert list(job.get_node_entries("State")) == ["TIMEOUT"]
+
+
+def test_issue_26(get_jobstats):
+    """Jobs with 0 total_time are parsed."""
+    admin_comment = {
+        "gpus": True,
+        "nodes": {
+            "maestro-3003": {
+                "cpus": 8,
+                "gpu_total_memory": {"2": 42949672960},
+                "gpu_used_memory": {"2": 0},
+                "gpu_utilization": {"2": 0},
+                "total_memory": 62914560.0,
+                "total_time": 0,
+                "used_memory": 0,
+            }
+        },
+        "total_time": 0,
+    }
+    entry = {
+        "AdminComment": get_jobstats(admin_comment),
+        "AllocCPUS": "8",
+        "Elapsed": "00:00:00",
+        "JobID": "13421658",
+        "JobIDRaw": "13421658",
+        "MaxRSS": "",
+        "NNodes": "1",
+        "REQMEM": "60G",
+        "State": "FAILED",
+        "Timelimit": "3-00:00:00",
+        "TotalCPU": "00:00.001",
+    }
+    job = job_module.Job("13421658", "13421658", None)
+    job.update(entry)
+    assert job.state == "FAILED"
+    assert job.cpu == 0
+    assert job.mem_eff == 0

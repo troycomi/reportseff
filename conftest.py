@@ -12,6 +12,11 @@ def to_comment(info: dict) -> str:
     ).decode("ascii")
 
 
+@pytest.fixture
+def get_jobstats():
+    return to_comment
+
+
 def to_sacct_dict(sacct_line: str) -> dict:
     columns = (
         "AdminComment",

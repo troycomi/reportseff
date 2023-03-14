@@ -181,53 +181,14 @@ class Job:
         if data is None:
             return
 
-        def average(value: str, data: Optional[dict] = None) -> float:
-            if data is None:
-                data = self.comment_data
-            return round(
-                sum(v[value] for v in data.values() if value in v) / len(data),
-                1,
-            )
+        for node, node_data in data["nodes"].items():
+            self.comment_data[node] = _get_node_data(data, node_data)
 
-        def get_gpu_value(comment_data: dict, key: str, gpu_number: int) -> float:
-            if key in comment_data:
-                if gpu_number in comment_data[key]:
-                    return comment_data[key][gpu_number]
-            return 0
-
-        for node, value in data["nodes"].items():
-            self.comment_data[node] = {
-                "CPUEff": value["total_time"]
-                / value["cpus"]
-                / data["total_time"]
-                * 100,
-                "MemEff": value["used_memory"] / value["total_memory"] * 100,
-            }
-            if data["gpus"] and "gpu_total_memory" in value:
-                self.comment_data[node]["gpus"] = {
-                    gpu: {
-                        "GPUEff": get_gpu_value(value, "gpu_utilization", gpu),
-                        "GPUMem": round(
-                            get_gpu_value(value, "gpu_used_memory", gpu)
-                            / get_gpu_value(value, "gpu_total_memory", gpu)
-                            * 100,
-                            1,
-                        ),
-                    }
-                    for gpu in value["gpu_total_memory"]
-                }
-                self.comment_data[node]["GPUEff"] = average(
-                    "GPUEff", self.comment_data[node]["gpus"]
-                )
-                self.comment_data[node]["GPUMem"] = average(
-                    "GPUMem", self.comment_data[node]["gpus"]
-                )
-
-        self.cpu = average("CPUEff")
-        self.mem_eff = average("MemEff")
+        self.cpu = _average_nested_dict("CPUEff", self.comment_data)
+        self.mem_eff = _average_nested_dict("MemEff", self.comment_data)
         if data["gpus"]:
-            self.gpu = average("GPUEff")
-            self.gpu_mem = average("GPUMem")
+            self.gpu = _average_nested_dict("GPUEff", self.comment_data)
+            self.gpu_mem = _average_nested_dict("GPUMem", self.comment_data)
 
     def _cache_entries(self) -> None:
         self.other_entries["State"] = self.state
@@ -434,3 +395,66 @@ def _parse_admin_comment_to_dict(comment: str) -> Optional[dict]:
         return json.loads(gzip.decompress(base64.b64decode(comment[4:])))
     except BaseException as exception:
         raise ValueError(f"Cannot decode comment '{comment}'") from exception
+
+
+def _get_node_data(comment_data: dict, node_data: dict) -> dict:
+    """Parse node level data from admin comment values.
+
+    Args:
+        comment_data: The AdminComment field.
+        node_data: Data for this node.
+
+    Returns:
+        the dict with efficiency information for this node
+    """
+
+    def get_gpu_value(comment_data: dict, key: str, gpu_number: int) -> float:
+        if key in comment_data:
+            if gpu_number in comment_data[key]:
+                return comment_data[key][gpu_number]
+        return 0
+
+    result = {
+        "MemEff": node_data["used_memory"] / node_data["total_memory"] * 100,
+    }
+
+    if node_data["cpus"] == 0 or comment_data["total_time"] == 0:
+        print("are you here?")
+        result["CPUEff"] = 0
+    else:
+        time_per_cpu = node_data["total_time"] / node_data["cpus"]
+        result["CPUEff"] = time_per_cpu / comment_data["total_time"] * 100
+
+    if comment_data["gpus"] and "gpu_total_memory" in node_data:
+        result["gpus"] = {
+            gpu: {
+                "GPUEff": get_gpu_value(node_data, "gpu_utilization", gpu),
+                "GPUMem": round(
+                    get_gpu_value(node_data, "gpu_used_memory", gpu)
+                    / get_gpu_value(node_data, "gpu_total_memory", gpu)
+                    * 100,
+                    1,
+                ),
+            }
+            for gpu in node_data["gpu_total_memory"]
+        }
+        result["GPUEff"] = _average_nested_dict("GPUEff", result["gpus"])
+        result["GPUMem"] = _average_nested_dict("GPUMem", result["gpus"])
+    return result
+
+
+def _average_nested_dict(nested_key: str, data: dict) -> float:
+    """Average nested values in data dictionary.
+
+    Args:
+        nested_key: The key to key for averaging
+        data: The dict to average.
+
+    Returns:
+        the mean value, rounded to one decimal
+    """
+    return round(
+        sum(value[nested_key] for value in data.values() if nested_key in value)
+        / len(data),
+        1,
+    )
