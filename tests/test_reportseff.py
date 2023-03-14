@@ -961,8 +961,6 @@ def test_energy_reporting(mocker, mock_inquirer):
     )
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
     result = runner.invoke(console.main, "--no-color --format=+energy 37403870".split())
-
-    print(result.output)
     assert result.exit_code == 0
     # remove header
     output = result.output.split("\n")[:-1]
