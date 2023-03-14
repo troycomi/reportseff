@@ -419,7 +419,6 @@ def _get_node_data(comment_data: dict, node_data: dict) -> dict:
     }
 
     if node_data["cpus"] == 0 or comment_data["total_time"] == 0:
-        print("are you here?")
         result["CPUEff"] = 0
     else:
         time_per_cpu = node_data["total_time"] / node_data["cpus"]
