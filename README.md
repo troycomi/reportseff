@@ -214,6 +214,10 @@ directory to check for slurm outputs.
 - `--since`: Limit results to those occurring after the specified time.  Accepts
   sacct formats and a comma separated list of key/value pairs.  To get jobs in
   the last hour and a half, can pass `h=1,m=30`.
+-`--until`: Limit results to those occurring before the specified time. Accepts 
+  sacct formats and a comma separated list of key/value pairs.
+  Useful in combination with the 'since' option to query a specific range.
+- `--partition`: Limit results to a specific partition.
 - `--node/-n`: Display information for multi-node jobs; requires additional
   sacct fields from jobstats.
 - `--node-and-gpu/-g`: Display information for multi-node jobs and GPU information;
