@@ -173,10 +173,10 @@ def test_short_output(mocker, mock_inquirer):
     mocker.patch.object(OutputRenderer, "format_jobs", return_value="output")
 
     mock_click = mocker.patch("reportseff.console.click.echo")
-    result = runner.invoke(console.main, "--no-color 23000233".split())
+    result = runner.invoke(console.main, " 23000233".split())
 
     assert result.exit_code == 0
-    mock_click.assert_called_once_with("output", color=False)
+    mock_click.assert_called_once_with("output", color=None)
 
 
 def test_long_output(mocker, mock_inquirer):
@@ -192,10 +192,10 @@ def test_long_output(mocker, mock_inquirer):
     mocker.patch("reportseff.console.len", return_value=21)
     mocker.patch.object(OutputRenderer, "format_jobs", return_value="output")
     mock_click = mocker.patch("reportseff.console.click.echo_via_pager")
-    result = runner.invoke(console.main, "--no-color 23000233".split())
+    result = runner.invoke(console.main, " 23000233".split())
 
     assert result.exit_code == 0
-    mock_click.assert_called_once_with("output", color=False)
+    mock_click.assert_called_once_with("output", color=None)
 
 
 def test_simple_job(mocker, mock_inquirer):

@@ -264,20 +264,6 @@ will likely be absent.  Node-level reporting is only shown for jobs which use
 multiple nodes or GPUs.  If you need a list of where jobs were run, you can add
 `--format +NodeList`.
 
-### My output is garbled with ESC[0m all over, where's the color?
-
-Those are ANSI color codes.  Click will usually strip these if it detects
-the consuming process can't display color codes, but `reportseff` defaults
-to always display them.  If you don't care for color, use the `--no-color`
-option.  For less, you can set
-```
-export LESS="-R"
-```
-in your `.bashrc`, or just type `-R` in an active less process.  Some versions
-of `watch` require the `-c` option to display color, others can't display
-colors properly.  If you search for `ansi color <tool>` you should get some
-solutions.
-
 ## Acknowledgments
 
 The code for calling sacct and parsing the returning information was taken
