@@ -122,7 +122,7 @@ split_ubam_24419972     RUNNING        01:26:26    ---      ---
 
 Without arguments, reportseff will try to find slurm output files in the
 current directory. Combine with `watch` to monitor job progress:
-`watch -cn 300 reportseff --modified-sort`
+`watch -cn 300 reportseff --color --modified-sort`
 
 ```txt
                 JobID           State          Elapsed   CPUEff   MemEff
@@ -214,7 +214,7 @@ directory to check for slurm outputs.
 - `--since`: Limit results to those occurring after the specified time.  Accepts
   sacct formats and a comma separated list of key/value pairs.  To get jobs in
   the last hour and a half, can pass `h=1,m=30`.
--`--until`: Limit results to those occurring before the specified time. Accepts 
+-`--until`: Limit results to those occurring before the specified time. Accepts
   sacct formats and a comma separated list of key/value pairs.
   Useful in combination with the 'since' option to query a specific range.
 - `--partition`: Limit results to a specific partition.
@@ -251,6 +251,23 @@ you get an error that pip isn't found, look for a python/anaconda/conda module.
 [pipx](https://pypa.github.io/pipx/) ensures that each application is installed
 in an isolated environment.  This resolves issues of dependency versions and
 allows applications to be run from any environment.
+
+### The output has no color with many jobs!
+
+Click should determine if the output supports color display and react automatically
+in a way you expect.  Check that your terminal is setup to display colors and
+that your pager (probably less) will display color by default.  Some commands,
+e.g. `watch` aren't handled properly even when invoked to support color.  Here
+are some useful settings for your `.bashrc`:
+```
+# have less display colors by default.  Will fix `reportseff` not showing colors
+export LESS="-R"
+# for watch aliases, include the `--color` option
+watch -cn 300 reportseff --color --modified-sort
+#      ^                 ^^^^^^^
+```
+You can always for display of color (or suppress it) with the `--color/--no-color`
+options
 
 ### I get an error about broken pipes when chaining to other commands
 
