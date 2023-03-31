@@ -21,7 +21,7 @@ from .parameters import ReportseffParameters
 )
 @click.option(
     "--color/--no-color",
-    default=True,
+    default=None,
     help="Force color output. No color will use click defaults",
 )
 @click.option(

@@ -122,7 +122,7 @@ split_ubam_24419972     RUNNING        01:26:26    ---      ---
 
 Without arguments, reportseff will try to find slurm output files in the
 current directory. Combine with `watch` to monitor job progress:
-`watch -cn 300 reportseff --modified-sort`
+`watch -cn 300 reportseff --color --modified-sort`
 
 ```txt
                 JobID           State          Elapsed   CPUEff   MemEff
@@ -214,6 +214,10 @@ directory to check for slurm outputs.
 - `--since`: Limit results to those occurring after the specified time.  Accepts
   sacct formats and a comma separated list of key/value pairs.  To get jobs in
   the last hour and a half, can pass `h=1,m=30`.
+-`--until`: Limit results to those occurring before the specified time. Accepts
+  sacct formats and a comma separated list of key/value pairs.
+  Useful in combination with the 'since' option to query a specific range.
+- `--partition`: Limit results to a specific partition.
 - `--node/-n`: Display information for multi-node jobs; requires additional
   sacct fields from jobstats.
 - `--node-and-gpu/-g`: Display information for multi-node jobs and GPU information;
@@ -248,6 +252,23 @@ you get an error that pip isn't found, look for a python/anaconda/conda module.
 in an isolated environment.  This resolves issues of dependency versions and
 allows applications to be run from any environment.
 
+### The output has no color with many jobs!
+
+Click should determine if the output supports color display and react automatically
+in a way you expect.  Check that your terminal is setup to display colors and
+that your pager (probably less) will display color by default.  Some commands,
+e.g. `watch` aren't handled properly even when invoked to support color.  Here
+are some useful settings for your `.bashrc`:
+```
+# have less display colors by default.  Will fix `reportseff` not showing colors
+export LESS="-R"
+# for watch aliases, include the `--color` option
+watch -cn 300 reportseff --color --modified-sort
+#      ^                 ^^^^^^^
+```
+You can always for display of color (or suppress it) with the `--color/--no-color`
+options
+
 ### I get an error about broken pipes when chaining to other commands
 
 Python will report that the consumer of process output has closed the stream
@@ -263,20 +284,6 @@ University.  If you are outside a Research Computing cluster, that information
 will likely be absent.  Node-level reporting is only shown for jobs which use
 multiple nodes or GPUs.  If you need a list of where jobs were run, you can add
 `--format +NodeList`.
-
-### My output is garbled with ESC[0m all over, where's the color?
-
-Those are ANSI color codes.  Click will usually strip these if it detects
-the consuming process can't display color codes, but `reportseff` defaults
-to always display them.  If you don't care for color, use the `--no-color`
-option.  For less, you can set
-```
-export LESS="-R"
-```
-in your `.bashrc`, or just type `-R` in an active less process.  Some versions
-of `watch` require the `-c` option to display color, others can't display
-colors properly.  If you search for `ansi color <tool>` you should get some
-solutions.
 
 ## Acknowledgments
 
