@@ -153,7 +153,7 @@ class SacctInquirer(BaseInquirer):
 
     def __init__(self) -> None:
         """Initialize a new inquirer."""
-        self.default_args = "sacct -P -n".split()
+        self.default_args = "sacct -P -n --delimiter=^|^".split()
         self.user: Optional[str] = None
         self.state: Optional[Set] = None
         self.not_state: Optional[Set] = None
@@ -258,7 +258,8 @@ class SacctInquirer(BaseInquirer):
         if debug_cmd is not None:
             debug_cmd("\n".join(lines))
 
-        result = [dict(zip(columns, line.split("|"))) for line in lines if line]
+        sacct_split = re.compile(r"\^\|\^")
+        result = [dict(zip(columns, sacct_split.split(line))) for line in lines if line]
 
         if self.state:
             # split to get first word in entries like "CANCELLED BY X"
