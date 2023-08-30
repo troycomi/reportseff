@@ -303,3 +303,16 @@ def bad_gpu_used():
             "|12|23:05:24|46044267.extern|46044267.extern|0|1||COMPLETED||00:00:00"
         ),
     ]
+
+
+@pytest.fixture
+def multinode_job():
+    """job run on multiple nodes."""
+    return [
+        to_sacct_dict(
+            "|720|12-14:16:39|6196869|6196869||20|191846Mn|COMPLETED|UNLIMITED|451-06:00:24"
+        ),
+        to_sacct_dict(
+            "|36|12-14:16:39|6196869.batch|6196869.batch|33824748K|1|191846Mn|COMPLETED||451-06:00:24"
+        ),
+    ]

@@ -150,15 +150,15 @@ class Job:
         if self.state == "RUNNING":
             return
 
-        cpus = (
-            _parse_slurm_timedelta(entry["TotalCPU"]) / int(entry["AllocCPUS"])
-            if "TotalCPU" in entry and "AllocCPUS" in entry
-            else 0
-        )
+        total_cpu = _parse_slurm_timedelta(entry.get("TotalCPU", "00:00.000"))
+        alloc_cpus = int(entry.get("AllocCPUS", 0))
+
+        cpu_time = cpu_time = total_cpu / alloc_cpus if alloc_cpus != 0 else 0.0
+
         if wall == 0:
             self.cpu = None
         else:
-            self.cpu = round(cpus / wall * 100, 1)
+            self.cpu = round(cpu_time / wall * 100, 1)
 
         if "REQMEM" in entry and "NNodes" in entry and "AllocCPUS" in entry:
             self.totalmem = parsemem(
