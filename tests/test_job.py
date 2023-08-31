@@ -756,3 +756,12 @@ def test_issue_26(get_jobstats):
     assert job.state == "FAILED"
     assert job.cpu == 0
     assert job.mem_eff == 0
+
+
+def test_multinode_job(multinode_job):
+    """Testing issue37 which is not actually a bug efficiency is truly 5%."""
+    job = job_module.Job("6196869", "6196869", None)
+    for line in multinode_job:
+        job.update(line)
+
+    assert job.cpu == 5.0
