@@ -60,7 +60,6 @@ class Job:
         self.time: Optional[str] = "---"
         self.time_eff: Union[str, float] = "---"
         self.cpu: Optional[Union[str, float]] = "---"
-        self.mem: Union[str, float] = "---"
         self.state: Optional[str] = None
         self.mem_eff: Optional[float] = None
         self.gpu: Optional[float] = None
@@ -116,7 +115,8 @@ class Job:
                 if k not in self.other_entries or not self.other_entries[k]:
                     self.other_entries[k] = value
             mem = parsemem(entry["MaxRSS"]) if "MaxRSS" in entry else 0
-            self.stepmem = max(self.stepmem, mem)
+            tasks = int(entry.get("NTasks", 1))
+            self.stepmem = max(self.stepmem, mem * tasks)
 
             if "TRESUsageOutAve" in entry:
                 self.energy = max(

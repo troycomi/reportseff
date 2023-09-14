@@ -175,7 +175,7 @@ def test_renderer_init(renderer):
     assert sorted(renderer.query_columns) == sorted(
         (
             "JobID JobIDRaw State Elapsed TotalCPU "
-            "AllocCPUS REQMEM NNodes MaxRSS AdminComment"
+            "AllocCPUS REQMEM NNodes NTasks MaxRSS AdminComment"
         ).split()
     )
 
@@ -277,7 +277,7 @@ def test_renderer_correct_columns(renderer):
         (
             "JobID TotalCPU Elapsed REQMEM"
             " JobIDRaw State AdminComment"
-            " NNodes AllocCPUS MaxRSS Timelimit"
+            " NNodes NTasks AllocCPUS MaxRSS Timelimit"
         ).split()
     )
 

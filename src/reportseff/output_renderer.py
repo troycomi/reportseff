@@ -45,7 +45,7 @@ class OutputRenderer:
         # values derived from other values, list includes all dependent values
         self.derived: Dict[str, List] = {
             "CPUEff": ["TotalCPU", "AllocCPUS", "Elapsed"],
-            "MemEff": ["REQMEM", "NNodes", "AllocCPUS", "MaxRSS"],
+            "MemEff": ["REQMEM", "NNodes", "AllocCPUS", "MaxRSS", "NTasks"],
             "TimeEff": ["Elapsed", "Timelimit"],
             "GPU": [],
             "GPUMem": [],
