@@ -40,7 +40,6 @@ def test_job_init(job):
     assert job.totalmem is None
     assert job.time == "---"
     assert job.cpu == "---"
-    assert job.mem == "---"
     assert job.state is None
 
 
@@ -250,7 +249,7 @@ def test_update_part_job():
             "Elapsed": "00:10:00",
             "MaxRSS": "495644K",
             "NNodes": "1",
-            "NTasks": "",
+            "NTasks": "1",
         }
     )
     assert job.state is None
@@ -765,3 +764,16 @@ def test_multinode_job(multinode_job):
         job.update(line)
 
     assert job.cpu == 5.0
+
+
+def test_multinode_job_issue_41(issue_41):
+    """Testing issue 41 where multiple tasks are used.
+
+    Previously reported incorrect memory efficiency.
+    """
+    job = job_module.Job("131042", "131042", None)
+    for line in issue_41:
+        job.update(line)
+
+    assert job.cpu == 98.3
+    assert job.get_entry("MemEff") == 95.1
