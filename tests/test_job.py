@@ -767,7 +767,10 @@ def test_multinode_job(multinode_job):
 
 
 def test_multinode_job_issue_41(issue_41):
-    """Testing issue37 which is not actually a bug efficiency is truly 5%."""
+    """Testing issue 41 where multiple tasks are used.
+
+    Previously reported incorrect memory efficiency.
+    """
     job = job_module.Job("131042", "131042", None)
     for line in issue_41:
         job.update(line)
