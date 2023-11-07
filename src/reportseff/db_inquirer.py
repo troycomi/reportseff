@@ -2,6 +2,7 @@
 from abc import ABC, abstractmethod
 import datetime
 import re
+import shlex
 import subprocess
 from typing import Callable, Dict, List, Optional, Set
 
@@ -23,6 +24,20 @@ class BaseInquirer(ABC):
         """
 
     @abstractmethod
+    def set_sacct_args(self, jobs: List[str]) -> List[str]:
+        """Set arguments of sacct query.
+
+        Args:
+            jobs: list of job names
+
+        Returns:
+            String of sacct arguments
+
+        Raises:
+            RuntimeError: if sacct doesn't return properly
+        """
+
+    @abstractmethod
     def get_db_output(
         self,
         columns: List[str],
@@ -40,6 +55,7 @@ class BaseInquirer(ABC):
             List of rows, where each row is a dictionary
             with the columns as keys and entries as values
             Output order is not garunteed to match the jobs list
+
         """
 
     @abstractmethod
@@ -48,6 +64,22 @@ class BaseInquirer(ABC):
 
         Args:
             user: user name
+        """
+
+    @abstractmethod
+    def set_partition(self, partition: str) -> None:
+        """Set the collection of jobs based on the provided partition.
+
+        Args:
+            partition: partition name
+        """
+
+    @abstractmethod
+    def set_extra_args(self, extra_args: str) -> None:
+        """Set extra arguments to be forwarded to sacct.
+
+        Args:
+            extra_args: list of arguments
         """
 
     @abstractmethod
@@ -68,6 +100,26 @@ class BaseInquirer(ABC):
 
         Args:
             state: comma separated list of state names or codes
+        """
+
+    @abstractmethod
+    def parse_date(self, d: str) -> str:
+        """Parse and convert custom string date format.
+
+        Args:
+            d: the string of date.
+
+        Returns:
+            converted string of date
+        """
+
+    @abstractmethod
+    def set_until(self, until: str) -> None:
+        """Set the filter for time of jobs to consider.
+
+        Args:
+            until: the string for filtering.  If specified as time=amount
+                will subtract that amount from the current time
         """
 
     @abstractmethod
@@ -101,12 +153,15 @@ class SacctInquirer(BaseInquirer):
 
     def __init__(self) -> None:
         """Initialize a new inquirer."""
-        self.default_args = "sacct -P -n".split()
+        self.default_args = "sacct -P -n --delimiter=^|^".split()
         self.user: Optional[str] = None
         self.state: Optional[Set] = None
         self.not_state: Optional[Set] = None
         self.since: Optional[str] = None
+        self.until: Optional[str] = None
         self.query_all_users: bool = False
+        self.partition: Optional[str] = None
+        self.extra_args: Optional[str] = None
 
     def get_valid_formats(self) -> List[str]:
         """Get the valid formatting options supported by the inquirer.
@@ -131,6 +186,37 @@ class SacctInquirer(BaseInquirer):
         result = cmd_result.stdout.split()
         return result
 
+    def set_sacct_args(self, jobs: List[str]) -> List[str]:
+        """Set arguments of sacct query.
+
+        Args:
+            jobs: list of job names
+
+        Returns:
+            String of sacct arguments
+
+        """
+        args = []
+        if self.user:
+            if not self.since:
+                start_date = datetime.date.today() - datetime.timedelta(days=7)
+                self.since = start_date.strftime("%m%d%y")  # MMDDYY
+            args += [f"--user={self.user}"]
+        elif self.query_all_users:
+            args += ["--allusers"]
+        else:
+            args += ["--jobs=" + ",".join(jobs)]
+
+        if self.since:
+            args += [f"--starttime={self.since}"]
+        if self.partition:
+            args += [f"--partition={self.partition}"]
+        if self.until:
+            args += [f"--endtime={self.until}"]
+        if self.extra_args:
+            args += shlex.split(self.extra_args)
+        return args
+
     def get_db_output(
         self,
         columns: List[str],
@@ -153,19 +239,7 @@ class SacctInquirer(BaseInquirer):
             RuntimeError: if sacct doesn't return properly
         """
         args = self.default_args + ["--format=" + ",".join(columns)]
-
-        if self.user:
-            if not self.since:
-                start_date = datetime.date.today() - datetime.timedelta(days=7)
-                self.since = start_date.strftime("%m%d%y")  # MMDDYY
-            args += [f"--user={self.user}", f"--starttime={self.since}"]
-        elif self.query_all_users:
-            args += ["--allusers", f"--starttime={self.since}"]
-        else:
-            args += ["--jobs=" + ",".join(jobs)]
-            if self.since:
-                args += [f"--starttime={self.since}"]
-
+        args += self.set_sacct_args(jobs)
         try:
             cmd_result = subprocess.run(
                 args=args,
@@ -184,7 +258,8 @@ class SacctInquirer(BaseInquirer):
         if debug_cmd is not None:
             debug_cmd("\n".join(lines))
 
-        result = [dict(zip(columns, line.split("|"))) for line in lines if line]
+        sacct_split = re.compile(r"\^\|\^")
+        result = [dict(zip(columns, sacct_split.split(line))) for line in lines if line]
 
         if self.state:
             # split to get first word in entries like "CANCELLED BY X"
@@ -203,6 +278,22 @@ class SacctInquirer(BaseInquirer):
             user: user name
         """
         self.user = user
+
+    def set_partition(self, partition: str) -> None:
+        """Set the collection of jobs based on the provided partition.
+
+        Args:
+            partition: partition name
+        """
+        self.partition = partition
+
+    def set_extra_args(self, extra_args: str) -> None:
+        """Set extra arguments to be forwarded to sacct.
+
+        Args:
+            extra_args: list of arguments
+        """
+        self.extra_args = extra_args
 
     def all_users(self) -> None:
         """Query for all users if `since` is set."""
@@ -228,6 +319,7 @@ class SacctInquirer(BaseInquirer):
 
         Args:
             state: comma separated list of state names or codes
+
         """
         if not state:
             return
@@ -237,6 +329,66 @@ class SacctInquirer(BaseInquirer):
         if not self.not_state:
             click.secho("No valid states provided to exclude", fg="yellow", err=True)
             self.not_state = None
+
+    def parse_date(self, d: str) -> str:
+        """Parse and convert custom string date format.
+
+        Args:
+            d: the string of date.
+
+        Returns:
+            converted string of date
+        """
+        abbrev_to_key = {
+            "w": "weeks",
+            "W": "weeks",
+            "d": "days",
+            "D": "days",
+            "h": "hours",
+            "H": "hours",
+            "m": "minutes",
+            "M": "minutes",
+        }
+        valid_args = ["weeks", "days", "hours", "minutes"]
+        date_args = {}
+
+        args = d.split(",")
+        for arg in args:
+            toks = arg.split("=")
+
+            # lines don't have an equal
+            if len(toks) < 2:
+                continue
+
+            # convert key to name
+            if toks[0] in abbrev_to_key:
+                toks[0] = abbrev_to_key[toks[0]]
+
+            toks[0] = toks[0].lower()
+
+            if toks[0] in valid_args:
+                try:
+                    date_args[toks[0]] = int(toks[1])
+                except ValueError:
+                    continue
+
+        date = datetime.datetime.today()
+        date -= datetime.timedelta(**date_args)
+        return date.strftime("%Y-%m-%dT%H:%M")  # MMDDYY
+
+    def set_until(self, until: str) -> None:
+        """Set the filter for time of jobs to consider.
+
+        Args:
+            until: the string for filtering. If specified as time=amount
+                will subtract that amount from the current time
+        """
+        if not until:
+            return
+        if "=" in until:  # handle custom format
+            self.until = self.parse_date(until)
+        else:
+            self.until = until
 
     def set_since(self, since: str) -> None:
         """Set the filter for time of jobs to consider.
@@ -248,43 +400,7 @@ class SacctInquirer(BaseInquirer):
         if not since:
             return
         if "=" in since:  # handle custom format
-            abbrev_to_key = {
-                "w": "weeks",
-                "W": "weeks",
-                "d": "days",
-                "D": "days",
-                "h": "hours",
-                "H": "hours",
-                "m": "minutes",
-                "M": "minutes",
-            }
-            valid_args = ["weeks", "days", "hours", "minutes"]
-            date_args = {}
-
-            args = since.split(",")
-            for arg in args:
-                toks = arg.split("=")
-
-                # lines don't have an equal
-                if len(toks) < 2:
-                    continue
-
-                # convert key to name
-                if toks[0] in abbrev_to_key:
-                    toks[0] = abbrev_to_key[toks[0]]
-
-                toks[0] = toks[0].lower()
-
-                if toks[0] in valid_args:
-                    try:
-                        date_args[toks[0]] = int(toks[1])
-                    except ValueError:
-                        continue
-
-            start_date = datetime.datetime.today()
-            start_date -= datetime.timedelta(**date_args)
-            self.since = start_date.strftime("%Y-%m-%dT%H:%M")  # MMDDYY
-
+            self.since = self.parse_date(since)
         else:
             self.since = since
 

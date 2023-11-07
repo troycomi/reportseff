@@ -37,7 +37,7 @@ def install_with_constraints(session, *args, **kwargs):
 def tests(session):
     """Run test suite with pytest and coverage."""
     args = session.posargs
-    session.run("poetry", "install", "--only", "main", external=True)
+    session.install(".")
     install_with_constraints(
         session, "coverage[toml]", "pytest", "pytest-cov", "pytest-mock"
     )

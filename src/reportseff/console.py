@@ -21,7 +21,7 @@ from .parameters import ReportseffParameters
 )
 @click.option(
     "--color/--no-color",
-    default=True,
+    default=None,
     help="Force color output. No color will use click defaults",
 )
 @click.option(
@@ -29,8 +29,8 @@ from .parameters import ReportseffParameters
     "format_str",
     default="JobID%>,State,Elapsed%>,TimeEff,CPUEff,MemEff",
     help="Comma-separated list of columns to include. Options "
-    "are any valid sacct input along with CPUEff, MemEff, and "
-    "TimeEff.  In systems with jobstat caching, GPU usage can be "
+    "are any valid sacct input along with CPUEff, MemEff, Energy, "
+    "and TimeEff.  In systems with jobstat caching, GPU usage can be "
     "added with GPUEff, GPUMem or GPU (for both). "
     "A width and alignment may optionally be provided "
     'after "%", e.g. JobID%>15 aligns job id right with max '
@@ -52,6 +52,16 @@ from .parameters import ReportseffParameters
     help="Ignore jobs, return all jobs in last week from user",
 )
 @click.option(
+    "--partition",
+    default="",
+    help="Only include jobs with the specified partition",
+)
+@click.option(
+    "--extra-args",
+    default="",
+    help="Extra arguments to forward to sacct",
+)
+@click.option(
     "-s", "--state", default="", help="Only include jobs with the specified states"
 )
 @click.option(
@@ -59,6 +69,15 @@ from .parameters import ReportseffParameters
 )
 @click.option(
     "--since",
+    default="",
+    help="Only include jobs after this time. Can be valid sacct "
+    "or as a comma separated list of time deltas, e.g. d=2,h=1 "
+    "means 2 days, 1 hour before current time. Weeks, days, "
+    "hours, and minutes can use case-insensitive abbreviations. "
+    "Minutes is the minimum resolution, while weeks is the coarsest.",
+)
+@click.option(
+    "--until",
     default="",
     help="Only include jobs before this time. Can be valid sacct "
     "or as a comma separated list of time deltas, e.g. d=2,h=1 "
@@ -122,6 +141,11 @@ def get_jobs(args: ReportseffParameters) -> Tuple[str, int]:
     inquirer.set_not_state(args.not_state)
 
     inquirer.set_since(args.since)
+    inquirer.set_until(args.until)
+
+    inquirer.set_partition(args.partition)
+
+    inquirer.set_extra_args(args.extra_args)
 
     add_jobs = False
 

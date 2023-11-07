@@ -60,11 +60,11 @@ class Job:
         self.time: Optional[str] = "---"
         self.time_eff: Union[str, float] = "---"
         self.cpu: Optional[Union[str, float]] = "---"
-        self.mem: Union[str, float] = "---"
         self.state: Optional[str] = None
         self.mem_eff: Optional[float] = None
         self.gpu: Optional[float] = None
         self.gpu_mem: Optional[float] = None
+        self.energy: int = 0
         self.other_entries: Dict[str, Any] = {}
         # safe to cache now
         self.other_entries["JobID"] = self.name()
@@ -114,7 +114,15 @@ class Job:
             for k, value in entry.items():
                 if k not in self.other_entries or not self.other_entries[k]:
                     self.other_entries[k] = value
-            self.stepmem += parsemem(entry["MaxRSS"]) if "MaxRSS" in entry else 0
+            mem = parsemem(entry["MaxRSS"]) if "MaxRSS" in entry else 0
+            tasks = int(entry.get("NTasks", 1))
+            self.stepmem = max(self.stepmem, mem * tasks)
+
+            if "TRESUsageOutAve" in entry:
+                self.energy = max(
+                    self.energy,
+                    _parse_energy(entry["TRESUsageOutAve"]),
+                )
 
     def _update_main_job(self, entry: Dict) -> None:
         """Update properties for the main job.
@@ -142,15 +150,15 @@ class Job:
         if self.state == "RUNNING":
             return
 
-        cpus = (
-            _parse_slurm_timedelta(entry["TotalCPU"]) / int(entry["AllocCPUS"])
-            if "TotalCPU" in entry and "AllocCPUS" in entry
-            else 0
-        )
+        total_cpu = _parse_slurm_timedelta(entry.get("TotalCPU", "00:00.000"))
+        alloc_cpus = int(entry.get("AllocCPUS", 0))
+
+        cpu_time = cpu_time = total_cpu / alloc_cpus if alloc_cpus != 0 else 0.0
+
         if wall == 0:
             self.cpu = None
         else:
-            self.cpu = round(cpus / wall * 100, 1)
+            self.cpu = round(cpu_time / wall * 100, 1)
 
         if "REQMEM" in entry and "NNodes" in entry and "AllocCPUS" in entry:
             self.totalmem = parsemem(
@@ -167,73 +175,30 @@ class Job:
 
         Args:
             comment: The AdminComment field.
-
-        Raises:
-            ValueError: if the comment doesn't start with JS1.
-            ValueError: if the comment can't be decoded.
         """
-        comment_type = comment[:3]
+        data = _parse_admin_comment_to_dict(comment)
 
-        if not comment_type.startswith("JS"):
-            # ignore comments that aren't from jobstats (JS)
+        if data is None:
             return
 
-        if comment_type not in ("JS1",):
-            raise ValueError(f"Unknown comment type '{comment_type}'")
-        data = {}
-        try:
-            data = json.loads(gzip.decompress(base64.b64decode(comment[4:])))
-        except BaseException as exception:
-            raise ValueError(f"Cannot decode comment '{comment}'") from exception
+        for node, node_data in data["nodes"].items():
+            self.comment_data[node] = _get_node_data(data, node_data)
 
-        def average(value: str, data: Optional[dict] = None) -> float:
-            if data is None:
-                data = self.comment_data
-            return round(
-                sum(v[value] for v in data.values()) / len(data),
-                1,
-            )
-
-        for node, value in data["nodes"].items():
-            self.comment_data[node] = {
-                "CPUEff": value["total_time"]
-                / value["cpus"]
-                / data["total_time"]
-                * 100,
-                "MemEff": value["used_memory"] / value["total_memory"] * 100,
-            }
-            if data["gpus"]:
-                self.comment_data[node]["gpus"] = {
-                    gpu: {
-                        "GPUEff": value["gpu_utilization"][gpu],
-                        "GPUMem": round(
-                            value["gpu_used_memory"][gpu]
-                            / value["gpu_total_memory"][gpu]
-                            * 100,
-                            1,
-                        ),
-                    }
-                    for gpu in value["gpu_utilization"]
-                }
-                self.comment_data[node]["GPUEff"] = average(
-                    "GPUEff", self.comment_data[node]["gpus"]
-                )
-                self.comment_data[node]["GPUMem"] = average(
-                    "GPUMem", self.comment_data[node]["gpus"]
-                )
-
-        self.cpu = average("CPUEff")
-        self.mem_eff = average("MemEff")
+        self.cpu = _average_nested_dict("CPUEff", self.comment_data)
+        self.mem_eff = _average_nested_dict("MemEff", self.comment_data)
         if data["gpus"]:
-            self.gpu = average("GPUEff")
-            self.gpu_mem = average("GPUMem")
+            self.gpu = _average_nested_dict("GPUEff", self.comment_data)
+            self.gpu_mem = _average_nested_dict("GPUMem", self.comment_data)
 
     def _cache_entries(self) -> None:
         self.other_entries["State"] = self.state
         self.other_entries["TimeEff"] = self.time_eff
         self.other_entries["CPUEff"] = self.cpu if self.cpu else "---"
-        self.other_entries["GPUEff"] = self.gpu if self.gpu else "---"
-        self.other_entries["GPUMem"] = self.gpu_mem if self.gpu_mem else "---"
+        self.other_entries["GPUEff"] = self.gpu if self.gpu is not None else "---"
+        if self.gpu_mem is not None:
+            self.other_entries["GPUMem"] = self.gpu_mem
+        else:
+            self.other_entries["GPUMem"] = "---"
 
     def name(self) -> str:
         """The name of the job.
@@ -260,6 +225,10 @@ class Job:
             if self.totalmem:
                 return round(self.stepmem / self.totalmem * 100, 1)
             return "---"
+
+        if key == "Energy":
+            return self.energy
+
         return self.other_entries.get(key, "---")
 
     def get_node_entries(
@@ -276,7 +245,7 @@ class Job:
             not change in nodes/gpus it will yield an empty string
         """
         yield self.get_entry(key)
-        if len(self.comment_data) > 1 or (gpu and self.gpu):
+        if len(self.comment_data) > 1 or (gpu and self.gpu is not None):
             for node, data in self.comment_data.items():
                 # get node-level data
                 if key == "JobID":
@@ -287,7 +256,9 @@ class Job:
                         to_yield if isinstance(to_yield, str) else round(to_yield, 1)
                     )
                     yield to_yield
-                if gpu and self.gpu:  # has gpus to report
+                if (
+                    gpu and self.gpu is not None and "gpus" in data
+                ):  # has gpus to report
                     for gpu_name, gpu_data in data["gpus"].items():
                         if key == "JobID":
                             yield f"    {gpu_name}"
@@ -380,3 +351,109 @@ def parsemem(mem: str, nodes: int = 1, cpus: int = 1) -> float:
         else:
             memory *= cpus
     return memory
+
+
+def _parse_energy(tres: str) -> int:
+    """Parse energy usage from tres entry.
+
+    Args:
+        tres: the tres entry from sacct
+
+    Returns:
+        The energy usage for the job.  If missing, will return 0.
+    """
+    for entry in tres.split(","):
+        tokens = entry.split("=")
+        if tokens[0] == "energy":
+            return int(tokens[1])
+    return 0
+
+
+def _parse_admin_comment_to_dict(comment: str) -> Optional[dict]:
+    """Attempt to parse AdminComment.
+
+    Args:
+        comment: The AdminComment field.
+
+    Returns:
+        the decoded dict
+        None if the comment isn't recognized but can be ignored
+
+    Raises:
+        ValueError: if the comment doesn't start with JS1.
+        ValueError: if the comment can't be decoded.
+    """
+    comment_type = comment[:3]
+
+    if not comment_type.startswith("JS"):
+        # ignore comments that aren't from jobstats (JS)
+        return None
+
+    if comment_type not in ("JS1",):
+        raise ValueError(f"Unknown comment type '{comment_type}'")
+    try:
+        return json.loads(gzip.decompress(base64.b64decode(comment[4:])))
+    except BaseException as exception:
+        raise ValueError(f"Cannot decode comment '{comment}'") from exception
+
+
+def _get_node_data(comment_data: dict, node_data: dict) -> dict:
+    """Parse node level data from admin comment values.
+
+    Args:
+        comment_data: The AdminComment field.
+        node_data: Data for this node.
+
+    Returns:
+        the dict with efficiency information for this node
+    """
+
+    def get_gpu_value(comment_data: dict, key: str, gpu_number: int) -> float:
+        if key in comment_data:
+            if gpu_number in comment_data[key]:
+                return comment_data[key][gpu_number]
+        return 0
+
+    result = {
+        "MemEff": node_data["used_memory"] / node_data["total_memory"] * 100,
+    }
+
+    if node_data["cpus"] == 0 or comment_data["total_time"] == 0:
+        result["CPUEff"] = 0
+    else:
+        time_per_cpu = node_data["total_time"] / node_data["cpus"]
+        result["CPUEff"] = time_per_cpu / comment_data["total_time"] * 100
+
+    if comment_data["gpus"] and "gpu_total_memory" in node_data:
+        result["gpus"] = {
+            gpu: {
+                "GPUEff": get_gpu_value(node_data, "gpu_utilization", gpu),
+                "GPUMem": round(
+                    get_gpu_value(node_data, "gpu_used_memory", gpu)
+                    / get_gpu_value(node_data, "gpu_total_memory", gpu)
+                    * 100,
+                    1,
+                ),
+            }
+            for gpu in node_data["gpu_total_memory"]
+        }
+        result["GPUEff"] = _average_nested_dict("GPUEff", result["gpus"])
+        result["GPUMem"] = _average_nested_dict("GPUMem", result["gpus"])
+    return result
+
+
+def _average_nested_dict(nested_key: str, data: dict) -> float:
+    """Average nested values in data dictionary.
+
+    Args:
+        nested_key: The key to key for averaging
+        data: The dict to average.
+
+    Returns:
+        the mean value, rounded to one decimal
+    """
+    return round(
+        sum(value[nested_key] for value in data.values() if nested_key in value)
+        / len(data),
+        1,
+    )

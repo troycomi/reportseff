@@ -40,7 +40,6 @@ def test_job_init(job):
     assert job.totalmem is None
     assert job.time == "---"
     assert job.cpu == "---"
-    assert job.mem == "---"
     assert job.state is None
 
 
@@ -250,7 +249,7 @@ def test_update_part_job():
             "Elapsed": "00:10:00",
             "MaxRSS": "495644K",
             "NNodes": "1",
-            "NTasks": "",
+            "NTasks": "1",
         }
     )
     assert job.state is None
@@ -687,3 +686,94 @@ def test_short_job(short_job):
     assert list(job.get_node_entries("JobID", True)) == ["8205464"]
     assert list(job.get_node_entries("CPUEff")) == [6.2]
     assert list(job.get_node_entries("State")) == ["FAILED"]
+
+
+def test_bad_gpu(bad_gpu):
+    """Jobs failing due to gpu are parsed properly."""
+    job = job_module.Job("45352405", "45352405", None)
+    for line in bad_gpu:
+        job.update(line)
+
+    assert job.cpu == 99.5
+    assert job.mem_eff == 39.1
+    assert job.gpu == 0
+    assert job.gpu_mem == 1.0
+
+    assert list(job.get_node_entries("JobID")) == ["45352405"]
+    assert list(job.get_node_entries("CPUEff")) == [99.5]
+    assert list(job.get_node_entries("State")) == ["CANCELLED"]
+
+
+def test_bad_gpu_utilization(bad_gpu_used):
+    """Jobs with no gpu utilization are parsed properly."""
+    job = job_module.Job("46044267", "46044267", None)
+    for line in bad_gpu_used:
+        job.update(line)
+
+    assert job.cpu == 96.2
+    assert job.mem_eff == 86.4
+    assert job.gpu == 4.8
+    assert job.gpu_mem == 11.1
+
+    assert list(job.get_node_entries("JobID")) == ["46044267"]
+    assert list(job.get_node_entries("CPUEff")) == [96.2]
+    assert list(job.get_node_entries("State")) == ["TIMEOUT"]
+
+
+def test_issue_26(get_jobstats):
+    """Jobs with 0 total_time are parsed."""
+    admin_comment = {
+        "gpus": True,
+        "nodes": {
+            "maestro-3003": {
+                "cpus": 8,
+                "gpu_total_memory": {"2": 42949672960},
+                "gpu_used_memory": {"2": 0},
+                "gpu_utilization": {"2": 0},
+                "total_memory": 62914560.0,
+                "total_time": 0,
+                "used_memory": 0,
+            }
+        },
+        "total_time": 0,
+    }
+    entry = {
+        "AdminComment": get_jobstats(admin_comment),
+        "AllocCPUS": "8",
+        "Elapsed": "00:00:00",
+        "JobID": "13421658",
+        "JobIDRaw": "13421658",
+        "MaxRSS": "",
+        "NNodes": "1",
+        "REQMEM": "60G",
+        "State": "FAILED",
+        "Timelimit": "3-00:00:00",
+        "TotalCPU": "00:00.001",
+    }
+    job = job_module.Job("13421658", "13421658", None)
+    job.update(entry)
+    assert job.state == "FAILED"
+    assert job.cpu == 0
+    assert job.mem_eff == 0
+
+
+def test_multinode_job(multinode_job):
+    """Testing issue37 which is not actually a bug efficiency is truly 5%."""
+    job = job_module.Job("6196869", "6196869", None)
+    for line in multinode_job:
+        job.update(line)
+
+    assert job.cpu == 5.0
+
+
+def test_multinode_job_issue_41(issue_41):
+    """Testing issue 41 where multiple tasks are used.
+
+    Previously reported incorrect memory efficiency.
+    """
+    job = job_module.Job("131042", "131042", None)
+    for line in issue_41:
+        job.update(line)
+
+    assert job.cpu == 98.3
+    assert job.get_entry("MemEff") == 95.1

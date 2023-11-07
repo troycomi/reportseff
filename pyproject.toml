@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "reportseff"
-version = "2.3.1"
+version = "2.3.2"
 description= "Tablular seff output"
 authors = ["Troy Comi <troycomi@gmail.com>"]
 license = "MIT"
@@ -22,10 +22,10 @@ pytest-cov = "^3.0.0"
 black = { version = "^22.1.0", allow-prereleases = true }
 flake8 = "^3.7.9"
 flake8-bandit = "^2.1.2"
-flake8-black = "^0.2.5"
+flake8-black = ">=0.2.5"
 flake8-bugbear = "^21.9.2"
 flake8-import-order = "^0.18.1"
-safety = "^1.10.3"
+safety = "^2.2.0"
 mypy = "^0.910"
 types-click = "^7.1.7"
 pytype = {version = "^2021.10.11", python = "3.7"}
@@ -34,7 +34,7 @@ flake8-annotations = "^2.0.0"
 flake8-docstrings = ">=1.6.0"
 darglint = ">=1.8.1"
 Sphinx = "^4.2.0"
-codecov = "^2.1.12"
+codecov = ">=2.1.13"
 
 [tool.poetry.scripts]
 reportseff = "reportseff.console:main"

@@ -12,6 +12,11 @@ def to_comment(info: dict) -> str:
     ).decode("ascii")
 
 
+@pytest.fixture
+def get_jobstats():
+    return to_comment
+
+
 def to_sacct_dict(sacct_line: str) -> dict:
     columns = (
         "AdminComment",
@@ -25,6 +30,7 @@ def to_sacct_dict(sacct_line: str) -> dict:
         "State",
         "Timelimit",
         "TotalCPU",
+        "NTasks",
     )
     return dict(zip(columns, sacct_line.split("|")))
 
@@ -266,3 +272,135 @@ def short_job():
         ),
         to_sacct_dict("|8|00:00:02|8205464.0|8205464.0|0|1||FAILED||00:01.587"),
     ]
+
+
+@pytest.fixture
+def bad_gpu():
+    """job with a failure due to bad gpu."""
+    return [
+        to_sacct_dict(
+            "JS1:H4sIAMMP3WMC/12NQQrDIBRE7/LXthj1q9/LhFAlFLSGRhdFvHuTphTS5TDz3jR4ZB9WcA18iHG6RC5n3GPJZYpjCik/X+CUIEXaCNIM6hr8rxi0sUSEKNgXKfcUwAmjub4Sg9tSN/3AYF7qeJY2kOAsbrxUSIL3Y3TyHxuDUiuJovf+f2Ok/WD7SX8DnGNK388AAAA=|1|07:42:18|45352405|45352405||1|4G|CANCELLED by 349394|23:00:00|07:40:23"
+        ),
+        to_sacct_dict(
+            "|1|07:42:20|45352405.batch|45352405.batch|1644460K|1||CANCELLED||07:40:23"
+        ),
+        to_sacct_dict(
+            "|1|07:42:19|45352405.extern|45352405.extern|104K|1||COMPLETED||00:00:00"
+        ),
+    ]
+
+
+@pytest.fixture
+def bad_gpu_used():
+    """job with a failure due to gpu with no utilization."""
+    return [
+        to_sacct_dict(
+            "JS1:H4sIAN7HCGQC/1WOQQ6DIBBF7zJrawYGRvAyxlRiSFBMi4vWcPeitk1c/sy8//4GcxzcE9oNBhdCfwuoR7nHFFMfuslN8fGCViORYGUQsYL16Yb/RZGyDbNhNNUXSn5y0FpGZFNzBfdlLQYhKxiXtbsWb1BsRhtrSWkrSztdcj6hi/JkGk2sSMuDEEYSSqFY849IPvh3n3ycd6L82FrnnK8jDQmpDqAslPkDhnD5Hg8BAAA=|12|23:05:24|46044267|46044267||1|48000M|TIMEOUT|23:00:00|11-02:46:01"
+        ),
+        to_sacct_dict(
+            "|12|23:05:55|46044267.batch|46044267.batch|42475564K|1||CANCELLED||11-02:46:01"
+        ),
+        to_sacct_dict(
+            "|12|23:05:24|46044267.extern|46044267.extern|0|1||COMPLETED||00:00:00"
+        ),
+    ]
+
+
+@pytest.fixture
+def multinode_job():
+    """job run on multiple nodes."""
+    return [
+        to_sacct_dict(
+            "|720|12-14:16:39|6196869|6196869||20|191846Mn|COMPLETED|UNLIMITED|451-06:00:24"
+        ),
+        to_sacct_dict(
+            "|36|12-14:16:39|6196869.batch|6196869.batch|33824748K|1|191846Mn|COMPLETED||451-06:00:24"
+        ),
+    ]
+
+
+@pytest.fixture
+def issue_41():
+    """job run on multiple nodes, with multiple tasks."""
+    return [
+        to_sacct_dict(
+            "|8|00:00:53|131042|131042||1|16000M|COMPLETED|00:01:00|06:57.815|8"
+        ),
+        to_sacct_dict(
+            "|8|00:00:53|131042.batch|131042.batch|20264K|1||COMPLETED||00:00.034|8"
+        ),
+        to_sacct_dict(
+            "|8|00:00:53|131042.extern|131042.extern|1052K|1||COMPLETED||00:00.001|8"
+        ),
+        to_sacct_dict(
+            "|8|00:00:53|131042.0|131042.0|1947276K|1||COMPLETED||06:57.779|8"
+        ),
+    ]
+
+
+@pytest.fixture
+def console_jobs():
+    """collection of sacct outputs for test_reportseff."""
+
+    # indexed on job id
+    return {
+        "25569410_notime": (
+            "^|^1^|^21:14:48^|^25569410^|^25569410^|^^|^1^|^1^|^4000Mc^|^"
+            "COMPLETED^|^19:28:36\n"
+            "^|^1^|^21:14:49^|^25569410.extern^|^25569410.extern^|^1548K^|^"
+            "1^|^1^|^4000Mc^|^COMPLETED^|^00:00:00\n"
+            "^|^1^|^21:14:43^|^25569410.0^|^25569410.0^|^62328K"
+            "^|^1^|^1^|^4000Mc^|^COMPLETED^|^19:28:36\n"
+        ),
+        "24418435_notime": (
+            "^|^1^|^01:27:42^|^24418435^|^24418435^|^^|^1^|^1^|^1Gn^|^"
+            "COMPLETED^|^01:27:29\n"
+            "^|^1^|^01:27:42^|^24418435.batch^|^24418435.batch^|^499092K^|^"
+            "1^|^1^|^1Gn^|^COMPLETED^|^01:27:29\n"
+            "^|^1^|^01:27:42^|^24418435.extern^|^24418435.extern^|^1376K^|^"
+            "1^|^1^|^1Gn^|^COMPLETED^|^00:00:00\n"
+        ),
+        "24418435": (
+            "^|^1^|^01:27:42^|^24418435^|^24418435^|^^|^1^|^1^|^1Gn^|^"
+            "COMPLETED^|^03:00:00^|^01:27:29\n"
+            "^|^1^|^01:27:42^|^24418435.batch^|^24418435.batch^|^499092K^|^"
+            "1^|^1^|^1Gn^|^COMPLETED^|^^|^01:27:29\n"
+            "^|^1^|^01:27:42^|^24418435.extern^|^24418435.extern^|^1376K^|^"
+            "1^|^1^|^1Gn^|^COMPLETED^|^^|^00:00:00\n"
+        ),
+        "23000233": (
+            "^|^16^|^00:00:00^|^23000233^|^23000233^|^^|^1^|^1^|^4000Mc^|^"
+            "CANCELLED by 129319^|^6-00:00:00^|^00:00:00\n"
+        ),
+        "24221219": (
+            "^|^1^|^00:09:34^|^24220929_421^|^24221219^|^^|^1^|^1^|^16000Mn^|^"
+            "COMPLETED^|^09:28.052\n"
+            "^|^1^|^00:09:34^|^24220929_421.batch^|^24221219.batch"
+            "^|^5664932K^|^1^|^1^|^16000Mn^|^COMPLETED^|^09:28.051\n"
+            "^|^1^|^00:09:34^|^24220929_421.extern^|^24221219.extern"
+            "^|^1404K^|^1^|^1^|^16000Mn^|^COMPLETED^|^00:00:00\n"
+        ),
+        "24221220": (
+            "^|^1^|^00:09:33^|^24220929_431^|^24221220^|^^|^1^|^1^|^16000Mn^|^"
+            "PENDING^|^09:27.460\n"
+            "^|^1^|^00:09:33^|^24220929_431.batch^|^24221220.batch"
+            "^|^5518572K^|^1^|^1^|^16000Mn^|^PENDING^|^09:27.459\n"
+            "^|^1^|^00:09:33^|^24220929_431.extern^|^24221220.extern"
+            "^|^1400K^|^1^|^1^|^16000Mn^|^PENDING^|^00:00:00\n"
+        ),
+        "23000381": (
+            "^|^8^|^00:00:12^|^23000381^|^23000381^|^^|^1^|^1^|^4000Mc^|^FAILED^|^00:00:00\n"
+            "^|^8^|^00:00:12^|^23000381.batch^|^23000381.batch^|^^|^1^|^1^|^4000Mc^|^"
+            "FAILED^|^00:00:00\n"
+            "^|^8^|^00:00:12^|^23000381.extern^|^23000381.extern^|^1592K^|^1^|^1^|^4000Mc^|^"
+            "COMPLETED^|^00:00:00\n"
+        ),
+        "23000210": (
+            "^|^8^|^00:00:00^|^23000210^|^23000210^|^^|^1^|^1^|^20000Mn^|^"
+            "FAILED^|^00:00.007\n"
+            "^|^8^|^00:00:00^|^23000210.batch^|^23000210.batch^|^1988K^|^1^|^1^|^20000Mn^|^"
+            "FAILED^|^00:00.006\n"
+            "^|^8^|^00:00:00^|^23000210.extern^|^23000210.extern^|^1556K^|^1^|^1^|^20000Mn^|^"
+            "COMPLETED^|^00:00:00\n"
+        ),
+    }

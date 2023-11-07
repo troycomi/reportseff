@@ -18,13 +18,17 @@ class ReportseffParameters:
     not_state: str = ""
     parsable: bool = False
     since: str = ""
+    until: str = ""
     state: str = ""
+    slurm_format: str = ""
     user: str = ""
+    partition: str = ""
+    extra_args: str = ""
 
     def __init__(
         self,
         jobs: tuple,
-        color: bool = True,
+        color: bool,
         debug: bool = False,
         format_str: str = "",
         modified_sort: bool = False,
@@ -33,8 +37,12 @@ class ReportseffParameters:
         not_state: str = "",
         parsable: bool = False,
         since: str = "",
+        until: str = "",
         state: str = "",
+        slurm_format: str = "",
         user: str = "",
+        partition: str = "",
+        extra_args: str = "",
     ) -> None:
         """Create a new parameter object.
 
@@ -49,8 +57,12 @@ class ReportseffParameters:
             not_state: states to remove
             parsable: if output should be parsable
             since: display jobs since a specific time
+            until: display jobs until a specific time
             state: stats to display
+            slurm_format: format string passed to sbatch
             user: the user to report for
+            partition: the partition to report for
+            extra_args: extra arguments to forward to sacct
         """
         self.color = color
         self.debug = debug
@@ -62,8 +74,12 @@ class ReportseffParameters:
         self.not_state = not_state
         self.parsable = parsable
         self.since = since
+        self.until = until
         self.state = state
+        self.slurm_format = slurm_format
         self.user = user
+        self.partition = partition
+        self.extra_args = extra_args
 
         if self.format_str.startswith("+"):
             self.format_str = (

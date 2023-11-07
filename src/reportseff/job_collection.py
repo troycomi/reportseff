@@ -28,7 +28,7 @@ class JobCollection:
         ]
 
         self.job_file_regex = re.compile(
-            r"^.*?[_-](?P<jobid>(?P<job>[0-9]+)(_[0-9]+)?)(.out)?$"
+            r"^.*?[_-](?P<jobid>(?P<job>[0-9]+)(_[0-9]+)?)(\.out)?$"
         )
         self.job_regex = re.compile(r"^(?P<jobid>(?P<job>[0-9]+)(_[][\-0-9]+)?)$")
 
@@ -88,7 +88,10 @@ class JobCollection:
             self.process_seff_file(file)
 
         if len(self.jobs) == 0:
-            raise ValueError(f"{working_directory} contains no valid output files!")
+            raise ValueError(
+                f"{working_directory} contains no valid output files!"
+                "\nDo you need to set a custom format with `--slurm-format`?"
+            )
         self.dir_name = working_directory
 
     def set_jobs(self, jobs: tuple) -> None:
