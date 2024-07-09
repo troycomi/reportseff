@@ -1,4 +1,5 @@
 """Test job object."""
+
 import pytest
 
 from reportseff import job as job_module
@@ -322,12 +323,12 @@ def test_parse_slurm_timedelta():
     """Can parse all types of time formats."""
     timestamps = ["01-03:04:02", "03:04:02", "04:02.123"]
     expected_seconds = [97442, 11042, 242]
-    for timestamp, seconds in zip(timestamps, expected_seconds):
+    for timestamp, seconds in zip(timestamps, expected_seconds):  # noqa: B905
         assert job_module._parse_slurm_timedelta(timestamp) == seconds
 
     with pytest.raises(ValueError) as exception:
         job_module._parse_slurm_timedelta("asdf")
-    assert 'Failed to parse time "asdf"' in str(exception)
+    assert "Failed to parse time 'asdf'" in str(exception)
 
 
 def test_parsemem_nodes():
@@ -360,7 +361,7 @@ def test_parsememstep():
 
     with pytest.raises(ValueError) as e:
         job_module.parsemem("18GG")
-    assert 'Failed to parse memory "18GG"' in str(e)
+    assert "Failed to parse memory '18GG'" in str(e)
 
     assert job_module.parsemem("") == 0
     assert job_module.parsemem("0") == 0

@@ -1,4 +1,5 @@
 """Test operation of output renderer object."""
+
 import re
 
 import click

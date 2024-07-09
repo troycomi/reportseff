@@ -1,4 +1,5 @@
 """Nox sessions."""
+
 import tempfile
 
 import nox
@@ -33,7 +34,7 @@ def install_with_constraints(session, *args, **kwargs):
         session.install(f"--constraint={requirements.name}", *args, **kwargs)
 
 
-@nox.session(python=["3.7", "3.8", "3.9"])
+@nox.session(python=["3.8", "3.9", "3.10", "3.11"])
 def tests(session):
     """Run test suite with pytest and coverage."""
     args = session.posargs
@@ -44,7 +45,7 @@ def tests(session):
     session.run("pytest", "--cov", *args)
 
 
-@nox.session(python=["3.7", "3.8", "3.9"])
+@nox.session(python=["3.8", "3.9", "3.10", "3.11"])
 def tests_old_click(session):
     """Run test suite with pytest and coverage, using click 6.7."""
     args = session.posargs
@@ -56,7 +57,7 @@ def tests_old_click(session):
     session.run("pytest", "--cov", *args)
 
 
-@nox.session(python="3.8")
+@nox.session(python="3.10")
 def black(session):
     """Format code with black."""
     args = session.posargs or locations
@@ -64,7 +65,7 @@ def black(session):
     session.run("black", *args)
 
 
-@nox.session(python="3.8")
+@nox.session(python="3.10")
 def lint(session):
     """Lint code with flake8."""
     args = session.posargs or locations
@@ -81,7 +82,7 @@ def lint(session):
     session.run("flake8", *args)
 
 
-@nox.session(python="3.8")
+@nox.session(python="3.10")
 def safety(session):
     """Scan dependencies for insecure packages."""
     with tempfile.NamedTemporaryFile() as requirements:
@@ -96,10 +97,16 @@ def safety(session):
             external=True,
         )
         install_with_constraints(session, "safety")
-        session.run("safety", "check", f"--file={requirements.name}", "--full-report")
+        session.run(
+            "safety",
+            "check",
+            "--ignore=70612",  # jinja template injection
+            f"--file={requirements.name}",
+            "--full-report",
+        )
 
 
-@nox.session(python=["3.8", "3.7"])
+@nox.session(python=["3.8", "3.9"])
 def mypy(session):
     """Type-check with mypy."""
     args = session.posargs or locations
@@ -107,7 +114,7 @@ def mypy(session):
     session.run("mypy", *args)
 
 
-@nox.session(python="3.7")
+@nox.session(python="3.10")
 def pytype(session):
     """Run the static type checker pytype."""
     args = session.posargs or ["--disable=import-error", *locations]
@@ -115,7 +122,7 @@ def pytype(session):
     session.run("pytype", *args)
 
 
-@nox.session(python="3.8")
+@nox.session(python="3.10")
 def typeguard(session):
     """Runtime type checking during unit tests."""
     args = session.posargs
@@ -124,7 +131,7 @@ def typeguard(session):
     session.run("pytest", f"--typeguard-packages={package}", *args)
 
 
-@nox.session(python="3.8")
+@nox.session(python="3.10")
 def coverage(session):
     """Upload coverage data."""
     install_with_constraints(session, "coverage[toml]", "codecov")

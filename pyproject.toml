@@ -10,30 +10,29 @@ repository= "https://github.com/troycomi/reportseff"
 keywords= ["slurm","seff"]
 
 [tool.poetry.dependencies]
-python = ">=3.7.0,<4.0"
+python = ">=3.8.1,<4.0"
 click = ">=6.7"
 importlib-metadata = {version = "^4.8.2", python = "<3.8"}
 
 [tool.poetry.dev-dependencies]
-pytest = "^7.2.0"
-pytest-mock = "^3.6.1"
-coverage = {extras = ["toml"], version = "^6.0.2"}
-pytest-cov = "^3.0.0"
-black = { version = "^22.1.0", allow-prereleases = true }
-flake8 = "^3.7.9"
-flake8-bandit = "^2.1.2"
+pytest = "^8.2.2"
+pytest-mock = "^3.14.0"
+coverage = {extras = ["toml"], version = "^7.5.4"}
+pytest-cov = "^5.0.0"
+black = { version = "^24.4.2", allow-prereleases = true }
+flake8 = "^7.1.0"
+flake8-bandit = "^4.1.1"
 flake8-black = "^0.3.6"
-flake8-bugbear = "^21.9.2"
+flake8-bugbear = "^24.4.26"
 flake8-import-order = "^0.18.1"
-safety = "^2.2.0"
-mypy = "^0.910"
-types-click = "^7.1.7"
-pytype = {version = "^2021.10.11", python = "3.7"}
-typeguard = "^2.13.0"
-flake8-annotations = "^2.0.0"
-flake8-docstrings = ">=1.6.0"
+safety = "^3.2.4"
+mypy = "^1.10.1"
+types-click = "^7.1.8"
+pytype = "^2024.4.11"
+typeguard = "^4.3.0"
+flake8-annotations = "^3.1.1"
+flake8-docstrings = ">=1.7.0"
 darglint = ">=1.8.1"
-Sphinx = "^4.2.0"
 codecov = ">=2.1.13"
 
 [tool.poetry.scripts]

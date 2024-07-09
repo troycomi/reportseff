@@ -35,9 +35,10 @@ repos:
   - id: shellcheck
 
 - repo: https://github.com/psf/black
-  rev: 22.3.0
+  rev: 24.4.2
   hooks:
   -   id: black
+      language_version: "3.10"
 
 - repo: https://github.com/PyCQA/flake8
   rev: 3.9.2

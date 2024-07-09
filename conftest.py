@@ -1,4 +1,5 @@
 """Collect common fixtures"""
+
 import json
 import gzip
 import base64

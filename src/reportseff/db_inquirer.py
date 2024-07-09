@@ -1,4 +1,5 @@
 """Abstract and concrete implementations of scheduler databases."""
+
 from abc import ABC, abstractmethod
 import datetime
 import re
@@ -12,6 +13,7 @@ import click
 class BaseInquirer(ABC):
     """Abstract interface for inquiring different schedulers."""
 
+    @abstractmethod
     def __init__(self) -> None:
         """Initialize a new inquirer."""
 
@@ -259,7 +261,11 @@ class SacctInquirer(BaseInquirer):
             debug_cmd("\n".join(lines))
 
         sacct_split = re.compile(r"\^\|\^")
-        result = [dict(zip(columns, sacct_split.split(line))) for line in lines if line]
+        result = [
+            dict(zip(columns, sacct_split.split(line)))  # noqa: B905
+            for line in lines
+            if line
+        ]
 
         if self.state:
             # split to get first word in entries like "CANCELLED BY X"
