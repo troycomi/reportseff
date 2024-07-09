@@ -1,4 +1,5 @@
 """Module for representing scheduler jobs."""
+
 import base64
 from datetime import timedelta
 import gzip
@@ -315,7 +316,7 @@ def _parse_slurm_timedelta(delta: str) -> int:
                 milliseconds=int(match.group("milliseconds")),
             ).total_seconds()
         )
-    raise ValueError(f'Failed to parse time "{delta}"')
+    raise ValueError(f"Failed to parse time {delta!r}")
 
 
 def parsemem(mem: str, nodes: int = 1, cpus: int = 1) -> float:
@@ -339,7 +340,7 @@ def parsemem(mem: str, nodes: int = 1, cpus: int = 1) -> float:
         return 0
     match = re.fullmatch(MEM_RE, mem)
     if not match:
-        raise ValueError(f'Failed to parse memory "{mem}"')
+        raise ValueError(f"Failed to parse memory {mem!r}")
     memory = float(match.group("memory"))
 
     if match.group("multiple") != "":
@@ -390,11 +391,11 @@ def _parse_admin_comment_to_dict(comment: str) -> Optional[dict]:
         return None
 
     if comment_type not in ("JS1",):
-        raise ValueError(f"Unknown comment type '{comment_type}'")
+        raise ValueError(f"Unknown comment type {comment_type!r}")
     try:
         return json.loads(gzip.decompress(base64.b64decode(comment[4:])))
-    except BaseException as exception:
-        raise ValueError(f"Cannot decode comment '{comment}'") from exception
+    except Exception as exception:
+        raise ValueError(f"Cannot decode comment {comment!r}") from exception
 
 
 def _get_node_data(comment_data: dict, node_data: dict) -> dict:

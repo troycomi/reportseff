@@ -1,4 +1,5 @@
 """Test cli usage."""
+
 import shlex
 import subprocess
 

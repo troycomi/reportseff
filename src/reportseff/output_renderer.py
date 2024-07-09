@@ -1,4 +1,5 @@
 """Module for rendering tabulated values."""
+
 import copy
 import re
 from typing import Any, Callable, Dict, Generator, List, Optional, Tuple, Union
@@ -160,8 +161,8 @@ class OutputRenderer:
                 # for each job
                 for job in jobs
                 # columns is a tuple of generators from format_node_job
-                for columns in zip(
-                    *(fmt.format_node_job(job, self.gpu) for fmt in self.formatters)
+                for columns in zip(  # noqa: B905
+                    *(fmt.format_node_job(job, self.gpu) for fmt in self.formatters),
                 )
             )
 
@@ -192,7 +193,7 @@ class ColumnFormatter:
             and not match.group("alignment")
             and not match.group("width")
         ):
-            err = f"Unable to parse format token '{token}'"
+            err = f"Unable to parse format token {token!r}"
             if "%" in token:
                 err += ", did you forget to wrap in quotes?"
             raise ValueError(err)
@@ -269,7 +270,7 @@ class ColumnFormatter:
                 return title
 
         raise ValueError(
-            f"'{self.title}' is not a valid title. "
+            f"{self.title!r} is not a valid title. "
             "Run sacct --helpformat for a list of allowed values."
         )
 

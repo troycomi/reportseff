@@ -1,4 +1,5 @@
 """Test sacct implementation of db inqurirer."""
+
 import datetime
 import subprocess
 

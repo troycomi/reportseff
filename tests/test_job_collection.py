@@ -1,4 +1,5 @@
 """Test job collection functions."""
+
 import pytest
 
 from reportseff import job_collection
@@ -109,7 +110,7 @@ def test_process_line(jobs, mocker):
     mock_update = mocker.patch.object(Job, "update")
     jobs.process_entry(
         dict(
-            zip(
+            zip(  # noqa: B905
                 jobs.get_columns(),
                 "24371655|24371655|COMPLETED|1|"
                 "01:29:47|01:29:56|03:00:00|1Gn||1|".split("|"),
@@ -118,7 +119,7 @@ def test_process_line(jobs, mocker):
     )
     jobs.process_entry(
         dict(
-            zip(
+            zip(  # noqa: B905
                 jobs.get_columns(),
                 "24371655.batch|24371655.batch|COMPLETED|1|"
                 "01:29:47|01:29:56||1Gn|495644K|1|1".split("|"),
@@ -127,7 +128,7 @@ def test_process_line(jobs, mocker):
     )
     jobs.process_entry(
         dict(
-            zip(
+            zip(  # noqa: B905
                 jobs.get_columns(),
                 "24371655.extern|24371655.extern|COMPLETED|1|"
                 "00:00:00|01:29:56||1Gn|1372K|1|1".split("|"),
@@ -190,7 +191,7 @@ def test_process_line_partition_timelimit_not_set(jobs, mocker):
     mock_update = mocker.patch.object(Job, "update")
     jobs.process_entry(
         dict(
-            zip(
+            zip(  # noqa: B905
                 jobs.get_columns(),
                 "24371655|24371655|COMPLETED|1|"
                 "01:29:47|01:29:56|Partition_Limit|1Gn||1||mainqueue".split("|"),
@@ -225,7 +226,7 @@ def test_process_line_partition_timelimit(jobs, mocker):
     jobs.set_partition_limits({"mainqueue": "01:02:03"})
     jobs.process_entry(
         dict(
-            zip(
+            zip(  # noqa: B905
                 jobs.get_columns(),
                 "24371655|24371655|COMPLETED|1|"
                 "01:29:47|01:29:56|Partition_Limit|1Gn||1||mainqueue".split("|"),
@@ -260,7 +261,7 @@ def test_process_line_partition_timelimit_no_match(jobs, mocker):
     jobs.set_partition_limits({"mainqueue2": "01:02:03"})
     jobs.process_entry(
         dict(
-            zip(
+            zip(  # noqa: B905
                 jobs.get_columns(),
                 "24371655|24371655|COMPLETED|1|"
                 "01:29:47|01:29:56|Partition_Limit|1Gn||1||mainqueue".split("|"),

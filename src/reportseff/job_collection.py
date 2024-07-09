@@ -1,4 +1,5 @@
 """Module representing a collection of jobs."""
+
 import os
 import re
 from typing import Dict, List, Optional, Tuple
