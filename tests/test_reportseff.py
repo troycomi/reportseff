@@ -316,7 +316,7 @@ def test_since_all_users(mocker, _mock_inquirer, console_jobs):
         stdout=mocker.ANY,
         encoding=mocker.ANY,
         check=mocker.ANY,
-        universal_newlines=True,
+        text=True,
         shell=False,
     )
 
@@ -359,7 +359,7 @@ def test_since_all_users_partition(mocker, _mock_inquirer, console_jobs):
         stdout=mocker.ANY,
         encoding=mocker.ANY,
         check=mocker.ANY,
-        universal_newlines=True,
+        text=True,
         shell=False,
     )
 

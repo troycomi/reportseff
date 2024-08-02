@@ -55,7 +55,7 @@ select = [
   "I",  # isort
   "N",  # pep8-naming
   # "D",  # pydocstyle
-  # "UP",  # pyupgrade
+  "UP",  # pyupgrade
   "ANN",  # annotations
   "S",  # bandit
   "BLE",
