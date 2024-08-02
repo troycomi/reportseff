@@ -232,7 +232,7 @@ class Job:
         return self.other_entries.get(key, "---")
 
     def get_node_entries(
-        self, key: str, gpu: bool = False
+        self, key: str, *, gpu: bool = False
     ) -> Generator[Any, None, None]:
         """Get an attribute by name for each node in job.
 

@@ -59,10 +59,10 @@ select = [
   "ANN",  # annotations
   "S",  # bandit
   "BLE",
-  # "FBT",  # boolean trap
+  "FBT",  # boolean trap
   "B",  # bugbear
   "A",  # builtins
-  # "COM",  # commas
+  "COM",  # commas
   # "C4",  # comprehensions
   "T10",  # debugger
   # "FA",  # error message
@@ -87,11 +87,12 @@ select = [
   # "TRY",  # tryceratops
   # "PERF",  # perflint
   "FURB",  # refurb
-  # "RUF",  # refurb
+  # "RUF",  # ruff
 ]
 ignore = [
   "ANN101",  # missing self
   "ANN401",  # allow Any
+  "COM812",  # allow missing commas on last element
 ]
 
 

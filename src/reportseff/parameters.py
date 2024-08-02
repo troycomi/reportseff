@@ -28,6 +28,7 @@ class ReportseffParameters:
     def __init__(
         self,
         jobs: tuple,
+        *,
         color: bool,
         debug: bool = False,
         format_str: str = "",

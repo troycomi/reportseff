@@ -147,7 +147,10 @@ def get_jobs(args: ReportseffParameters) -> Tuple[str, int]:
         job_collection.set_custom_seff_format(args.slurm_format)
 
     inquirer, renderer = get_implementation(
-        args.format_str, args.node, args.node_and_gpu, args.parsable
+        args.format_str,
+        node=args.node,
+        node_and_gpu=args.node_and_gpu,
+        parsable=args.parsable,
     )
 
     inquirer.set_state(args.state)
@@ -177,7 +180,12 @@ def get_jobs(args: ReportseffParameters) -> Tuple[str, int]:
         sys.exit(1)
 
     job_collection.set_partition_limits(inquirer.get_partition_timelimits())
-    db_output = get_db_output(inquirer, renderer, job_collection, args.debug)
+    db_output = get_db_output(
+        inquirer,
+        renderer,
+        job_collection,
+        debug=args.debug,
+    )
     for entry in db_output:
         try:
             job_collection.process_entry(entry, add_job=add_jobs)
@@ -185,7 +193,7 @@ def get_jobs(args: ReportseffParameters) -> Tuple[str, int]:
             click.echo(f"Error processing entry: {entry}", err=True)
             raise error
 
-    found_jobs = job_collection.get_sorted_jobs(args.modified_sort)
+    found_jobs = job_collection.get_sorted_jobs(change_sort=args.modified_sort)
     found_jobs = [j for j in found_jobs if j.state]
 
     return renderer.format_jobs(found_jobs), len(found_jobs)
@@ -193,6 +201,7 @@ def get_jobs(args: ReportseffParameters) -> Tuple[str, int]:
 
 def get_implementation(
     format_str: str,
+    *,
     node: bool = False,
     node_and_gpu: bool = False,
     parsable: bool = False,
@@ -226,6 +235,7 @@ def get_db_output(
     inquirer: BaseInquirer,
     renderer: OutputRenderer,
     job_collection: JobCollection,
+    *,
     debug: bool,
 ) -> List[Dict[str, str]]:
     """Get output from inquirer.

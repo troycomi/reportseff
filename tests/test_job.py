@@ -463,31 +463,31 @@ def test_single_gpu(single_gpu):
     assert list(job.get_node_entries("GPUMem")) == [99.8]
 
     # with forced GPU output
-    assert list(job.get_node_entries("JobID", True)) == [
+    assert list(job.get_node_entries("JobID", gpu=True)) == [
         "8197399",
         "  tiger-i23g14",
         "    3",
     ]
 
-    assert list(job.get_node_entries("CPUEff", True)) == [
+    assert list(job.get_node_entries("CPUEff", gpu=True)) == [
         95.4,
         95.4,
         "",
     ]
 
-    assert list(job.get_node_entries("MemEff", True)) == [
+    assert list(job.get_node_entries("MemEff", gpu=True)) == [
         9.5,
         9.5,
         "",
     ]
 
-    assert list(job.get_node_entries("GPUEff", True)) == [
+    assert list(job.get_node_entries("GPUEff", gpu=True)) == [
         29.4,
         29.4,
         29.4,
     ]
 
-    assert list(job.get_node_entries("GPUMem", True)) == [
+    assert list(job.get_node_entries("GPUMem", gpu=True)) == [
         99.8,
         99.8,
         99.8,
@@ -513,7 +513,7 @@ def test_multi_gpu(multi_gpu):
     assert list(job.get_node_entries("GPUMem")) == [30.1]
 
     # with forced GPU output
-    assert list(job.get_node_entries("JobID", True)) == [
+    assert list(job.get_node_entries("JobID", gpu=True)) == [
         "8189521",
         "  tiger-i19g9",
         "    0",
@@ -522,7 +522,7 @@ def test_multi_gpu(multi_gpu):
         "    3",
     ]
 
-    assert list(job.get_node_entries("CPUEff", True)) == [
+    assert list(job.get_node_entries("CPUEff", gpu=True)) == [
         10.5,
         10.5,
         "",
@@ -531,7 +531,7 @@ def test_multi_gpu(multi_gpu):
         "",
     ]
 
-    assert list(job.get_node_entries("MemEff", True)) == [
+    assert list(job.get_node_entries("MemEff", gpu=True)) == [
         26.3,
         26.3,
         "",
@@ -540,7 +540,7 @@ def test_multi_gpu(multi_gpu):
         "",
     ]
 
-    assert list(job.get_node_entries("GPUEff", True)) == [
+    assert list(job.get_node_entries("GPUEff", gpu=True)) == [
         3.5,
         3.5,
         3.5,
@@ -549,7 +549,7 @@ def test_multi_gpu(multi_gpu):
         3.8,
     ]
 
-    assert list(job.get_node_entries("GPUMem", True)) == [
+    assert list(job.get_node_entries("GPUMem", gpu=True)) == [
         30.1,
         30.1,
         30.1,
@@ -600,7 +600,7 @@ def test_multi_node_multi_gpu(multi_node_multi_gpu):
         30.1,
     ]
 
-    assert list(job.get_node_entries("JobID", True)) == [
+    assert list(job.get_node_entries("JobID", gpu=True)) == [
         "8189521",
         "  tiger-i19g10",
         "    0",
@@ -614,7 +614,7 @@ def test_multi_node_multi_gpu(multi_node_multi_gpu):
         "    3",
     ]
 
-    assert list(job.get_node_entries("CPUEff", True)) == [
+    assert list(job.get_node_entries("CPUEff", gpu=True)) == [
         10.5,
         10.5,
         "",
@@ -628,7 +628,7 @@ def test_multi_node_multi_gpu(multi_node_multi_gpu):
         "",
     ]
 
-    assert list(job.get_node_entries("MemEff", True)) == [
+    assert list(job.get_node_entries("MemEff", gpu=True)) == [
         26.0,
         25.8,
         "",
@@ -642,7 +642,7 @@ def test_multi_node_multi_gpu(multi_node_multi_gpu):
         "",
     ]
 
-    assert list(job.get_node_entries("GPUEff", True)) == [
+    assert list(job.get_node_entries("GPUEff", gpu=True)) == [
         5.5,
         7.5,
         7.5,
@@ -656,7 +656,7 @@ def test_multi_node_multi_gpu(multi_node_multi_gpu):
         3.8,
     ]
 
-    assert list(job.get_node_entries("GPUMem", True)) == [
+    assert list(job.get_node_entries("GPUMem", gpu=True)) == [
         30.1,
         30.1,
         30.1,
@@ -683,7 +683,7 @@ def test_short_job(short_job):
     assert job.gpu_mem is None
 
     assert list(job.get_node_entries("JobID")) == ["8205464"]
-    assert list(job.get_node_entries("JobID", True)) == ["8205464"]
+    assert list(job.get_node_entries("JobID", gpu=True)) == ["8205464"]
     assert list(job.get_node_entries("CPUEff")) == [6.2]
     assert list(job.get_node_entries("State")) == ["FAILED"]
 

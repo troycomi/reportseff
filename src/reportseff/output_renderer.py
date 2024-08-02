@@ -25,6 +25,7 @@ class OutputRenderer:
         self,
         valid_titles: List,
         format_str: str = "JobID%>,State,Elapsed%>,CPUEff,MemEff",
+        *,
         node: bool = False,
         gpu: bool = False,
         parsable: bool = False,
@@ -144,7 +145,7 @@ class OutputRenderer:
                 if self.parsable:
                     fmt.no_formatting()
                 else:
-                    fmt.compute_width(jobs, self.node, self.gpu)
+                    fmt.compute_width(jobs, node=self.node, gpu=self.gpu)
 
             result += delimiter.join(
                 fmt.format_title(bold=not self.parsable) for fmt in self.formatters
@@ -161,7 +162,10 @@ class OutputRenderer:
                 for job in jobs
                 # columns is a tuple of generators from format_node_job
                 for columns in zip(  # noqa: B905
-                    *(fmt.format_node_job(job, self.gpu) for fmt in self.formatters),
+                    *(
+                        fmt.format_node_job(job, gpu=self.gpu)
+                        for fmt in self.formatters
+                    ),
                 )
             )
 
@@ -276,6 +280,7 @@ class ColumnFormatter:
     def compute_width(
         self,
         jobs: List[Job],
+        *,
         node: bool = False,
         gpu: bool = False,
     ) -> None:
@@ -298,7 +303,7 @@ class ColumnFormatter:
                 width = max(
                     len(str(entry))
                     for job in jobs
-                    for entry in job.get_node_entries(self.title, gpu)
+                    for entry in job.get_node_entries(self.title, gpu=gpu)
                 )
             else:
                 width = max(len(str(job.get_entry(self.title))) for job in jobs)
@@ -312,7 +317,7 @@ class ColumnFormatter:
         self.width = None
         self.color_function = lambda x: (str(x), None)
 
-    def format_title(self, bold: bool = True) -> str:
+    def format_title(self, *, bold: bool = True) -> str:
         """Format title of column for printing.
 
         Args:
@@ -337,7 +342,10 @@ class ColumnFormatter:
         return self.format_entry(*self.color_function(value))
 
     def format_node_job(
-        self, job: Job, gpu: bool = False
+        self,
+        job: Job,
+        *,
+        gpu: bool = False,
     ) -> Generator[str, None, None]:
         """Format the provided job for printing with individual node stats.
 
@@ -350,7 +358,7 @@ class ColumnFormatter:
         """
         return (
             self.format_entry(*self.color_function(value))
-            for value in job.get_node_entries(self.title, gpu)
+            for value in job.get_node_entries(self.title, gpu=gpu)
         )
 
     def format_entry(self, entry: str, color: Optional[str] = None) -> str:

@@ -458,7 +458,7 @@ def test_get_sorted_jobs(jobs, mocker):
     jobs.add_job("j2", "jid2")
     jobs.add_job("j13", "jid13")
 
-    assert jobs.get_sorted_jobs(False) == [
+    assert jobs.get_sorted_jobs(change_sort=False) == [
         Job("j1", "jid1", None),
         Job("j2", "jid2", None),
         Job("j3", "jid3", None),
@@ -481,7 +481,7 @@ def test_get_sorted_jobs(jobs, mocker):
     mocker.patch("reportseff.job_collection.os.path.getmtime", side_effect=len)
 
     # still uses other sorting, no dir_name set
-    assert jobs.get_sorted_jobs(True) == [
+    assert jobs.get_sorted_jobs(change_sort=True) == [
         Job("j13", "jid13", None),
         Job("j2", "jid2", "file234"),
         Job("j14", "jid14", "nothing"),
@@ -490,7 +490,7 @@ def test_get_sorted_jobs(jobs, mocker):
     ]
 
     jobs.dir_name = "dir"  # now dir/nothing doesn't exist
-    assert jobs.get_sorted_jobs(True) == [
+    assert jobs.get_sorted_jobs(change_sort=True) == [
         Job("j14", "jid14", "nothing"),
         Job("j13", "jid13", None),
         Job("j2", "jid2", "file234"),

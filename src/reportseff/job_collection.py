@@ -191,7 +191,7 @@ class JobCollection:
         """
         self.jobs[jobid] = Job(job, jobid, filename)
 
-    def process_entry(self, entry: Dict, add_job: bool = False) -> None:
+    def process_entry(self, entry: Dict, *, add_job: bool = False) -> None:
         """Update the jobs collection with information from the provided entry.
 
         Args:
@@ -223,7 +223,7 @@ class JobCollection:
 
         self.jobs[job_id].update(entry)
 
-    def get_sorted_jobs(self, change_sort: bool) -> List[Job]:
+    def get_sorted_jobs(self, *, change_sort: bool) -> List[Job]:
         """Sort the jobs.
 
         Args:
