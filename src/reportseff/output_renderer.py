@@ -161,7 +161,7 @@ class OutputRenderer:
                 # for each job
                 for job in jobs
                 # columns is a tuple of generators from format_node_job
-                for columns in zip(  # noqa: B905
+                for columns in zip(
                     *(
                         fmt.format_node_job(job, gpu=self.gpu)
                         for fmt in self.formatters

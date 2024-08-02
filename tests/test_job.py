@@ -322,7 +322,7 @@ def test_parse_slurm_timedelta():
     """Can parse all types of time formats."""
     timestamps = ["01-03:04:02", "03:04:02", "04:02.123"]
     expected_seconds = [97442, 11042, 242]
-    for timestamp, seconds in zip(timestamps, expected_seconds):  # noqa: B905
+    for timestamp, seconds in zip(timestamps, expected_seconds):
         assert job_module._parse_slurm_timedelta(timestamp) == seconds
 
     with pytest.raises(ValueError) as exception:

@@ -230,7 +230,7 @@ def test_renderer_validate_formatters(renderer):
 
 def test_renderer_validate_formatters_with_node(renderer):
     """Validating formatters with GPUs can alter formatters."""
-    min_gpu = min_required + ["GPU", "GPUEff", "GPUMem"]
+    min_gpu = [*min_required, "GPU", "GPUEff", "GPUMem"]
     # normal function
     renderer.node = False
     renderer.gpu = False

@@ -240,7 +240,7 @@ class SacctInquirer(BaseInquirer):
         Raises:
             RuntimeError: if sacct doesn't return properly
         """
-        args = self.default_args + ["--format=" + ",".join(columns)]
+        args = [*self.default_args, "--format=" + ",".join(columns)]
         args += self.set_sacct_args(jobs)
         try:
             cmd_result = subprocess.run(
@@ -261,11 +261,7 @@ class SacctInquirer(BaseInquirer):
             debug_cmd("\n".join(lines))
 
         sacct_split = re.compile(r"\^\|\^")
-        result = [
-            dict(zip(columns, sacct_split.split(line)))  # noqa: B905
-            for line in lines
-            if line
-        ]
+        result = [dict(zip(columns, sacct_split.split(line))) for line in lines if line]
 
         if self.state:
             # split to get first word in entries like "CANCELLED BY X"

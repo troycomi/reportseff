@@ -87,7 +87,7 @@ select = [
   # "TRY",  # tryceratops
   # "PERF",  # perflint
   "FURB",  # refurb
-  # "RUF",  # ruff
+  "RUF",  # ruff
 ]
 ignore = [
   "ANN101",  # missing self
