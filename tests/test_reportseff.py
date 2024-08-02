@@ -3,9 +3,8 @@
 import shlex
 import subprocess
 
-from click.testing import CliRunner
 import pytest
-
+from click.testing import CliRunner
 from reportseff import console
 from reportseff.db_inquirer import SacctInquirer
 from reportseff.job_collection import JobCollection
@@ -13,16 +12,16 @@ from reportseff.output_renderer import OutputRenderer
 
 
 @pytest.fixture
-def mock_inquirer(mocker):
+def _mock_inquirer(mocker):
     """Override valid formats to prevent calls to shell."""
 
-    def mock_valid(self):
+    def mock_valid(_self):
         return (
             "JobID,State,Elapsed,JobIDRaw,State,TotalCPU,AllocCPUS,"
             "REQMEM,NNodes,MaxRSS,Timelimit"
         ).split(",")
 
-    def mock_partition_timelimits(self):
+    def mock_partition_timelimits(_self):
         return {}
 
     mocker.patch.object(SacctInquirer, "get_valid_formats", new=mock_valid)
@@ -31,7 +30,7 @@ def mock_inquirer(mocker):
     )
 
 
-def test_directory_input(mocker, mock_inquirer, console_jobs):
+def test_directory_input(mocker, _mock_inquirer, console_jobs):
     """Able to get jobs from directory calls."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -40,7 +39,7 @@ def test_directory_input(mocker, mock_inquirer, console_jobs):
     sub_result.stdout = console_jobs["24418435"]
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
 
-    def set_jobs(self, directory):
+    def set_jobs(self, _directory):
         self.set_jobs(("24418435",))
 
     mocker.patch.object(JobCollection, "set_out_dir", new=set_jobs)
@@ -62,7 +61,7 @@ def test_directory_input(mocker, mock_inquirer, console_jobs):
     ]
 
 
-def test_directory_input_exception(mocker, mock_inquirer, console_jobs):
+def test_directory_input_exception(mocker, _mock_inquirer, console_jobs):
     """Catch exceptions in setting jobs from directory."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -71,7 +70,7 @@ def test_directory_input_exception(mocker, mock_inquirer, console_jobs):
     sub_result.stdout = console_jobs["24418435"]
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
 
-    def set_jobs(self, directory):
+    def set_jobs(_self, _directory):
         raise ValueError("Testing EXCEPTION")
 
     mocker.patch.object(JobCollection, "set_out_dir", new=set_jobs)
@@ -81,7 +80,7 @@ def test_directory_input_exception(mocker, mock_inquirer, console_jobs):
     assert "Testing EXCEPTION" in result.output
 
 
-def test_debug_option(mocker, mock_inquirer, console_jobs):
+def test_debug_option(mocker, _mock_inquirer, console_jobs):
     """Setting debug prints subprocess result."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -108,7 +107,7 @@ def test_debug_option(mocker, mock_inquirer, console_jobs):
     ]
 
 
-def test_process_failure(mocker, mock_inquirer, console_jobs):
+def test_process_failure(mocker, _mock_inquirer, console_jobs):
     """Catch exceptions in process_entry by printing the offending entry."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -136,7 +135,7 @@ def test_process_failure(mocker, mock_inquirer, console_jobs):
     )
 
 
-def test_short_output(mocker, mock_inquirer, console_jobs):
+def test_short_output(mocker, _mock_inquirer, console_jobs):
     """Outputs with 20 or fewer entries are directly printed."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -154,7 +153,7 @@ def test_short_output(mocker, mock_inquirer, console_jobs):
     mock_click.assert_called_once_with("output", color=None)
 
 
-def test_long_output(mocker, mock_inquirer, console_jobs):
+def test_long_output(mocker, _mock_inquirer, console_jobs):
     """Outputs with more than 20 entries are echoed via pager."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -171,7 +170,7 @@ def test_long_output(mocker, mock_inquirer, console_jobs):
     mock_click.assert_called_once_with("output", color=None)
 
 
-def test_simple_job(mocker, mock_inquirer, console_jobs):
+def test_simple_job(mocker, _mock_inquirer, console_jobs):
     """Can get efficiency from a single job."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -190,7 +189,7 @@ def test_simple_job(mocker, mock_inquirer, console_jobs):
     assert output[0].split() == ["24418435", "COMPLETED", "01:27:42", "99.8%", "47.6%"]
 
 
-def test_simple_user(mocker, mock_inquirer, console_jobs):
+def test_simple_user(mocker, _mock_inquirer, console_jobs):
     """Can limit outputs by user."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -212,7 +211,7 @@ def test_simple_user(mocker, mock_inquirer, console_jobs):
     assert output[1].split() == ["25569410", "COMPLETED", "21:14:48", "91.7%", "1.5%"]
 
 
-def test_simple_partition(mocker, mock_inquirer, console_jobs):
+def test_simple_partition(mocker, _mock_inquirer, console_jobs):
     """Can limit outputs by partition."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -235,7 +234,7 @@ def test_simple_partition(mocker, mock_inquirer, console_jobs):
     assert output[1].split() == ["25569410", "COMPLETED", "21:14:48", "91.7%", "1.5%"]
 
 
-def test_format_add(mocker, mock_inquirer):
+def test_format_add(mocker, _mock_inquirer):
     """Can add to format specifier."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -255,7 +254,7 @@ def test_format_add(mocker, mock_inquirer):
     )
 
 
-def test_since(mocker, mock_inquirer, console_jobs):
+def test_since(mocker, _mock_inquirer, console_jobs):
     """Can limit outputs by time since argument."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -280,7 +279,7 @@ def test_since(mocker, mock_inquirer, console_jobs):
     assert output[1].split() == ["25569410", "COMPLETED", "21:14:48", "91.7%", "1.5%"]
 
 
-def test_since_all_users(mocker, mock_inquirer, console_jobs):
+def test_since_all_users(mocker, _mock_inquirer, console_jobs):
     """Can limit outputs by time since argument."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -322,7 +321,7 @@ def test_since_all_users(mocker, mock_inquirer, console_jobs):
     )
 
 
-def test_since_all_users_partition(mocker, mock_inquirer, console_jobs):
+def test_since_all_users_partition(mocker, _mock_inquirer, console_jobs):
     """Can limit outputs by time since and partition argument."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -365,7 +364,7 @@ def test_since_all_users_partition(mocker, mock_inquirer, console_jobs):
     )
 
 
-def test_parsable(mocker, mock_inquirer, console_jobs):
+def test_parsable(mocker, _mock_inquirer, console_jobs):
     """Can display output as parsable format."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -391,7 +390,7 @@ def test_parsable(mocker, mock_inquirer, console_jobs):
     assert output[1].split("|") == ["25569410", "RUNNING", "21:14:48", "---", "---"]
 
 
-def test_simple_state(mocker, mock_inquirer, console_jobs):
+def test_simple_state(mocker, _mock_inquirer, console_jobs):
     """Can limit outputs by filtering state."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -417,7 +416,7 @@ def test_simple_state(mocker, mock_inquirer, console_jobs):
     assert output[1].split() == []
 
 
-def test_simple_not_state(mocker, mock_inquirer, console_jobs):
+def test_simple_not_state(mocker, _mock_inquirer, console_jobs):
     """Can limit outputs by removing state."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -443,7 +442,7 @@ def test_simple_not_state(mocker, mock_inquirer, console_jobs):
     assert output[1].split() == []
 
 
-def test_invalid_not_state(mocker, mock_inquirer, console_jobs):
+def test_invalid_not_state(mocker, _mock_inquirer, console_jobs):
     """When not state isn't found, return all jobs."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -472,7 +471,7 @@ def test_invalid_not_state(mocker, mock_inquirer, console_jobs):
     assert output[5].split() == []
 
 
-def test_no_state(mocker, mock_inquirer, console_jobs):
+def test_no_state(mocker, _mock_inquirer, console_jobs):
     """Unknown states produce empty output."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -502,7 +501,7 @@ def test_no_state(mocker, mock_inquirer, console_jobs):
     assert output[3] == ""
 
 
-def test_array_job_raw_id(mocker, mock_inquirer, console_jobs):
+def test_array_job_raw_id(mocker, _mock_inquirer, console_jobs):
     """Can find job array by base id."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -528,7 +527,7 @@ def test_array_job_raw_id(mocker, mock_inquirer, console_jobs):
     assert len(output) == 1
 
 
-def test_array_job_single(mocker, mock_inquirer, console_jobs):
+def test_array_job_single(mocker, _mock_inquirer, console_jobs):
     """Can get single array job element."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -556,7 +555,7 @@ def test_array_job_single(mocker, mock_inquirer, console_jobs):
     assert len(output) == 1
 
 
-def test_array_job_base(mocker, mock_inquirer, console_jobs):
+def test_array_job_base(mocker, _mock_inquirer, console_jobs):
     """Base array job id gets all elements."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -583,7 +582,7 @@ def test_array_job_base(mocker, mock_inquirer, console_jobs):
     assert len(output) == 2
 
 
-def test_sacct_error(mocker, mock_inquirer):
+def test_sacct_error(mocker, _mock_inquirer):
     """Subprocess errors in sacct are reported."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -597,7 +596,7 @@ def test_sacct_error(mocker, mock_inquirer):
     assert "Error running sacct!" in result.output
 
 
-def test_empty_sacct(mocker, mock_inquirer):
+def test_empty_sacct(mocker, _mock_inquirer):
     """Empty sacct results produce just the header line."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -620,7 +619,7 @@ def test_empty_sacct(mocker, mock_inquirer):
     assert len(output) == 1
 
 
-def test_failed_no_mem(mocker, mock_inquirer, console_jobs):
+def test_failed_no_mem(mocker, _mock_inquirer, console_jobs):
     """Empty memory entries produce valid output."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -637,7 +636,7 @@ def test_failed_no_mem(mocker, mock_inquirer, console_jobs):
     assert len(output) == 1
 
 
-def test_canceled_by_other(mocker, mock_inquirer, console_jobs):
+def test_canceled_by_other(mocker, _mock_inquirer, console_jobs):
     """Canceled states are correctly handled."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -661,7 +660,7 @@ def test_canceled_by_other(mocker, mock_inquirer, console_jobs):
     assert len(output) == 1
 
 
-def test_zero_runtime(mocker, mock_inquirer, console_jobs):
+def test_zero_runtime(mocker, _mock_inquirer, console_jobs):
     """Entries with zero runtime produce reasonable timeeff."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -678,7 +677,7 @@ def test_zero_runtime(mocker, mock_inquirer, console_jobs):
     assert len(output) == 1
 
 
-def test_no_systems(mocker, mock_inquirer):
+def test_no_systems(mocker, _mock_inquirer):
     """When no scheduling system is found, raise error."""
     mocker.patch("reportseff.console.which", return_value=None)
     runner = CliRunner()
@@ -690,7 +689,7 @@ def test_no_systems(mocker, mock_inquirer):
     assert output[0] == "No supported scheduling systems found!"
 
 
-def test_issue_16(mocker, mock_inquirer, console_jobs):
+def test_issue_16(mocker, _mock_inquirer):
     """Incorrect memory usage for multi-node jobs."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -766,7 +765,7 @@ def test_issue_16(mocker, mock_inquirer, console_jobs):
     assert len(output) == 1
 
 
-def test_energy_reporting(mocker, mock_inquirer, console_jobs):
+def test_energy_reporting(mocker, _mock_inquirer):
     """Include energy reporting with the `energy` format code."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -851,7 +850,7 @@ def test_energy_reporting(mocker, mock_inquirer, console_jobs):
     assert len(output) == 5
 
 
-def test_extra_args(mocker, mock_inquirer, console_jobs):
+def test_extra_args(mocker):
     """Can add extra arguments for sacct."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()

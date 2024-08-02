@@ -4,10 +4,8 @@ import re
 
 import click
 import pytest
-
 from reportseff import job as job_module
 from reportseff import output_renderer
-
 
 min_required = (
     "JobID,State,Elapsed,JobIDRaw,State,TotalCPU,AllocCPUS,"

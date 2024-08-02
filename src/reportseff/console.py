@@ -1,7 +1,7 @@
 """CLI for reportseff."""
 
-from shutil import which
 import sys
+from shutil import which
 from typing import Any, Dict, List, Tuple
 
 import click

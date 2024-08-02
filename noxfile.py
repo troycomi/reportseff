@@ -4,7 +4,6 @@ import tempfile
 
 import nox
 
-
 locations = "src", "tests", "noxfile.py"
 nox.options.sessions = "lint", "safety", "mypy", "pytype", "tests", "tests_old_click"
 package = "reportseff"
@@ -61,25 +60,19 @@ def tests_old_click(session):
 def black(session):
     """Format code with black."""
     args = session.posargs or locations
-    install_with_constraints(session, "black")
-    session.run("black", *args)
+    install_with_constraints(session, "ruff")
+    session.run("ruff", "format", *args)
 
 
 @nox.session(python="3.10")
 def lint(session):
-    """Lint code with flake8."""
+    """Lint code with ruff."""
     args = session.posargs or locations
     install_with_constraints(
         session,
-        "flake8",
-        "flake8-annotations",
-        "flake8-black",
-        "flake8-bugbear",
-        "flake8-docstrings",
-        "flake8-import-order",
-        "darglint",
+        "ruff",
     )
-    session.run("flake8", *args)
+    session.run("ruff", "check", *args)
 
 
 @nox.session(python="3.10")

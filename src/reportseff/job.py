@@ -1,12 +1,11 @@
 """Module for representing scheduler jobs."""
 
 import base64
-from datetime import timedelta
 import gzip
 import json
 import re
+from datetime import timedelta
 from typing import Any, Dict, Generator, Optional, Union
-
 
 multiple_map = {
     "K": 1024**0,

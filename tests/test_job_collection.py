@@ -1,7 +1,6 @@
 """Test job collection functions."""
 
 import pytest
-
 from reportseff import job_collection
 from reportseff.job import Job
 
@@ -64,14 +63,14 @@ def test_set_out_dir_dir_handling(jobs, mocker):
     mock_exists.assert_called_once_with("/dir/path2/")
 
 
-def test_set_jobs_none_valid(jobs, mocker):
+def test_set_jobs_none_valid(jobs):
     """Set jobs raises exceptions when no valid name is provided."""
     with pytest.raises(ValueError) as exception:
         jobs.set_jobs(("asdf", "qwer", "zxcv", "asdf111"))
     assert "No valid jobs provided!" in str(exception)
 
 
-def test_set_jobs_filter(jobs, mocker):
+def test_set_jobs_filter(jobs):
     """Set jobs take only valid names from list."""
     jobs.set_jobs(("asdf", "1", "1_1", "asdf_1_2", "1_asdf_2"))
     assert jobs.jobs == {

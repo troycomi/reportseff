@@ -8,7 +8,6 @@ import click
 
 from .job import Job, state_colors
 
-
 #: Regex for format tokens, NAME[%[ALIGNMENT][WIDTH[e?]]]
 FORMAT_RE = re.compile(
     r"(?P<title>[^%:]+)"  # must have title

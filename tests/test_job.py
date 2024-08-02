@@ -1,7 +1,6 @@
 """Test job object."""
 
 import pytest
-
 from reportseff import job as job_module
 
 

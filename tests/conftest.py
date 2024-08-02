@@ -1,8 +1,9 @@
 """Collect common fixtures"""
 
-import json
-import gzip
 import base64
+import gzip
+import json
+
 import pytest
 
 

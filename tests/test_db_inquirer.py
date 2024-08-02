@@ -4,7 +4,6 @@ import datetime
 import subprocess
 
 import pytest
-
 from reportseff import db_inquirer
 
 

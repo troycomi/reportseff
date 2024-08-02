@@ -1,10 +1,10 @@
 """Abstract and concrete implementations of scheduler databases."""
 
-from abc import ABC, abstractmethod
 import datetime
 import re
 import shlex
 import subprocess
+from abc import ABC, abstractmethod
 from typing import Callable, Dict, List, Optional, Set
 
 import click
