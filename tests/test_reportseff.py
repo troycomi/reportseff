@@ -126,7 +126,8 @@ def test_process_failure(mocker, _mock_inquirer, console_jobs):
     assert result.exit_code != 0
     # remove header
     output = result.output.split("\n")
-    assert output[0] == "Error processing entry: " + (
+    assert output[0] == (
+        "Error processing entry: "
         "{'AdminComment': '', 'AllocCPUS': '16', "
         "'Elapsed': '00:00:00', 'JobID': '23000233', "
         "'JobIDRaw': '23000233', 'MaxRSS': '', 'NNodes': '1', "
@@ -538,7 +539,7 @@ def test_array_job_single(mocker, _mock_inquirer, console_jobs):
     result = runner.invoke(
         console.main,
         (
-            "--no-color 24220929_421 --format " "JobID%>,State,Elapsed%>,CPUEff,MemEff"
+            "--no-color 24220929_421 --format JobID%>,State,Elapsed%>,CPUEff,MemEff"
         ).split(),
     )
 

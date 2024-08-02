@@ -66,7 +66,7 @@ select = [
   "C4",  # comprehensions
   "T10",  # debugger
   # "FA",  # error message
-  # "ISC",  # String concatenation
+  "ISC",  # String concatenation
   "ICN",  # import conventions
   "PIE",  # pie
   "T20",  # print
@@ -93,6 +93,7 @@ ignore = [
   "ANN101",  # missing self
   "ANN401",  # allow Any
   "COM812",  # allow missing commas on last element
+  "ISC001",  # recommended by format
 ]
 
 

@@ -480,14 +480,14 @@ def test_formatter_init():
     with pytest.raises(ValueError) as exception:
         result = output_renderer.ColumnFormatter("test%a")
     assert (
-        "Unable to parse format token 'test%a', " "did you forget to wrap in quotes?"
+        "Unable to parse format token 'test%a', did you forget to wrap in quotes?"
     ) in str(exception)
 
     # if unable to parse with %, recommend using "" even when matching
     with pytest.raises(ValueError) as exception:
         result = output_renderer.ColumnFormatter("test%")
     assert (
-        "Unable to parse format token 'test%', " "did you forget to wrap in quotes?"
+        "Unable to parse format token 'test%', did you forget to wrap in quotes?"
     ) in str(exception)
 
     # end without width is an error
