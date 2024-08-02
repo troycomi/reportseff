@@ -440,7 +440,7 @@ def test_sacct_set_state(sacct, capsys):
 
     sacct.set_state("unknown,z")
     assert sacct.state == {None}
-    assert {string for string in capsys.readouterr().err.split("\n")} == {
+    assert set(capsys.readouterr().err.split("\n")) == {
         "Unknown state UNKNOWN",
         "Unknown state Z",
         "No valid states provided to include",
@@ -450,7 +450,7 @@ def test_sacct_set_state(sacct, capsys):
     # remove duplicate unknowns
     sacct.set_state("unknown,z,z,z")
     assert sacct.state == {None}
-    assert {string for string in capsys.readouterr().err.split("\n")} == {
+    assert set(capsys.readouterr().err.split("\n")) == {
         "Unknown state UNKNOWN",
         "Unknown state Z",
         "No valid states provided to include",

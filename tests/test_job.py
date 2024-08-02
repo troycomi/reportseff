@@ -18,7 +18,7 @@ def test_eq():
 
     job2 = job_module.Job("j2", "j1", "filename")
     assert job1 != job2
-    job2 = dict()
+    job2 = {}
     assert job1 != job2
 
 

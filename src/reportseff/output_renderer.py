@@ -118,7 +118,7 @@ class OutputRenderer:
         flat_result += self.required
 
         # remove duplicates
-        self.query_columns = list(sorted(set(flat_result)))
+        self.query_columns = sorted(set(flat_result))
 
     def format_jobs(self, jobs: List[Job]) -> str:
         """Given list of jobs, build output table.

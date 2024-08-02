@@ -517,7 +517,7 @@ def test_formatter_eq():
     assert fmt == fmt2
     assert fmt != fmt3
 
-    assert fmt != list()
+    assert fmt != []
     assert repr(fmt) == "Name%^None"
 
     assert "Name" == fmt

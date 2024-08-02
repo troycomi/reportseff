@@ -63,7 +63,7 @@ select = [
   "B",  # bugbear
   "A",  # builtins
   "COM",  # commas
-  # "C4",  # comprehensions
+  "C4",  # comprehensions
   "T10",  # debugger
   # "FA",  # error message
   # "ISC",  # String concatenation
