@@ -13,13 +13,13 @@ min_required = (
 ).split(",")
 
 
-@pytest.fixture
+@pytest.fixture()
 def renderer():
     """Default renderer with valid names for only default string."""
     return output_renderer.OutputRenderer(min_required)
 
 
-@pytest.fixture
+@pytest.fixture()
 def some_jobs():
     """A few test jobs for generating an output table."""
     jobs = []
@@ -122,7 +122,7 @@ def some_jobs():
     return jobs
 
 
-@pytest.fixture
+@pytest.fixture()
 def some_multi_core_jobs(
     single_core, multi_node, single_gpu, multi_gpu, multi_node_multi_gpu, short_job
 ):
@@ -467,31 +467,29 @@ def test_formatter_init():
     assert result.end is None
 
     # with invalid width
-    with pytest.raises(ValueError) as exception:
+    with pytest.raises(ValueError, match="Unable to parse format token 'test%1<0'"):
         result = output_renderer.ColumnFormatter("test%1<0")
-    assert "Unable to parse format token 'test%1<0'" in str(exception)
 
     # empty
-    with pytest.raises(ValueError) as exception:
+    with pytest.raises(ValueError, match="Unable to parse format token ''"):
         result = output_renderer.ColumnFormatter("")
-    assert "Unable to parse format token ''" in str(exception)
 
     # if unable to parse with %, recommend using ""
-    with pytest.raises(ValueError) as exception:
+    with pytest.raises(
+        ValueError,
+        match="Unable to parse format token 'test%a', did you forget to wrap in quotes?",
+    ):
         result = output_renderer.ColumnFormatter("test%a")
-    assert (
-        "Unable to parse format token 'test%a', did you forget to wrap in quotes?"
-    ) in str(exception)
 
     # if unable to parse with %, recommend using "" even when matching
-    with pytest.raises(ValueError) as exception:
+    with pytest.raises(
+        ValueError,
+        match="Unable to parse format token 'test%', did you forget to wrap in quotes?",
+    ):
         result = output_renderer.ColumnFormatter("test%")
-    assert (
-        "Unable to parse format token 'test%', did you forget to wrap in quotes?"
-    ) in str(exception)
 
     # end without width is an error
-    with pytest.raises(ValueError) as exception:
+    with pytest.raises(ValueError, match="Unable to parse format token 'test%e'"):
         result = output_renderer.ColumnFormatter("test%e")
 
     # can specify end with width
@@ -533,9 +531,8 @@ def test_formatter_validate_title():
     """Can validate titles against a column formatter."""
     fmt = output_renderer.ColumnFormatter("NaMe")
 
-    with pytest.raises(ValueError) as exception:
+    with pytest.raises(ValueError, match="'NaMe' is not a valid title"):
         fmt.validate_title(["JobID", "State"])
-    assert "'NaMe' is not a valid title" in str(exception)
 
     fmt.title = "jOBid"
     assert fmt.validate_title(["other", "JobID", "State"]) == "JobID"

@@ -4,7 +4,7 @@ import pytest
 from reportseff import job as job_module
 
 
-@pytest.fixture
+@pytest.fixture()
 def job():
     """Default job ."""
     return job_module.Job("job", "jobid", "filename")
@@ -325,9 +325,8 @@ def test_parse_slurm_timedelta():
     for timestamp, seconds in zip(timestamps, expected_seconds):
         assert job_module._parse_slurm_timedelta(timestamp) == seconds
 
-    with pytest.raises(ValueError) as exception:
+    with pytest.raises(ValueError, match="Failed to parse time 'asdf'"):
         job_module._parse_slurm_timedelta("asdf")
-    assert "Failed to parse time 'asdf'" in str(exception)
 
 
 def test_parsemem_nodes():
@@ -358,9 +357,8 @@ def test_parsememstep():
         for mem in (2, 4, 6):
             assert job_module.parsemem(f"{mem}{multiple}") == mem * 1024**exp
 
-    with pytest.raises(ValueError) as e:
+    with pytest.raises(ValueError, match="Failed to parse memory '18GG'"):
         job_module.parsemem("18GG")
-    assert "Failed to parse memory '18GG'" in str(e)
 
     assert job_module.parsemem("") == 0
     assert job_module.parsemem("0") == 0

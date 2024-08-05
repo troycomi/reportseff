@@ -11,7 +11,7 @@ from reportseff.job_collection import JobCollection
 from reportseff.output_renderer import OutputRenderer
 
 
-@pytest.fixture
+@pytest.fixture()
 def _mock_inquirer(mocker):
     """Override valid formats to prevent calls to shell."""
 
@@ -30,7 +30,8 @@ def _mock_inquirer(mocker):
     )
 
 
-def test_directory_input(mocker, _mock_inquirer, console_jobs):
+@pytest.mark.usefixtures("_mock_inquirer")
+def test_directory_input(mocker, console_jobs):
     """Able to get jobs from directory calls."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -61,7 +62,8 @@ def test_directory_input(mocker, _mock_inquirer, console_jobs):
     ]
 
 
-def test_directory_input_exception(mocker, _mock_inquirer, console_jobs):
+@pytest.mark.usefixtures("_mock_inquirer")
+def test_directory_input_exception(mocker, console_jobs):
     """Catch exceptions in setting jobs from directory."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -80,7 +82,8 @@ def test_directory_input_exception(mocker, _mock_inquirer, console_jobs):
     assert "Testing EXCEPTION" in result.output
 
 
-def test_debug_option(mocker, _mock_inquirer, console_jobs):
+@pytest.mark.usefixtures("_mock_inquirer")
+def test_debug_option(mocker, console_jobs):
     """Setting debug prints subprocess result."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -107,7 +110,8 @@ def test_debug_option(mocker, _mock_inquirer, console_jobs):
     ]
 
 
-def test_process_failure(mocker, _mock_inquirer, console_jobs):
+@pytest.mark.usefixtures("_mock_inquirer")
+def test_process_failure(mocker, console_jobs):
     """Catch exceptions in process_entry by printing the offending entry."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -136,7 +140,8 @@ def test_process_failure(mocker, _mock_inquirer, console_jobs):
     )
 
 
-def test_short_output(mocker, _mock_inquirer, console_jobs):
+@pytest.mark.usefixtures("_mock_inquirer")
+def test_short_output(mocker, console_jobs):
     """Outputs with 20 or fewer entries are directly printed."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -154,7 +159,8 @@ def test_short_output(mocker, _mock_inquirer, console_jobs):
     mock_click.assert_called_once_with("output", color=None)
 
 
-def test_long_output(mocker, _mock_inquirer, console_jobs):
+@pytest.mark.usefixtures("_mock_inquirer")
+def test_long_output(mocker, console_jobs):
     """Outputs with more than 20 entries are echoed via pager."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -171,7 +177,8 @@ def test_long_output(mocker, _mock_inquirer, console_jobs):
     mock_click.assert_called_once_with("output", color=None)
 
 
-def test_simple_job(mocker, _mock_inquirer, console_jobs):
+@pytest.mark.usefixtures("_mock_inquirer")
+def test_simple_job(mocker, console_jobs):
     """Can get efficiency from a single job."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -190,7 +197,8 @@ def test_simple_job(mocker, _mock_inquirer, console_jobs):
     assert output[0].split() == ["24418435", "COMPLETED", "01:27:42", "99.8%", "47.6%"]
 
 
-def test_simple_user(mocker, _mock_inquirer, console_jobs):
+@pytest.mark.usefixtures("_mock_inquirer")
+def test_simple_user(mocker, console_jobs):
     """Can limit outputs by user."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -212,7 +220,8 @@ def test_simple_user(mocker, _mock_inquirer, console_jobs):
     assert output[1].split() == ["25569410", "COMPLETED", "21:14:48", "91.7%", "1.5%"]
 
 
-def test_simple_partition(mocker, _mock_inquirer, console_jobs):
+@pytest.mark.usefixtures("_mock_inquirer")
+def test_simple_partition(mocker, console_jobs):
     """Can limit outputs by partition."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -235,7 +244,8 @@ def test_simple_partition(mocker, _mock_inquirer, console_jobs):
     assert output[1].split() == ["25569410", "COMPLETED", "21:14:48", "91.7%", "1.5%"]
 
 
-def test_format_add(mocker, _mock_inquirer):
+@pytest.mark.usefixtures("_mock_inquirer")
+def test_format_add(mocker):
     """Can add to format specifier."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -255,7 +265,8 @@ def test_format_add(mocker, _mock_inquirer):
     )
 
 
-def test_since(mocker, _mock_inquirer, console_jobs):
+@pytest.mark.usefixtures("_mock_inquirer")
+def test_since(mocker, console_jobs):
     """Can limit outputs by time since argument."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -280,7 +291,8 @@ def test_since(mocker, _mock_inquirer, console_jobs):
     assert output[1].split() == ["25569410", "COMPLETED", "21:14:48", "91.7%", "1.5%"]
 
 
-def test_since_all_users(mocker, _mock_inquirer, console_jobs):
+@pytest.mark.usefixtures("_mock_inquirer")
+def test_since_all_users(mocker, console_jobs):
     """Can limit outputs by time since argument."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -322,7 +334,8 @@ def test_since_all_users(mocker, _mock_inquirer, console_jobs):
     )
 
 
-def test_since_all_users_partition(mocker, _mock_inquirer, console_jobs):
+@pytest.mark.usefixtures("_mock_inquirer")
+def test_since_all_users_partition(mocker, console_jobs):
     """Can limit outputs by time since and partition argument."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -365,7 +378,8 @@ def test_since_all_users_partition(mocker, _mock_inquirer, console_jobs):
     )
 
 
-def test_parsable(mocker, _mock_inquirer, console_jobs):
+@pytest.mark.usefixtures("_mock_inquirer")
+def test_parsable(mocker, console_jobs):
     """Can display output as parsable format."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -391,7 +405,8 @@ def test_parsable(mocker, _mock_inquirer, console_jobs):
     assert output[1].split("|") == ["25569410", "RUNNING", "21:14:48", "---", "---"]
 
 
-def test_simple_state(mocker, _mock_inquirer, console_jobs):
+@pytest.mark.usefixtures("_mock_inquirer")
+def test_simple_state(mocker, console_jobs):
     """Can limit outputs by filtering state."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -417,7 +432,8 @@ def test_simple_state(mocker, _mock_inquirer, console_jobs):
     assert output[1].split() == []
 
 
-def test_simple_not_state(mocker, _mock_inquirer, console_jobs):
+@pytest.mark.usefixtures("_mock_inquirer")
+def test_simple_not_state(mocker, console_jobs):
     """Can limit outputs by removing state."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -443,7 +459,8 @@ def test_simple_not_state(mocker, _mock_inquirer, console_jobs):
     assert output[1].split() == []
 
 
-def test_invalid_not_state(mocker, _mock_inquirer, console_jobs):
+@pytest.mark.usefixtures("_mock_inquirer")
+def test_invalid_not_state(mocker, console_jobs):
     """When not state isn't found, return all jobs."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -472,7 +489,8 @@ def test_invalid_not_state(mocker, _mock_inquirer, console_jobs):
     assert output[5].split() == []
 
 
-def test_no_state(mocker, _mock_inquirer, console_jobs):
+@pytest.mark.usefixtures("_mock_inquirer")
+def test_no_state(mocker, console_jobs):
     """Unknown states produce empty output."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -502,7 +520,8 @@ def test_no_state(mocker, _mock_inquirer, console_jobs):
     assert output[3] == ""
 
 
-def test_array_job_raw_id(mocker, _mock_inquirer, console_jobs):
+@pytest.mark.usefixtures("_mock_inquirer")
+def test_array_job_raw_id(mocker, console_jobs):
     """Can find job array by base id."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -528,7 +547,8 @@ def test_array_job_raw_id(mocker, _mock_inquirer, console_jobs):
     assert len(output) == 1
 
 
-def test_array_job_single(mocker, _mock_inquirer, console_jobs):
+@pytest.mark.usefixtures("_mock_inquirer")
+def test_array_job_single(mocker, console_jobs):
     """Can get single array job element."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -556,7 +576,8 @@ def test_array_job_single(mocker, _mock_inquirer, console_jobs):
     assert len(output) == 1
 
 
-def test_array_job_base(mocker, _mock_inquirer, console_jobs):
+@pytest.mark.usefixtures("_mock_inquirer")
+def test_array_job_base(mocker, console_jobs):
     """Base array job id gets all elements."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -583,7 +604,8 @@ def test_array_job_base(mocker, _mock_inquirer, console_jobs):
     assert len(output) == 2
 
 
-def test_sacct_error(mocker, _mock_inquirer):
+@pytest.mark.usefixtures("_mock_inquirer")
+def test_sacct_error(mocker):
     """Subprocess errors in sacct are reported."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -597,7 +619,8 @@ def test_sacct_error(mocker, _mock_inquirer):
     assert "Error running sacct!" in result.output
 
 
-def test_empty_sacct(mocker, _mock_inquirer):
+@pytest.mark.usefixtures("_mock_inquirer")
+def test_empty_sacct(mocker):
     """Empty sacct results produce just the header line."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -620,7 +643,8 @@ def test_empty_sacct(mocker, _mock_inquirer):
     assert len(output) == 1
 
 
-def test_failed_no_mem(mocker, _mock_inquirer, console_jobs):
+@pytest.mark.usefixtures("_mock_inquirer")
+def test_failed_no_mem(mocker, console_jobs):
     """Empty memory entries produce valid output."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -637,7 +661,8 @@ def test_failed_no_mem(mocker, _mock_inquirer, console_jobs):
     assert len(output) == 1
 
 
-def test_canceled_by_other(mocker, _mock_inquirer, console_jobs):
+@pytest.mark.usefixtures("_mock_inquirer")
+def test_canceled_by_other(mocker, console_jobs):
     """Canceled states are correctly handled."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -661,7 +686,8 @@ def test_canceled_by_other(mocker, _mock_inquirer, console_jobs):
     assert len(output) == 1
 
 
-def test_zero_runtime(mocker, _mock_inquirer, console_jobs):
+@pytest.mark.usefixtures("_mock_inquirer")
+def test_zero_runtime(mocker, console_jobs):
     """Entries with zero runtime produce reasonable timeeff."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -678,7 +704,8 @@ def test_zero_runtime(mocker, _mock_inquirer, console_jobs):
     assert len(output) == 1
 
 
-def test_no_systems(mocker, _mock_inquirer):
+@pytest.mark.usefixtures("_mock_inquirer")
+def test_no_systems(mocker):
     """When no scheduling system is found, raise error."""
     mocker.patch("reportseff.console.which", return_value=None)
     runner = CliRunner()
@@ -690,7 +717,8 @@ def test_no_systems(mocker, _mock_inquirer):
     assert output[0] == "No supported scheduling systems found!"
 
 
-def test_issue_16(mocker, _mock_inquirer):
+@pytest.mark.usefixtures("_mock_inquirer")
+def test_issue_16(mocker):
     """Incorrect memory usage for multi-node jobs."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -766,7 +794,8 @@ def test_issue_16(mocker, _mock_inquirer):
     assert len(output) == 1
 
 
-def test_energy_reporting(mocker, _mock_inquirer):
+@pytest.mark.usefixtures("_mock_inquirer")
+def test_energy_reporting(mocker):
     """Include energy reporting with the `energy` format code."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()

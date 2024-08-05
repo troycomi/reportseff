@@ -5,7 +5,7 @@ from reportseff import job_collection
 from reportseff.job import Job
 
 
-@pytest.fixture
+@pytest.fixture()
 def jobs():
     """New default job collection."""
     return job_collection.JobCollection()
@@ -44,9 +44,8 @@ def test_set_out_dir_dir_handling(jobs, mocker):
         "reportseff.job_collection.os.path.exists", return_value=False
     )
 
-    with pytest.raises(ValueError) as exception:
+    with pytest.raises(ValueError, match="/dir/path/ does not exist!"):
         jobs.set_out_dir("")
-    assert "/dir/path/ does not exist!" in str(exception)
     mock_cwd.assert_called_once()
     mock_real.assert_not_called()
     mock_exists.assert_called_once_with("/dir/path/")
@@ -55,9 +54,8 @@ def test_set_out_dir_dir_handling(jobs, mocker):
     mock_real.reset_mock()
     mock_exists.reset_mock()
 
-    with pytest.raises(ValueError) as exception:
+    with pytest.raises(ValueError, match="/dir/path2/ does not exist!"):
         jobs.set_out_dir("pwd")
-    assert "/dir/path2/ does not exist!" in str(exception)
     mock_cwd.assert_not_called()
     mock_real.assert_called_once_with("pwd")
     mock_exists.assert_called_once_with("/dir/path2/")
@@ -65,9 +63,8 @@ def test_set_out_dir_dir_handling(jobs, mocker):
 
 def test_set_jobs_none_valid(jobs):
     """Set jobs raises exceptions when no valid name is provided."""
-    with pytest.raises(ValueError) as exception:
+    with pytest.raises(ValueError, match="No valid jobs provided!"):
         jobs.set_jobs(("asdf", "qwer", "zxcv", "asdf111"))
-    assert "No valid jobs provided!" in str(exception)
 
 
 def test_set_jobs_filter(jobs):
@@ -85,9 +82,8 @@ def test_set_jobs_dir(jobs, mocker):
     """Can provide a directory to set jobs."""
     jobs.jobs = {}
     mocker.patch("reportseff.job_collection.os.path.isdir", return_value=False)
-    with pytest.raises(ValueError) as exception:
+    with pytest.raises(ValueError, match="No valid jobs provided!"):
         jobs.set_jobs(("dir",))
-    assert "No valid jobs provided!" in str(exception)
 
     jobs.set_jobs(("1",))
     assert jobs.jobs == {"1": Job("1", "1", None)}
@@ -298,14 +294,17 @@ def test_set_out_dir(jobs, mocker):
     mocker.patch("reportseff.job_collection.os.path.isfile", return_value=True)
 
     mocker.patch("reportseff.job_collection.os.listdir", return_value=[])
-    with pytest.raises(ValueError) as exception:
+    with pytest.raises(
+        ValueError,
+        match="/dir/path2/test contains no files!",
+    ):
         jobs.set_out_dir("test")
-    assert "/dir/path2/test contains no files!" in str(exception)
 
     mocker.patch("reportseff.job_collection.os.listdir", return_value=["asdf"])
-    with pytest.raises(ValueError) as exception:
+    with pytest.raises(
+        ValueError, match="/dir/path2/test contains no valid output files!"
+    ):
         jobs.set_out_dir("test")
-    assert "/dir/path2/test contains no valid output files!" in str(exception)
 
     mocker.patch(
         "reportseff.job_collection.os.listdir",
@@ -343,9 +342,8 @@ def test_set_custom_seff_format(jobs, mocker):
         ],
     )
 
-    with pytest.raises(ValueError) as exception:
+    with pytest.raises(ValueError, match="Unable to determine jobid from %n.out."):
         jobs.set_custom_seff_format("%n.out")
-    assert "Unable to determine jobid from %n.out." in str(exception)
 
     jobs.set_custom_seff_format("%j.out")
     assert jobs.job_file_regex.pattern == r"^(?P<jobid>(?P<job>[0-9]+))\.out$"

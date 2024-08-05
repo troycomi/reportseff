@@ -14,7 +14,7 @@ def to_comment(info: dict) -> str:
     ).decode("ascii")
 
 
-@pytest.fixture
+@pytest.fixture()
 def get_jobstats():
     return to_comment
 
@@ -37,7 +37,7 @@ def to_sacct_dict(sacct_line: str) -> dict:
     return dict(zip(columns, sacct_line.split("|")))
 
 
-@pytest.fixture
+@pytest.fixture()
 def single_core():
     """single core 8206163"""
     comment = to_comment(
@@ -72,7 +72,7 @@ def single_core():
     ]
 
 
-@pytest.fixture
+@pytest.fixture()
 def multi_node():
     """multiple nodes with 20 cpus, 80 GB, 9 minutes 8205048"""
     comment = to_comment(
@@ -121,7 +121,7 @@ def multi_node():
     ]
 
 
-@pytest.fixture
+@pytest.fixture()
 def single_gpu():
     """one gpu, used all 16 GB, 30% eff 8197399"""
     comment = to_comment(
@@ -155,7 +155,7 @@ def single_gpu():
     ]
 
 
-@pytest.fixture
+@pytest.fixture()
 def multi_gpu():
     """4 gpus, 30% mem eff, 3% util 8189521"""
     comment = to_comment(
@@ -198,7 +198,7 @@ def multi_gpu():
     ]
 
 
-@pytest.fixture
+@pytest.fixture()
 def multi_node_multi_gpu():
     """made up job with multiple nodes and gpus"""
     comment = to_comment(
@@ -260,7 +260,7 @@ def multi_node_multi_gpu():
     ]
 
 
-@pytest.fixture
+@pytest.fixture()
 def short_job():
     """used for jobs which don't last long enough 8205464"""
     comment = "JS1:Short"
@@ -276,7 +276,7 @@ def short_job():
     ]
 
 
-@pytest.fixture
+@pytest.fixture()
 def bad_gpu():
     """job with a failure due to bad gpu."""
     return [
@@ -292,7 +292,7 @@ def bad_gpu():
     ]
 
 
-@pytest.fixture
+@pytest.fixture()
 def bad_gpu_used():
     """job with a failure due to gpu with no utilization."""
     return [
@@ -308,7 +308,7 @@ def bad_gpu_used():
     ]
 
 
-@pytest.fixture
+@pytest.fixture()
 def multinode_job():
     """job run on multiple nodes."""
     return [
@@ -321,7 +321,7 @@ def multinode_job():
     ]
 
 
-@pytest.fixture
+@pytest.fixture()
 def issue_41():
     """job run on multiple nodes, with multiple tasks."""
     return [
@@ -340,7 +340,7 @@ def issue_41():
     ]
 
 
-@pytest.fixture
+@pytest.fixture()
 def console_jobs():
     """collection of sacct outputs for test_reportseff."""
 

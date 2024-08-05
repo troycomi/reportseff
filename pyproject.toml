@@ -70,7 +70,7 @@ select = [
   "ICN",  # import conventions
   "PIE",  # pie
   "T20",  # print
-  # "PT",  # pytest style
+  "PT",  # pytest style
   "Q",  # Quotes
   "RSE",  # raise
   # "RET",  # return

@@ -7,7 +7,7 @@ import pytest
 from reportseff import db_inquirer
 
 
-@pytest.fixture
+@pytest.fixture()
 def sacct():
     """Default sacct inquirer."""
     return db_inquirer.SacctInquirer()
@@ -59,9 +59,10 @@ def test_sacct_get_valid_formats(sacct, mocker):
         "\nWorkDir            \n"
     )
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=mock_sacct)
-    with pytest.raises(Exception) as exception:
+    with pytest.raises(
+        Exception, match="Error retrieving sacct options with --helpformat"
+    ):
         sacct.get_valid_formats()
-    assert "Error retrieving sacct options with --helpformat" in str(exception)
 
     mock_sacct.returncode = 0
     result = [
@@ -276,9 +277,8 @@ def test_sacct_get_db_output_user(sacct, mocker):
     mock_date.today.return_value = datetime.date(2018, 1, 20)
     mock_date.side_effect = datetime.date
     mocker.patch("reportseff.db_inquirer.datetime.date", mock_date)
-    with pytest.raises(Exception) as exception:
+    with pytest.raises(Exception, match="Error running sacct!"):
         sacct.get_db_output("c1 c2".split(), "j1 j2 j3".split())
-    assert "Error running sacct!" in str(exception)
 
     mock_sacct = mocker.MagicMock()
     mock_sacct.returncode = 0
@@ -612,9 +612,8 @@ def test_sacct_get_db_output_user_state(sacct, mocker):
     mock_date.today.return_value = datetime.date(2018, 1, 20)
     mock_date.side_effect = datetime.date
     mocker.patch("reportseff.db_inquirer.datetime.date", mock_date)
-    with pytest.raises(Exception) as exception:
+    with pytest.raises(Exception, match="Error running sacct!"):
         sacct.get_db_output("c1 c2".split(), "j1 j2 j3".split())
-    assert "Error running sacct!" in str(exception)
 
     mock_sacct = mocker.MagicMock()
     mock_sacct.returncode = 0
