@@ -108,9 +108,7 @@ class OutputRenderer:
 
     def correct_columns(self) -> None:
         """Expand derived values of query columns and remove duplicates."""
-        result: List[List] = [
-            self.derived[c] if c in self.derived else [c] for c in self.query_columns
-        ]
+        result: List[List] = [self.derived.get(c, [c]) for c in self.query_columns]
         # flatten
         flat_result = [item for sublist in result for item in sublist]
 
@@ -378,10 +376,7 @@ class ColumnFormatter:
         if self.width is None:
             result = entry
         else:
-            if self.end:
-                entry = entry[-self.width :]
-            else:
-                entry = entry[: self.width]
+            entry = entry[-self.width :] if self.end else entry[: self.width]
             result = (f"{{:{self.alignment}{self.width}}}").format(entry)
 
         if color:

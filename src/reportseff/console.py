@@ -186,12 +186,12 @@ def get_jobs(args: ReportseffParameters) -> Tuple[str, int]:
         job_collection,
         debug=args.debug,
     )
-    for entry in db_output:
-        try:
+    try:
+        for entry in db_output:
             job_collection.process_entry(entry, add_job=add_jobs)
-        except Exception as error:
-            click.echo(f"Error processing entry: {entry}", err=True)
-            raise error
+    except Exception as error:
+        click.echo(f"Error processing entry: {entry}", err=True)
+        raise error
 
     found_jobs = job_collection.get_sorted_jobs(change_sort=args.modified_sort)
     found_jobs = [j for j in found_jobs if j.state]

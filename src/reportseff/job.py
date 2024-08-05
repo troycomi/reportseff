@@ -133,7 +133,7 @@ class Job:
         for k, value in entry.items():
             if k not in self.other_entries or not self.other_entries[k]:
                 self.other_entries[k] = value
-        self.time = entry["Elapsed"] if "Elapsed" in entry else None
+        self.time = entry.get("Elapsed")
 
         requested = 0
         if "Timelimit" in entry and entry["Timelimit"] not in (
@@ -409,9 +409,8 @@ def _get_node_data(comment_data: dict, node_data: dict) -> dict:
     """
 
     def get_gpu_value(comment_data: dict, key: str, gpu_number: int) -> float:
-        if key in comment_data:
-            if gpu_number in comment_data[key]:
-                return comment_data[key][gpu_number]
+        if key in comment_data and gpu_number in comment_data[key]:
+            return comment_data[key][gpu_number]
         return 0
 
     result = {

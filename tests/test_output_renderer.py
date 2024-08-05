@@ -518,7 +518,7 @@ def test_formatter_eq():
     assert fmt != []
     assert repr(fmt) == "Name%^None"
 
-    assert "Name" == fmt
+    assert "Name" == fmt  # noqa: SIM300 need to check both sides for equality
     assert fmt == "Name"
     assert fmt != "NaMe"
 

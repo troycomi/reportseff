@@ -185,8 +185,7 @@ class SacctInquirer(BaseInquirer):
         )
         if cmd_result.returncode != 0:
             raise RuntimeError("Error retrieving sacct options with --helpformat")
-        result = cmd_result.stdout.split()
-        return result
+        return cmd_result.stdout.split()
 
     def set_sacct_args(self, jobs: List[str]) -> List[str]:
         """Set arguments of sacct query.

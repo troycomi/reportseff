@@ -73,11 +73,11 @@ select = [
   "PT",  # pytest style
   "Q",  # Quotes
   "RSE",  # raise
-  # "RET",  # return
-  # "SLF",  # Self
-  # "SIM",  # simplify
+  "RET",  # return
+  "SLF",  # Self
+  "SIM",  # simplify
   "TID",  # tidy imports
-  # "TCH",  # type checking
+  "TCH",  # type checking
   "INT",  # gettext
   "ARG",  # tidy imports
   # "PTH",  # use pathlib
@@ -85,7 +85,7 @@ select = [
   "ERA",  # commented out code
   # "PL",  # pylint
   # "TRY",  # tryceratops
-  # "PERF",  # perflint
+  "PERF",  # perflint
   "FURB",  # refurb
   "RUF",  # ruff
 ]
@@ -102,6 +102,7 @@ ignore = [
   "ANN",  # type annotations
   "S101",  # use assert
   "PLR2004",  # magic numbers in tests
+  "SLF001",  # allow private methods in tests
 ]
 "noxfile.py" = [
   "ANN",  # type annotations

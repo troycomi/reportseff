@@ -2,10 +2,12 @@
 
 import os
 import re
-from typing import Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 from .job import Job
-from .output_renderer import OutputRenderer
+
+if TYPE_CHECKING:  # pragma: no cover
+    from .output_renderer import OutputRenderer
 
 
 class JobCollection:
