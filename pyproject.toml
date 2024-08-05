@@ -65,7 +65,7 @@ select = [
   "COM",  # commas
   "C4",  # comprehensions
   "T10",  # debugger
-  # "FA",  # error message
+  "FA",  # error message
   "ISC",  # String concatenation
   "ICN",  # import conventions
   "PIE",  # pie

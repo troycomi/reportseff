@@ -1,8 +1,10 @@
 """Module representing a collection of jobs."""
 
+from __future__ import annotations
+
 import os
 import re
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING
 
 from .job import Job
 
@@ -35,12 +37,12 @@ class JobCollection:
         )
         self.job_regex = re.compile(r"^(?P<jobid>(?P<job>[0-9]+)(_[][\-0-9]+)?)$")
 
-        self.jobs: Dict[str, Job] = {}
-        self.renderer: Optional[OutputRenderer] = None
+        self.jobs: dict[str, Job] = {}
+        self.renderer: OutputRenderer | None = None
         self.dir_name = ""
         self.partition_timelimits: dict = {}
 
-    def get_columns(self) -> List[str]:
+    def get_columns(self) -> list[str]:
         """The list of columns requested from inquirer.
 
         Returns:
@@ -48,7 +50,7 @@ class JobCollection:
         """
         return self.columns
 
-    def get_jobs(self) -> List[str]:
+    def get_jobs(self) -> list[str]:
         """List of jobs to get from inquirer.
 
         Returns:
@@ -183,7 +185,7 @@ class JobCollection:
                 processed_tokens.append(token)
         self.job_file_regex = re.compile("^" + "".join(processed_tokens) + "$")
 
-    def add_job(self, job: str, jobid: str, filename: Optional[str] = None) -> None:
+    def add_job(self, job: str, jobid: str, filename: str | None = None) -> None:
         """Add a job to the collection.
 
         Args:
@@ -193,7 +195,7 @@ class JobCollection:
         """
         self.jobs[jobid] = Job(job, jobid, filename)
 
-    def process_entry(self, entry: Dict, *, add_job: bool = False) -> None:
+    def process_entry(self, entry: dict, *, add_job: bool = False) -> None:
         """Update the jobs collection with information from the provided entry.
 
         Args:
@@ -225,7 +227,7 @@ class JobCollection:
 
         self.jobs[job_id].update(entry)
 
-    def get_sorted_jobs(self, *, change_sort: bool) -> List[Job]:
+    def get_sorted_jobs(self, *, change_sort: bool) -> list[Job]:
         """Sort the jobs.
 
         Args:
@@ -248,7 +250,7 @@ class JobCollection:
                 return os.path.getmtime(file)
             return idnum
 
-        def get_file_name(job: Job) -> Tuple[bool, int, str]:
+        def get_file_name(job: Job) -> tuple[bool, int, str]:
             file = job.name()
             file = os.path.join(self.dir_name, file)
             return (not os.path.exists(file), len(file), file)

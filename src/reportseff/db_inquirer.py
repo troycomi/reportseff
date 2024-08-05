@@ -1,11 +1,13 @@
 """Abstract and concrete implementations of scheduler databases."""
 
+from __future__ import annotations
+
 import datetime
 import re
 import shlex
 import subprocess
 from abc import ABC, abstractmethod
-from typing import Callable, Dict, List, Optional, Set
+from typing import Callable
 
 import click
 
@@ -18,7 +20,7 @@ class BaseInquirer(ABC):
         """Initialize a new inquirer."""
 
     @abstractmethod
-    def get_valid_formats(self) -> List[str]:
+    def get_valid_formats(self) -> list[str]:
         """Get the valid formatting options supported by the inquirer.
 
         Returns:
@@ -26,7 +28,7 @@ class BaseInquirer(ABC):
         """
 
     @abstractmethod
-    def set_sacct_args(self, jobs: List[str]) -> List[str]:
+    def set_sacct_args(self, jobs: list[str]) -> list[str]:
         """Set arguments of sacct query.
 
         Args:
@@ -42,10 +44,10 @@ class BaseInquirer(ABC):
     @abstractmethod
     def get_db_output(
         self,
-        columns: List[str],
-        jobs: List[str],
-        debug_cmd: Optional[Callable],
-    ) -> List[Dict[str, str]]:
+        columns: list[str],
+        jobs: list[str],
+        debug_cmd: Callable | None,
+    ) -> list[dict[str, str]]:
         """Query the database with the supplied columns.
 
         Args:
@@ -156,16 +158,16 @@ class SacctInquirer(BaseInquirer):
     def __init__(self) -> None:
         """Initialize a new inquirer."""
         self.default_args = "sacct -P -n --delimiter=^|^".split()
-        self.user: Optional[str] = None
-        self.state: Optional[Set] = None
-        self.not_state: Optional[Set] = None
-        self.since: Optional[str] = None
-        self.until: Optional[str] = None
+        self.user: str | None = None
+        self.state: set | None = None
+        self.not_state: set | None = None
+        self.since: str | None = None
+        self.until: str | None = None
         self.query_all_users: bool = False
-        self.partition: Optional[str] = None
-        self.extra_args: Optional[str] = None
+        self.partition: str | None = None
+        self.extra_args: str | None = None
 
-    def get_valid_formats(self) -> List[str]:
+    def get_valid_formats(self) -> list[str]:
         """Get the valid formatting options supported by the inquirer.
 
         Returns:
@@ -187,7 +189,7 @@ class SacctInquirer(BaseInquirer):
             raise RuntimeError("Error retrieving sacct options with --helpformat")
         return cmd_result.stdout.split()
 
-    def set_sacct_args(self, jobs: List[str]) -> List[str]:
+    def set_sacct_args(self, jobs: list[str]) -> list[str]:
         """Set arguments of sacct query.
 
         Args:
@@ -220,10 +222,10 @@ class SacctInquirer(BaseInquirer):
 
     def get_db_output(
         self,
-        columns: List[str],
-        jobs: List[str],
-        debug_cmd: Optional[Callable] = None,
-    ) -> List[Dict[str, str]]:
+        columns: list[str],
+        jobs: list[str],
+        debug_cmd: Callable | None = None,
+    ) -> list[dict[str, str]]:
         """Query the database with the supplied columns.
 
         Args:
@@ -450,7 +452,7 @@ class SacctInquirer(BaseInquirer):
         return result
 
 
-def get_states_as_set(state_list: str) -> Set:
+def get_states_as_set(state_list: str) -> set:
     """Helper method to parse the state string.
 
     Args:

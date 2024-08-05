@@ -1,8 +1,10 @@
 """Module for rendering tabulated values."""
 
+from __future__ import annotations
+
 import copy
 import re
-from typing import Any, Callable, Dict, Generator, List, Optional, Tuple, Union
+from typing import Any, Callable, Generator
 
 import click
 
@@ -23,7 +25,7 @@ class OutputRenderer:
 
     def __init__(
         self,
-        valid_titles: List,
+        valid_titles: list,
         format_str: str = "JobID%>,State,Elapsed%>,CPUEff,MemEff",
         *,
         node: bool = False,
@@ -44,7 +46,7 @@ class OutputRenderer:
         # values required for proper parsing, need not be included in output
         self.required = ["JobID", "JobIDRaw", "State", "AdminComment"]
         # values derived from other values, list includes all dependent values
-        self.derived: Dict[str, List] = {
+        self.derived: dict[str, list] = {
             "CPUEff": ["TotalCPU", "AllocCPUS", "Elapsed"],
             "MemEff": ["REQMEM", "NNodes", "AllocCPUS", "MaxRSS", "NTasks"],
             "TimeEff": ["Elapsed", "Timelimit"],
@@ -66,7 +68,7 @@ class OutputRenderer:
         # build columns for sacct call
         self.correct_columns()
 
-    def validate_formatters(self, valid_titles: List) -> List:
+    def validate_formatters(self, valid_titles: list) -> list:
         """Validate titles of formatters attribute.
 
         Expands GPU to GPUEff and GPUMem in formatters
@@ -108,7 +110,7 @@ class OutputRenderer:
 
     def correct_columns(self) -> None:
         """Expand derived values of query columns and remove duplicates."""
-        result: List[List] = [self.derived.get(c, [c]) for c in self.query_columns]
+        result: list[list] = [self.derived.get(c, [c]) for c in self.query_columns]
         # flatten
         flat_result = [item for sublist in result for item in sublist]
 
@@ -118,7 +120,7 @@ class OutputRenderer:
         # remove duplicates
         self.query_columns = sorted(set(flat_result))
 
-    def format_jobs(self, jobs: List[Job]) -> str:
+    def format_jobs(self, jobs: list[Job]) -> str:
         """Given list of jobs, build output table.
 
         Args:
@@ -211,7 +213,7 @@ class ColumnFormatter:
 
         self.end = match.group("end")
 
-        self.color_function: Callable[[str], Tuple[str, Any]] = lambda x: (str(x), None)
+        self.color_function: Callable[[str], tuple[str, Any]] = lambda x: (str(x), None)
         fold_title = self.title.casefold()
         if fold_title == "state":
             self.color_function = color_state
@@ -248,7 +250,7 @@ class ColumnFormatter:
         """
         return f"{self.title}%{self.alignment}{self.width}"
 
-    def validate_title(self, valid_titles: List[str]) -> str:
+    def validate_title(self, valid_titles: list[str]) -> str:
         """Validate the title against a list.
 
         Tries to find this formatter's title in the valid titles list in a case
@@ -277,7 +279,7 @@ class ColumnFormatter:
 
     def compute_width(
         self,
-        jobs: List[Job],
+        jobs: list[Job],
         *,
         node: bool = False,
         gpu: bool = False,
@@ -359,7 +361,7 @@ class ColumnFormatter:
             for value in job.get_node_entries(self.title, gpu=gpu)
         )
 
-    def format_entry(self, entry: str, color: Optional[str] = None) -> str:
+    def format_entry(self, entry: str, color: str | None = None) -> str:
         """Format the entry to match width, alignment, and color.
 
         If no color is supplied, will just return string
@@ -384,7 +386,7 @@ class ColumnFormatter:
         return result
 
 
-def color_state(value: str) -> Tuple[str, Optional[str]]:
+def color_state(value: str) -> tuple[str, str | None]:
     """Get the color name of the provided state string.
 
     Args:
@@ -396,7 +398,7 @@ def color_state(value: str) -> Tuple[str, Optional[str]]:
     return value, state_colors.get(value, None)
 
 
-def render_eff(value: Union[str, float], target_type: str) -> Tuple[str, Optional[str]]:
+def render_eff(value: str | float, target_type: str) -> tuple[str, str | None]:
     """Return a styled string for efficiency values.
 
     Args:
@@ -417,7 +419,7 @@ def render_eff(value: Union[str, float], target_type: str) -> Tuple[str, Optiona
     return value, color
 
 
-def color_mid(value: float) -> Optional[str]:
+def color_mid(value: float) -> str | None:
     """Determine color for efficiency value where "mid" values are the target.
 
     Args:
@@ -433,7 +435,7 @@ def color_mid(value: float) -> Optional[str]:
     return None
 
 
-def color_high(value: float) -> Optional[str]:
+def color_high(value: float) -> str | None:
     """Determine color for efficiency value where "high" values are the target.
 
     Args:
@@ -449,7 +451,7 @@ def color_high(value: float) -> Optional[str]:
     return None
 
 
-def build_formatters(format_str: str) -> List:
+def build_formatters(format_str: str) -> list:
     """Generate list of formatters from comma separated list in format string.
 
     Args:

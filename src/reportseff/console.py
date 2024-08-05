@@ -1,8 +1,10 @@
 """CLI for reportseff."""
 
+from __future__ import annotations
+
 import sys
 from shutil import which
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 import click
 
@@ -131,7 +133,7 @@ def main(**kwargs: Any) -> None:
         click.echo(output, color=args.color)
 
 
-def get_jobs(args: ReportseffParameters) -> Tuple[str, int]:
+def get_jobs(args: ReportseffParameters) -> tuple[str, int]:
     """Helper method to get jobs from db_inquirer.
 
     Returns:
@@ -186,6 +188,7 @@ def get_jobs(args: ReportseffParameters) -> Tuple[str, int]:
         job_collection,
         debug=args.debug,
     )
+    entry = None
     try:
         for entry in db_output:
             job_collection.process_entry(entry, add_job=add_jobs)
@@ -205,7 +208,7 @@ def get_implementation(
     node: bool = False,
     node_and_gpu: bool = False,
     parsable: bool = False,
-) -> Tuple[BaseInquirer, OutputRenderer]:
+) -> tuple[BaseInquirer, OutputRenderer]:
     """Get system-specific objects.
 
     Args:
@@ -237,7 +240,7 @@ def get_db_output(
     job_collection: JobCollection,
     *,
     debug: bool,
-) -> List[Dict[str, str]]:
+) -> list[dict[str, str]]:
     """Get output from inquirer.
 
     Returns:

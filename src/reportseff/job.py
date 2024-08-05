@@ -1,11 +1,13 @@
 """Module for representing scheduler jobs."""
 
+from __future__ import annotations
+
 import base64
 import gzip
 import json
 import re
 from datetime import timedelta
-from typing import Any, Dict, Generator, Optional, Union
+from typing import Any, Generator
 
 multiple_map = {
     "K": 1024**0,
@@ -44,7 +46,7 @@ MEM_RE = re.compile(
 class Job:
     """Representation of scheduler job."""
 
-    def __init__(self, job: str, jobid: str, filename: Optional[str]) -> None:
+    def __init__(self, job: str, jobid: str, filename: str | None) -> None:
         """Initialize new job.
 
         Args:
@@ -56,19 +58,19 @@ class Job:
         self.jobid = jobid
         self.filename = filename
         self.stepmem = 0.0
-        self.totalmem: Optional[float] = None
-        self.time: Optional[str] = "---"
-        self.time_eff: Union[str, float] = "---"
-        self.cpu: Optional[Union[str, float]] = "---"
-        self.state: Optional[str] = None
-        self.mem_eff: Optional[float] = None
-        self.gpu: Optional[float] = None
-        self.gpu_mem: Optional[float] = None
+        self.totalmem: float | None = None
+        self.time: str | None = "---"
+        self.time_eff: str | float = "---"
+        self.cpu: str | float | None = "---"
+        self.state: str | None = None
+        self.mem_eff: float | None = None
+        self.gpu: float | None = None
+        self.gpu_mem: float | None = None
         self.energy: int = 0
-        self.other_entries: Dict[str, Any] = {}
+        self.other_entries: dict[str, Any] = {}
         # safe to cache now
         self.other_entries["JobID"] = self.name()
-        self.comment_data: Dict = {}
+        self.comment_data: dict = {}
 
     def __eq__(self, other: Any) -> bool:
         """Test for equality.
@@ -92,7 +94,7 @@ class Job:
         """
         return f"Job(job={self.job}, jobid={self.jobid}, filename={self.filename})"
 
-    def update(self, entry: Dict) -> None:
+    def update(self, entry: dict) -> None:
         """Update the job properties based on the db_inquirer entry.
 
         Args:
@@ -124,7 +126,7 @@ class Job:
                     _parse_energy(entry["TRESUsageOutAve"]),
                 )
 
-    def _update_main_job(self, entry: Dict) -> None:
+    def _update_main_job(self, entry: dict) -> None:
         """Update properties for the main job.
 
         Args:
@@ -369,7 +371,7 @@ def _parse_energy(tres: str) -> int:
     return 0
 
 
-def _parse_admin_comment_to_dict(comment: str) -> Optional[dict]:
+def _parse_admin_comment_to_dict(comment: str) -> dict | None:
     """Attempt to parse AdminComment.
 
     Args:
