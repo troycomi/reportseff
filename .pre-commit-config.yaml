@@ -19,9 +19,8 @@ repos:
   - id: python-check-blanket-noqa
   - id: python-no-eval
   - id: python-use-type-annotations
-  - id: rst-backticks
-  - id: rst-directive-colons
-  - id: rst-inline-touching-normal
+  - id: python-check-blanket-type-ignore
+  - id: python-check-mock-methods
 
 - repo: https://github.com/codespell-project/codespell
   rev: v2.1.0

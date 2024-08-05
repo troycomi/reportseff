@@ -213,6 +213,9 @@ def get_implementation(
 
     Args:
         format_str: the formatting options specified by user
+        node: control if node-level stats are displayed
+        node_and_gpu: control if node and gpu stats are displayed
+        parsable: produce output with a delimiter separating columns
 
     Returns:
         A db_inqurirer

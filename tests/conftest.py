@@ -1,4 +1,4 @@
-"""Collect common fixtures"""
+"""Collect common fixtures."""
 
 import base64
 import gzip
@@ -8,7 +8,7 @@ import pytest
 
 
 def to_comment(info: dict) -> str:
-    """Convert jobstats dict to compressed base64 to match AdminComment"""
+    """Convert jobstats dict to compressed base64 to match AdminComment."""
     return "JS1:" + base64.b64encode(
         gzip.compress(json.dumps(info, sort_keys=True, indent=4).encode("ascii"))
     ).decode("ascii")
@@ -16,10 +16,12 @@ def to_comment(info: dict) -> str:
 
 @pytest.fixture()
 def get_jobstats():
+    """Fixture to produce jobstats-like encoding."""
     return to_comment
 
 
 def to_sacct_dict(sacct_line: str) -> dict:
+    """Convert debug print statement to dictionary like from sacct."""
     columns = (
         "AdminComment",
         "AllocCPUS",
@@ -39,7 +41,7 @@ def to_sacct_dict(sacct_line: str) -> dict:
 
 @pytest.fixture()
 def single_core():
-    """single core 8206163"""
+    """Single core 8206163."""
     comment = to_comment(
         {
             "gpus": False,
@@ -74,7 +76,7 @@ def single_core():
 
 @pytest.fixture()
 def multi_node():
-    """multiple nodes with 20 cpus, 80 GB, 9 minutes 8205048"""
+    """Multiple nodes with 20 cpus, 80 GB, 9 minutes 8205048."""
     comment = to_comment(
         {
             "gpus": False,
@@ -123,7 +125,7 @@ def multi_node():
 
 @pytest.fixture()
 def single_gpu():
-    """one gpu, used all 16 GB, 30% eff 8197399"""
+    """One gpu, used all 16 GB, 30% eff 8197399."""
     comment = to_comment(
         {
             "gpus": True,
@@ -157,7 +159,7 @@ def single_gpu():
 
 @pytest.fixture()
 def multi_gpu():
-    """4 gpus, 30% mem eff, 3% util 8189521"""
+    """4 gpus, 30% mem eff, 3% util 8189521."""
     comment = to_comment(
         {
             "gpus": True,
@@ -200,7 +202,7 @@ def multi_gpu():
 
 @pytest.fixture()
 def multi_node_multi_gpu():
-    """made up job with multiple nodes and gpus"""
+    """Made up job with multiple nodes and gpus."""
     comment = to_comment(
         {
             "gpus": True,
@@ -262,7 +264,7 @@ def multi_node_multi_gpu():
 
 @pytest.fixture()
 def short_job():
-    """used for jobs which don't last long enough 8205464"""
+    """Used for jobs which don't last long enough 8205464."""
     comment = "JS1:Short"
     return [
         to_sacct_dict(
@@ -278,7 +280,7 @@ def short_job():
 
 @pytest.fixture()
 def bad_gpu():
-    """job with a failure due to bad gpu."""
+    """Job with a failure due to bad gpu."""
     return [
         to_sacct_dict(
             "JS1:H4sIAMMP3WMC/12NQQrDIBRE7/LXthj1q9/LhFAlFLSGRhdFvHuTphTS5TDz3jR4ZB9WcA18iHG6RC5n3GPJZYpjCik/X+CUIEXaCNIM6hr8rxi0sUSEKNgXKfcUwAmjub4Sg9tSN/3AYF7qeJY2kOAsbrxUSIL3Y3TyHxuDUiuJovf+f2Ok/WD7SX8DnGNK388AAAA=|1|07:42:18|45352405|45352405||1|4G|CANCELLED by 349394|23:00:00|07:40:23"
@@ -294,7 +296,7 @@ def bad_gpu():
 
 @pytest.fixture()
 def bad_gpu_used():
-    """job with a failure due to gpu with no utilization."""
+    """Job with a failure due to gpu with no utilization."""
     return [
         to_sacct_dict(
             "JS1:H4sIAN7HCGQC/1WOQQ6DIBBF7zJrawYGRvAyxlRiSFBMi4vWcPeitk1c/sy8//4GcxzcE9oNBhdCfwuoR7nHFFMfuslN8fGCViORYGUQsYL16Yb/RZGyDbNhNNUXSn5y0FpGZFNzBfdlLQYhKxiXtbsWb1BsRhtrSWkrSztdcj6hi/JkGk2sSMuDEEYSSqFY849IPvh3n3ycd6L82FrnnK8jDQmpDqAslPkDhnD5Hg8BAAA=|12|23:05:24|46044267|46044267||1|48000M|TIMEOUT|23:00:00|11-02:46:01"
@@ -310,7 +312,7 @@ def bad_gpu_used():
 
 @pytest.fixture()
 def multinode_job():
-    """job run on multiple nodes."""
+    """Job run on multiple nodes."""
     return [
         to_sacct_dict(
             "|720|12-14:16:39|6196869|6196869||20|191846Mn|COMPLETED|UNLIMITED|451-06:00:24"
@@ -323,7 +325,7 @@ def multinode_job():
 
 @pytest.fixture()
 def issue_41():
-    """job run on multiple nodes, with multiple tasks."""
+    """Job run on multiple nodes, with multiple tasks."""
     return [
         to_sacct_dict(
             "|8|00:00:53|131042|131042||1|16000M|COMPLETED|00:01:00|06:57.815|8"
@@ -342,8 +344,7 @@ def issue_41():
 
 @pytest.fixture()
 def console_jobs():
-    """collection of sacct outputs for test_reportseff."""
-
+    """Collection of sacct outputs for test_reportseff."""
     # indexed on job id
     return {
         "25569410_notime": (

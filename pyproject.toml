@@ -54,7 +54,7 @@ select = [
   "W",  # pycode style Warning
   "I",  # isort
   "N",  # pep8-naming
-  # "D",  # pydocstyle
+  "D",  # pydocstyle
   "UP",  # pyupgrade
   "ANN",  # annotations
   "S",  # bandit
@@ -89,6 +89,7 @@ select = [
   "FURB",  # refurb
   "RUF",  # ruff
 ]
+
 ignore = [
   "ANN101",  # missing self
   "ANN401",  # allow Any
@@ -104,6 +105,10 @@ ignore = [
   "PLR2004",  # magic numbers in tests
   "SLF001",  # allow private methods in tests
 ]
+
 "noxfile.py" = [
   "ANN",  # type annotations
 ]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
