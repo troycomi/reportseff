@@ -79,7 +79,8 @@ class JobCollection:
             working_directory = os.path.realpath(directory)
 
         if not os.path.exists(working_directory):
-            raise ValueError(f"{working_directory} does not exist!")
+            msg = f"{working_directory} does not exist!"
+            raise ValueError(msg)
 
         # get files from directory
         files = os.listdir(working_directory)
@@ -87,16 +88,18 @@ class JobCollection:
             filter(lambda x: os.path.isfile(os.path.join(working_directory, x)), files)
         )
         if len(files) == 0:
-            raise ValueError(f"{working_directory} contains no files!")
+            msg = f"{working_directory} contains no files!"
+            raise ValueError(msg)
 
         for file in files:
             self.process_seff_file(file)
 
         if len(self.jobs) == 0:
-            raise ValueError(
+            msg = (
                 f"{working_directory} contains no valid output files!"
                 "\nDo you need to set a custom format with `--slurm-format`?"
             )
+            raise ValueError(msg)
         self.dir_name = working_directory
 
     def set_jobs(self, jobs: tuple) -> None:
@@ -128,7 +131,8 @@ class JobCollection:
                 self.process_seff_file(job_id)
 
         if len(self.jobs) == 0:
-            raise ValueError("No valid jobs provided!")
+            msg = "No valid jobs provided!"
+            raise ValueError(msg)
 
     def process_seff_file(self, filename: str) -> None:
         """Try to parse out job information from the supplied filename.
@@ -166,10 +170,11 @@ class JobCollection:
                 r"(?P<jobid>(?P<job>[0-9]+))",
             )
         else:
-            raise ValueError(
+            msg = (
                 f"Unable to determine jobid from {filename_pattern}. "
                 "Pattern should include one of ('%j', '%A', '%A_%a')"
             )
+            raise ValueError(msg)
 
         tokens = re.split(r"(%[^%])", pattern)
         # combine sequential tokens

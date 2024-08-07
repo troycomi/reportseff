@@ -14,6 +14,8 @@ from .job_collection import JobCollection
 from .output_renderer import OutputRenderer
 from .parameters import ReportseffParameters
 
+MAX_ENTRIES_TO_ECHO = 20
+
 
 @click.command()
 @click.option(
@@ -127,7 +129,7 @@ def main(**kwargs: Any) -> None:
 
     output, entries = get_jobs(args)
 
-    if entries > 20:
+    if entries > MAX_ENTRIES_TO_ECHO:
         click.echo_via_pager(output, color=args.color)
     else:
         click.echo(output, color=args.color)
@@ -192,9 +194,9 @@ def get_jobs(args: ReportseffParameters) -> tuple[str, int]:
     try:
         for entry in db_output:
             job_collection.process_entry(entry, add_job=add_jobs)
-    except Exception as error:
+    except Exception:
         click.echo(f"Error processing entry: {entry}", err=True)
-        raise error
+        raise
 
     found_jobs = job_collection.get_sorted_jobs(change_sort=args.modified_sort)
     found_jobs = [j for j in found_jobs if j.state]

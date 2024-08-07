@@ -73,7 +73,8 @@ def test_directory_input_exception(mocker, console_jobs):
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
 
     def set_jobs(_self, _directory):
-        raise ValueError("Testing EXCEPTION")
+        msg = "Testing EXCEPTION"
+        raise ValueError(msg)
 
     mocker.patch.object(JobCollection, "set_out_dir", new=set_jobs)
     result = runner.invoke(console.main, ["--no-color"])

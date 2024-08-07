@@ -49,45 +49,45 @@ fail_under = 100
 
 [tool.ruff.lint]
 select = [
-  "F",  # pyflakes
-  # "E",  # pycode style Error
-  "W",  # pycode style Warning
-  "I",  # isort
-  "N",  # pep8-naming
-  "D",  # pydocstyle
-  "UP",  # pyupgrade
-  "ANN",  # annotations
-  "S",  # bandit
-  "BLE",
-  "FBT",  # boolean trap
-  "B",  # bugbear
   "A",  # builtins
-  "COM",  # commas
-  "C4",  # comprehensions
-  "T10",  # debugger
-  "FA",  # error message
-  "ISC",  # String concatenation
-  "ICN",  # import conventions
-  "PIE",  # pie
-  "T20",  # print
-  "PT",  # pytest style
-  "Q",  # Quotes
-  "RSE",  # raise
-  "RET",  # return
-  "SLF",  # Self
-  "SIM",  # simplify
-  "TID",  # tidy imports
-  "TCH",  # type checking
-  "INT",  # gettext
+  "ANN",  # annotations
   "ARG",  # tidy imports
-  # "PTH",  # use pathlib
-  "TD",  # todos
+  "B",  # bugbear
+  "BLE",
+  "C4",  # comprehensions
+  "COM",  # commas
+  "D",  # pydocstyle
+  "E",  # pycode style Error
   "ERA",  # commented out code
-  # "PL",  # pylint
-  # "TRY",  # tryceratops
-  "PERF",  # perflint
+  "F",  # pyflakes
+  "FA",  # error message
+  "FBT",  # boolean trap
   "FURB",  # refurb
+  "I",  # isort
+  "ICN",  # import conventions
+  "INT",  # gettext
+  "ISC",  # String concatenation
+  "N",  # pep8-naming
+  "PERF",  # perflint
+  "PIE",  # pie
+  "PL",  # pylint
+  "PT",  # pytest style
+  # "PTH",  # use pathlib
+  "Q",  # Quotes
+  "RET",  # return
+  "RSE",  # raise
   "RUF",  # ruff
+  "S",  # bandit
+  "SIM",  # simplify
+  "SLF",  # Self
+  "T10",  # debugger
+  "T20",  # print
+  "TCH",  # type checking
+  "TD",  # todos
+  "TID",  # tidy imports
+  "TRY",  # tryceratops
+  "UP",  # pyupgrade
+  "W",  # pycode style Warning
 ]
 
 ignore = [

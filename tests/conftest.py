@@ -189,7 +189,8 @@ def multi_gpu():
     )
     return [
         to_sacct_dict(
-            f"{comment}|28|19:04:47|8189521|8189521||1|112000M|CANCELLED by 129276|23:00:00|2-07:51:43"
+            f"{comment}|28|19:04:47|8189521|8189521||1|112000M|"
+            "CANCELLED by 129276|23:00:00|2-07:51:43"
         ),
         to_sacct_dict(
             "|28|19:04:48|8189521.batch|8189521.batch|29036860K|1||CANCELLED||2-07:51:43"
@@ -251,7 +252,8 @@ def multi_node_multi_gpu():
     )
     return [
         to_sacct_dict(
-            f"{comment}|28|19:04:47|8189521|8189521||1|112000M|CANCELLED by 129276|23:00:00|2-07:51:43"
+            f"{comment}|28|19:04:47|8189521|8189521||1|112000M|"
+            "CANCELLED by 129276|23:00:00|2-07:51:43"
         ),
         to_sacct_dict(
             "|28|19:04:48|8189521.batch|8189521.batch|29036860K|1||CANCELLED||2-07:51:43"
@@ -283,7 +285,11 @@ def bad_gpu():
     """Job with a failure due to bad gpu."""
     return [
         to_sacct_dict(
-            "JS1:H4sIAMMP3WMC/12NQQrDIBRE7/LXthj1q9/LhFAlFLSGRhdFvHuTphTS5TDz3jR4ZB9WcA18iHG6RC5n3GPJZYpjCik/X+CUIEXaCNIM6hr8rxi0sUSEKNgXKfcUwAmjub4Sg9tSN/3AYF7qeJY2kOAsbrxUSIL3Y3TyHxuDUiuJovf+f2Ok/WD7SX8DnGNK388AAAA=|1|07:42:18|45352405|45352405||1|4G|CANCELLED by 349394|23:00:00|07:40:23"
+            "JS1:H4sIAMMP3WMC/12NQQrDIBRE7/LXthj1q9/LhFAlFLSGRhdFvHuTphTS5TDz3"
+            "jR4ZB9WcA18iHG6RC5n3GPJZYpjCik/X+CUIEXaCNIM6hr8rxi0sUSEKNgXKfcUwA"
+            "mjub4Sg9tSN/3AYF7qeJY2kOAsbrxUSIL3Y3TyHxuDUiuJovf+f2Ok/WD7SX8DnGN"
+            "K388AAAA=|1|07:42:18|45352405|45352405||1|4G|CANCELLED by 349394|"
+            "23:00:00|07:40:23"
         ),
         to_sacct_dict(
             "|1|07:42:20|45352405.batch|45352405.batch|1644460K|1||CANCELLED||07:40:23"

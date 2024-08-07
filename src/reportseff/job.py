@@ -41,6 +41,7 @@ MMSSMMM_RE = re.compile(
 MEM_RE = re.compile(
     r"(?P<memory>[-+]?\d*\.\d+|\d+)(?P<multiple>[KMGTE]?)(?P<type>[nc]?)"
 )
+ADMIN_COMMENT_MIN_LENGTH = 10
 
 
 class Job:
@@ -155,7 +156,7 @@ class Job:
         total_cpu = _parse_slurm_timedelta(entry.get("TotalCPU", "00:00.000"))
         alloc_cpus = int(entry.get("AllocCPUS", 0))
 
-        cpu_time = cpu_time = total_cpu / alloc_cpus if alloc_cpus != 0 else 0.0
+        cpu_time = total_cpu / alloc_cpus if alloc_cpus != 0 else 0.0
 
         if wall == 0:
             self.cpu = None
@@ -167,7 +168,10 @@ class Job:
                 entry["REQMEM"], int(entry["NNodes"]), int(entry["AllocCPUS"])
             )
 
-        if "AdminComment" in entry and len(entry["AdminComment"]) > 10:
+        if (
+            "AdminComment" in entry
+            and len(entry["AdminComment"]) > ADMIN_COMMENT_MIN_LENGTH
+        ):
             self._parse_admin_comment(entry["AdminComment"])
 
     def _parse_admin_comment(self, comment: str) -> None:
@@ -317,7 +321,8 @@ def _parse_slurm_timedelta(delta: str) -> int:
                 milliseconds=int(match.group("milliseconds")),
             ).total_seconds()
         )
-    raise ValueError(f"Failed to parse time {delta!r}")
+    msg = f"Failed to parse time {delta!r}"
+    raise ValueError(msg)
 
 
 def parsemem(mem: str, nodes: int = 1, cpus: int = 1) -> float:
@@ -337,11 +342,12 @@ def parsemem(mem: str, nodes: int = 1, cpus: int = 1) -> float:
     Raises:
         ValueError: if unable to parse mem
     """
-    if mem == "" or mem == "0":
+    if mem in ("", "0"):
         return 0
     match = re.fullmatch(MEM_RE, mem)
     if not match:
-        raise ValueError(f"Failed to parse memory {mem!r}")
+        msg = f"Failed to parse memory {mem!r}"
+        raise ValueError(msg)
     memory = float(match.group("memory"))
 
     if match.group("multiple") != "":
@@ -392,11 +398,13 @@ def _parse_admin_comment_to_dict(comment: str) -> dict | None:
         return None
 
     if comment_type not in ("JS1",):
-        raise ValueError(f"Unknown comment type {comment_type!r}")
+        msg = f"Unknown comment type {comment_type!r}"
+        raise ValueError(msg)
     try:
         return json.loads(gzip.decompress(base64.b64decode(comment[4:])))
     except Exception as exception:
-        raise ValueError(f"Cannot decode comment {comment!r}") from exception
+        msg = f"Cannot decode comment {comment!r}"
+        raise ValueError(msg) from exception
 
 
 def _get_node_data(comment_data: dict, node_data: dict) -> dict:

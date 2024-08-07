@@ -19,6 +19,13 @@ FORMAT_RE = re.compile(
     r")?"
 )
 
+# efficiency limits for mid and high measurements
+MID_LIMIT_LOW = 20
+MID_LIMIT_HIGH = 90
+MID_LIMIT_GOOD = 60
+HIGH_LIMIT_LOW = 20
+HIGH_LIMIT_GOOD = 80
+
 
 class OutputRenderer:
     """A collection of formatting columns for rendering output."""
@@ -272,10 +279,11 @@ class ColumnFormatter:
                 self.title = title
                 return title
 
-        raise ValueError(
+        msg = (
             f"{self.title!r} is not a valid title. "
             "Run sacct --helpformat for a list of allowed values."
         )
+        raise ValueError(msg)
 
     def compute_width(
         self,
@@ -428,9 +436,9 @@ def color_mid(value: float) -> str | None:
     Returns:
         The color string for click or None if color should be unchanged
     """
-    if value < 20 or value > 90:  # too close to limit
+    if value < MID_LIMIT_LOW or value > MID_LIMIT_HIGH:
         return "red"
-    if value > 60:  # good
+    if value > MID_LIMIT_GOOD:
         return "green"
     return None
 
@@ -444,9 +452,9 @@ def color_high(value: float) -> str | None:
     Returns:
         The color string for click or None if color should be unchanged
     """
-    if value < 20:  # too low
+    if value < HIGH_LIMIT_LOW:
         return "red"
-    if value > 80:  # good
+    if value > HIGH_LIMIT_GOOD:
         return "green"
     return None
 

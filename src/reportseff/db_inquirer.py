@@ -186,7 +186,8 @@ class SacctInquirer(BaseInquirer):
             shell=False,
         )
         if cmd_result.returncode != 0:
-            raise RuntimeError("Error retrieving sacct options with --helpformat")
+            msg = "Error retrieving sacct options with --helpformat"
+            raise RuntimeError(msg)
         return cmd_result.stdout.split()
 
     def set_sacct_args(self, jobs: list[str]) -> list[str]:
@@ -255,7 +256,8 @@ class SacctInquirer(BaseInquirer):
             cmd_result.check_returncode()
 
         except subprocess.CalledProcessError as error:
-            raise RuntimeError(f"Error running sacct!\n{error.stderr}") from error
+            msg = f"Error running sacct!\n{error.stderr}"
+            raise RuntimeError(msg) from error
 
         lines = cmd_result.stdout.split("\n")
         if debug_cmd is not None:
@@ -357,11 +359,10 @@ class SacctInquirer(BaseInquirer):
 
         args = d.split(",")
         for arg in args:
-            toks = arg.split("=")
-
-            # lines don't have an equal
-            if len(toks) < 2:
+            if "=" not in arg:
                 continue
+
+            toks = arg.split("=")
 
             # convert key to name
             if toks[0] in abbrev_to_key:
@@ -434,7 +435,8 @@ class SacctInquirer(BaseInquirer):
             shell=False,
         )
         if cmd_result.returncode != 0:
-            raise RuntimeError("Error retrieving information from scontrol")
+            msg = "Error retrieving information from scontrol"
+            raise RuntimeError(msg)
 
         partition_name = re.compile(r"^PartitionName=(?P<name>\S+)$")
         time_limit = re.compile(r"MaxTime=(?P<time>\S+)")

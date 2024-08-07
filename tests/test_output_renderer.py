@@ -123,16 +123,9 @@ def some_jobs():
 
 
 @pytest.fixture()
-def some_multi_core_jobs(
-    single_core, multi_node, single_gpu, multi_gpu, multi_node_multi_gpu, short_job
-):
-    """A collection of jobs with multiple cores/gpus."""
+def gpu_jobs(single_gpu, multi_gpu, multi_node_multi_gpu):
+    """A collection of jobs with gpus."""
     jobs = []
-
-    job = job_module.Job("8205464", "8205464", None)
-    for line in short_job:
-        job.update(line)
-    jobs.append(job)
 
     job = job_module.Job("8189521", "8189521", None)
     for line in multi_node_multi_gpu:
@@ -149,6 +142,19 @@ def some_multi_core_jobs(
         job.update(line)
     jobs.append(job)
 
+    return jobs
+
+
+@pytest.fixture()
+def cpu_jobs(single_core, multi_node, short_job):
+    """A collection of cpu jobs."""
+    jobs = []
+
+    job = job_module.Job("8205464", "8205464", None)
+    for line in short_job:
+        job.update(line)
+    jobs.append(job)
+
     job = job_module.Job("8205048", "8205048", None)
     for line in multi_node:
         job.update(line)
@@ -160,6 +166,16 @@ def some_multi_core_jobs(
     jobs.append(job)
 
     return jobs
+
+
+@pytest.fixture()
+def some_multi_core_jobs(gpu_jobs, cpu_jobs):
+    """A collection of jobs with multiple cores/gpus."""
+    result = []
+    result.append(cpu_jobs[0])
+    result += gpu_jobs
+    result += cpu_jobs[1:]
+    return result
 
 
 def test_renderer_init(renderer):
@@ -477,7 +493,10 @@ def test_formatter_init():
     # if unable to parse with %, recommend using ""
     with pytest.raises(
         ValueError,
-        match="Unable to parse format token 'test%a', did you forget to wrap in quotes?",
+        match=(
+            "Unable to parse format token 'test%a', "
+            "did you forget to wrap in quotes?"
+        ),
     ):
         result = output_renderer.ColumnFormatter("test%a")
 
