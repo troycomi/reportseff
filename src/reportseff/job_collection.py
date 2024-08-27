@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import os
 import re
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from .job import Job
@@ -39,7 +39,7 @@ class JobCollection:
 
         self.jobs: dict[str, Job] = {}
         self.renderer: OutputRenderer | None = None
-        self.dir_name = ""
+        self.dir_name: Path | None = None
         self.partition_timelimits: dict = {}
 
     def get_columns(self) -> list[str]:
@@ -73,26 +73,20 @@ class JobCollection:
             ValueError: if the directory contains no valid files
         """
         # set and validate working directory to full path
-        if directory == "":
-            working_directory = os.getcwd()
-        else:
-            working_directory = os.path.realpath(directory)
+        working_directory = Path(directory).resolve() if directory else Path.cwd()
 
-        if not os.path.exists(working_directory):
+        if not working_directory.exists():
             msg = f"{working_directory} does not exist!"
             raise ValueError(msg)
 
         # get files from directory
-        files = os.listdir(working_directory)
-        files = list(
-            filter(lambda x: os.path.isfile(os.path.join(working_directory, x)), files)
-        )
+        files = [file for file in working_directory.iterdir() if file.is_file()]
         if len(files) == 0:
             msg = f"{working_directory} contains no files!"
             raise ValueError(msg)
 
         for file in files:
-            self.process_seff_file(file)
+            self.process_seff_file(file.name)
 
         if len(self.jobs) == 0:
             msg = (
@@ -119,7 +113,7 @@ class JobCollection:
             # look in current directory for slurm outputs
             self.set_out_dir("")
             return
-        if len(jobs) == 1 and os.path.isdir(jobs[0]):
+        if len(jobs) == 1 and Path(jobs[0]).is_dir():
             self.set_out_dir(jobs[0])
             return
         for job_id in jobs:
@@ -250,15 +244,17 @@ class JobCollection:
             idnum = float(re.sub("[^0-9.]", "", job.jobid.replace("_", ".")))
             file = job.filename
             if file and self.dir_name:
-                file = os.path.join(self.dir_name, file)
-            if file and os.path.exists(file):
-                return os.path.getmtime(file)
+                file = self.dir_name / file
+            if file:
+                file = Path(file)
+                if file.exists():
+                    return file.stat().st_mtime
             return idnum
 
         def get_file_name(job: Job) -> tuple[bool, int, str]:
-            file = job.name()
-            file = os.path.join(self.dir_name, file)
-            return (not os.path.exists(file), len(file), file)
+            file = Path(job.name())
+            file = self.dir_name / file if self.dir_name else file
+            return (not file.exists(), len(str(file)), str(file))
 
         if change_sort:
             return sorted(self.jobs.values(), key=get_time, reverse=True)

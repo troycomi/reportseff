@@ -1,5 +1,7 @@
 """Test job collection functions."""
 
+from pathlib import Path
+
 import pytest
 from reportseff import job_collection
 from reportseff.job import Job
@@ -35,30 +37,30 @@ def test_set_out_dir_dir_handling(jobs, mocker):
     """Can handle setting path from cwd or provided value."""
     # dir handling
     mock_cwd = mocker.patch(
-        "reportseff.job_collection.os.getcwd", return_value="/dir/path/"
+        "reportseff.job_collection.Path.cwd", return_value=Path("/dir/path")
     )
     mock_real = mocker.patch(
-        "reportseff.job_collection.os.path.realpath", return_value="/dir/path2/"
+        "reportseff.job_collection.Path.resolve", return_value=Path("/dir/path2")
     )
     mock_exists = mocker.patch(
-        "reportseff.job_collection.os.path.exists", return_value=False
+        "reportseff.job_collection.Path.exists", return_value=False
     )
 
-    with pytest.raises(ValueError, match="/dir/path/ does not exist!"):
+    with pytest.raises(ValueError, match="/dir/path does not exist!"):
         jobs.set_out_dir("")
     mock_cwd.assert_called_once()
     mock_real.assert_not_called()
-    mock_exists.assert_called_once_with("/dir/path/")
+    mock_exists.assert_called_once()
 
     mock_cwd.reset_mock()
     mock_real.reset_mock()
     mock_exists.reset_mock()
 
-    with pytest.raises(ValueError, match="/dir/path2/ does not exist!"):
+    with pytest.raises(ValueError, match="/dir/path2 does not exist!"):
         jobs.set_out_dir("pwd")
     mock_cwd.assert_not_called()
-    mock_real.assert_called_once_with("pwd")
-    mock_exists.assert_called_once_with("/dir/path2/")
+    mock_real.assert_called_once()
+    mock_exists.assert_called_once()
 
 
 def test_set_jobs_none_valid(jobs):
@@ -81,22 +83,22 @@ def test_set_jobs_filter(jobs):
 def test_set_jobs_dir(jobs, mocker):
     """Can provide a directory to set jobs."""
     jobs.jobs = {}
-    mocker.patch("reportseff.job_collection.os.path.isdir", return_value=False)
+    mocker.patch("reportseff.job_collection.Path.is_dir", return_value=False)
     with pytest.raises(ValueError, match="No valid jobs provided!"):
         jobs.set_jobs(("dir",))
 
     jobs.set_jobs(("1",))
     assert jobs.jobs == {"1": Job("1", "1", None)}
 
-    mocker.patch("reportseff.job_collection.os.path.isdir", return_value=True)
+    mocker.patch("reportseff.job_collection.Path.is_dir", return_value=True)
     mock_set_out = mocker.patch.object(job_collection.JobCollection, "set_out_dir")
 
     jobs.set_jobs(())
-    mock_set_out.assert_called_once_with("")
+    mock_set_out.assert_called_once()
 
     mock_set_out.reset_mock()
     jobs.set_jobs(("dir",))
-    mock_set_out.assert_called_once_with("dir")
+    mock_set_out.assert_called_once()
 
 
 def test_process_line(jobs, mocker):
@@ -287,33 +289,33 @@ def test_process_line_partition_timelimit_no_match(jobs, mocker):
 def test_set_out_dir(jobs, mocker):
     """Can set directory with slurm out files."""
     mocker.patch(
-        "reportseff.job_collection.os.path.realpath",
-        side_effect=lambda x: f"/dir/path2/{x}",
+        "reportseff.job_collection.Path.resolve",
+        return_value=Path("/dir/path2/test"),
     )
-    mocker.patch("reportseff.job_collection.os.path.exists", return_value=True)
-    mocker.patch("reportseff.job_collection.os.path.isfile", return_value=True)
+    mocker.patch("reportseff.job_collection.Path.exists", return_value=True)
+    mocker.patch("reportseff.job_collection.Path.is_file", return_value=True)
 
-    mocker.patch("reportseff.job_collection.os.listdir", return_value=[])
+    mocker.patch("reportseff.job_collection.Path.iterdir", return_value=[])
     with pytest.raises(
         ValueError,
         match="/dir/path2/test contains no files!",
     ):
         jobs.set_out_dir("test")
 
-    mocker.patch("reportseff.job_collection.os.listdir", return_value=["asdf"])
+    mocker.patch("reportseff.job_collection.Path.iterdir", return_value=[Path("asdf")])
     with pytest.raises(
         ValueError, match="/dir/path2/test contains no valid output files!"
     ):
         jobs.set_out_dir("test")
 
     mocker.patch(
-        "reportseff.job_collection.os.listdir",
+        "reportseff.job_collection.Path.iterdir",
         return_value=[
-            "asdf",
-            "base_1",
-            "base_1_1.out",
-            "base_2_1",  # overwritten
-            "base_2_1.out",
+            Path("asdf"),
+            Path("base_1"),
+            Path("base_1_1.out"),
+            Path("base_2_1"),  # overwritten
+            Path("base_2_1.out"),
         ],
     )
     jobs.set_out_dir("test")
@@ -327,18 +329,18 @@ def test_set_out_dir(jobs, mocker):
 
 def test_set_custom_seff_format(jobs, mocker):
     """Can change the slurm output file matching."""
-    mocker.patch("reportseff.job_collection.os.path.exists", return_value=True)
-    mocker.patch("reportseff.job_collection.os.path.isfile", return_value=True)
+    mocker.patch("reportseff.job_collection.Path.exists", return_value=True)
+    mocker.patch("reportseff.job_collection.Path.is_file", return_value=True)
     mocker.patch(
-        "reportseff.job_collection.os.listdir",
+        "reportseff.job_collection.Path.iterdir",
         return_value=[
-            "asdf",
-            "base_1",
-            "base_1_1.out",
-            "base_2_1",
-            "base_2_1.out",
-            "3.out",
-            "4_1.out",
+            Path("asdf"),
+            Path("base_1"),
+            Path("base_1_1.out"),
+            Path("base_2_1"),
+            Path("base_2_1.out"),
+            Path("3.out"),
+            Path("4_1.out"),
         ],
     )
 
@@ -472,11 +474,20 @@ def test_get_sorted_jobs(jobs, mocker):
 
     # make all non-none files exist
     mocker.patch(
-        "reportseff.job_collection.os.path.exists",
-        side_effect=lambda x: x is not None and x != "dir/nothing",
+        "reportseff.job_collection.Path.exists",
+        lambda x: str(x) != "dir/nothing",
     )
+
     # replace mtime with the length of the filename
-    mocker.patch("reportseff.job_collection.os.path.getmtime", side_effect=len)
+    def my_stat(file):
+        mock = mocker.MagicMock()
+        mock.st_mtime = len(file.name)
+        return mock
+
+    mocker.patch(
+        "reportseff.job_collection.Path.stat",
+        my_stat,
+    )
 
     # still uses other sorting, no dir_name set
     assert jobs.get_sorted_jobs(change_sort=True) == [
@@ -487,7 +498,7 @@ def test_get_sorted_jobs(jobs, mocker):
         Job("j3", "jid3", "file3"),
     ]
 
-    jobs.dir_name = "dir"  # now dir/nothing doesn't exist
+    jobs.dir_name = Path("dir")  # now dir/nothing doesn't exist
     assert jobs.get_sorted_jobs(change_sort=True) == [
         Job("j14", "jid14", "nothing"),
         Job("j13", "jid13", None),

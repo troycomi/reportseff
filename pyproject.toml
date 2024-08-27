@@ -72,7 +72,7 @@ select = [
   "PIE",  # pie
   "PL",  # pylint
   "PT",  # pytest style
-  # "PTH",  # use pathlib
+  "PTH",  # use pathlib
   "Q",  # Quotes
   "RET",  # return
   "RSE",  # raise
