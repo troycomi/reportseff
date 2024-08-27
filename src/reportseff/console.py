@@ -1,8 +1,10 @@
 """CLI for reportseff."""
 
-from shutil import which
+from __future__ import annotations
+
 import sys
-from typing import Any, Dict, List, Tuple
+from shutil import which
+from typing import Any
 
 import click
 
@@ -11,6 +13,8 @@ from .db_inquirer import BaseInquirer, SacctInquirer
 from .job_collection import JobCollection
 from .output_renderer import OutputRenderer
 from .parameters import ReportseffParameters
+
+MAX_ENTRIES_TO_ECHO = 20
 
 
 @click.command()
@@ -125,13 +129,13 @@ def main(**kwargs: Any) -> None:
 
     output, entries = get_jobs(args)
 
-    if entries > 20:
+    if entries > MAX_ENTRIES_TO_ECHO:
         click.echo_via_pager(output, color=args.color)
     else:
         click.echo(output, color=args.color)
 
 
-def get_jobs(args: ReportseffParameters) -> Tuple[str, int]:
+def get_jobs(args: ReportseffParameters) -> tuple[str, int]:
     """Helper method to get jobs from db_inquirer.
 
     Returns:
@@ -147,7 +151,10 @@ def get_jobs(args: ReportseffParameters) -> Tuple[str, int]:
         job_collection.set_custom_seff_format(args.slurm_format)
 
     inquirer, renderer = get_implementation(
-        args.format_str, args.node, args.node_and_gpu, args.parsable
+        args.format_str,
+        node=args.node,
+        node_and_gpu=args.node_and_gpu,
+        parsable=args.parsable,
     )
 
     inquirer.set_state(args.state)
@@ -177,15 +184,21 @@ def get_jobs(args: ReportseffParameters) -> Tuple[str, int]:
         sys.exit(1)
 
     job_collection.set_partition_limits(inquirer.get_partition_timelimits())
-    db_output = get_db_output(inquirer, renderer, job_collection, args.debug)
-    for entry in db_output:
-        try:
+    db_output = get_db_output(
+        inquirer,
+        renderer,
+        job_collection,
+        debug=args.debug,
+    )
+    entry = None
+    try:
+        for entry in db_output:
             job_collection.process_entry(entry, add_job=add_jobs)
-        except Exception as error:
-            click.echo(f"Error processing entry: {entry}", err=True)
-            raise error
+    except Exception:
+        click.echo(f"Error processing entry: {entry}", err=True)
+        raise
 
-    found_jobs = job_collection.get_sorted_jobs(args.modified_sort)
+    found_jobs = job_collection.get_sorted_jobs(change_sort=args.modified_sort)
     found_jobs = [j for j in found_jobs if j.state]
 
     return renderer.format_jobs(found_jobs), len(found_jobs)
@@ -193,14 +206,18 @@ def get_jobs(args: ReportseffParameters) -> Tuple[str, int]:
 
 def get_implementation(
     format_str: str,
+    *,
     node: bool = False,
     node_and_gpu: bool = False,
     parsable: bool = False,
-) -> Tuple[BaseInquirer, OutputRenderer]:
+) -> tuple[BaseInquirer, OutputRenderer]:
     """Get system-specific objects.
 
     Args:
         format_str: the formatting options specified by user
+        node: control if node-level stats are displayed
+        node_and_gpu: control if node and gpu stats are displayed
+        parsable: produce output with a delimiter separating columns
 
     Returns:
         A db_inqurirer
@@ -226,8 +243,9 @@ def get_db_output(
     inquirer: BaseInquirer,
     renderer: OutputRenderer,
     job_collection: JobCollection,
+    *,
     debug: bool,
-) -> List[Dict[str, str]]:
+) -> list[dict[str, str]]:
     """Get output from inquirer.
 
     Returns:

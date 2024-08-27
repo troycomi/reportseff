@@ -1,11 +1,15 @@
 """Module representing a collection of jobs."""
 
-import os
+from __future__ import annotations
+
 import re
-from typing import Dict, List, Optional, Tuple
+from pathlib import Path
+from typing import TYPE_CHECKING
 
 from .job import Job
-from .output_renderer import OutputRenderer
+
+if TYPE_CHECKING:  # pragma: no cover
+    from .output_renderer import OutputRenderer
 
 
 class JobCollection:
@@ -33,12 +37,12 @@ class JobCollection:
         )
         self.job_regex = re.compile(r"^(?P<jobid>(?P<job>[0-9]+)(_[][\-0-9]+)?)$")
 
-        self.jobs: Dict[str, Job] = {}
-        self.renderer: Optional[OutputRenderer] = None
-        self.dir_name = ""
+        self.jobs: dict[str, Job] = {}
+        self.renderer: OutputRenderer | None = None
+        self.dir_name: Path | None = None
         self.partition_timelimits: dict = {}
 
-    def get_columns(self) -> List[str]:
+    def get_columns(self) -> list[str]:
         """The list of columns requested from inquirer.
 
         Returns:
@@ -46,7 +50,7 @@ class JobCollection:
         """
         return self.columns
 
-    def get_jobs(self) -> List[str]:
+    def get_jobs(self) -> list[str]:
         """List of jobs to get from inquirer.
 
         Returns:
@@ -69,30 +73,27 @@ class JobCollection:
             ValueError: if the directory contains no valid files
         """
         # set and validate working directory to full path
-        if directory == "":
-            working_directory = os.getcwd()
-        else:
-            working_directory = os.path.realpath(directory)
+        working_directory = Path(directory).resolve() if directory else Path.cwd()
 
-        if not os.path.exists(working_directory):
-            raise ValueError(f"{working_directory} does not exist!")
+        if not working_directory.exists():
+            msg = f"{working_directory} does not exist!"
+            raise ValueError(msg)
 
         # get files from directory
-        files = os.listdir(working_directory)
-        files = list(
-            filter(lambda x: os.path.isfile(os.path.join(working_directory, x)), files)
-        )
+        files = [file for file in working_directory.iterdir() if file.is_file()]
         if len(files) == 0:
-            raise ValueError(f"{working_directory} contains no files!")
+            msg = f"{working_directory} contains no files!"
+            raise ValueError(msg)
 
         for file in files:
-            self.process_seff_file(file)
+            self.process_seff_file(file.name)
 
         if len(self.jobs) == 0:
-            raise ValueError(
+            msg = (
                 f"{working_directory} contains no valid output files!"
                 "\nDo you need to set a custom format with `--slurm-format`?"
             )
+            raise ValueError(msg)
         self.dir_name = working_directory
 
     def set_jobs(self, jobs: tuple) -> None:
@@ -112,7 +113,7 @@ class JobCollection:
             # look in current directory for slurm outputs
             self.set_out_dir("")
             return
-        if len(jobs) == 1 and os.path.isdir(jobs[0]):
+        if len(jobs) == 1 and Path(jobs[0]).is_dir():
             self.set_out_dir(jobs[0])
             return
         for job_id in jobs:
@@ -124,7 +125,8 @@ class JobCollection:
                 self.process_seff_file(job_id)
 
         if len(self.jobs) == 0:
-            raise ValueError("No valid jobs provided!")
+            msg = "No valid jobs provided!"
+            raise ValueError(msg)
 
     def process_seff_file(self, filename: str) -> None:
         """Try to parse out job information from the supplied filename.
@@ -162,10 +164,11 @@ class JobCollection:
                 r"(?P<jobid>(?P<job>[0-9]+))",
             )
         else:
-            raise ValueError(
+            msg = (
                 f"Unable to determine jobid from {filename_pattern}. "
                 "Pattern should include one of ('%j', '%A', '%A_%a')"
             )
+            raise ValueError(msg)
 
         tokens = re.split(r"(%[^%])", pattern)
         # combine sequential tokens
@@ -181,7 +184,7 @@ class JobCollection:
                 processed_tokens.append(token)
         self.job_file_regex = re.compile("^" + "".join(processed_tokens) + "$")
 
-    def add_job(self, job: str, jobid: str, filename: Optional[str] = None) -> None:
+    def add_job(self, job: str, jobid: str, filename: str | None = None) -> None:
         """Add a job to the collection.
 
         Args:
@@ -191,7 +194,7 @@ class JobCollection:
         """
         self.jobs[jobid] = Job(job, jobid, filename)
 
-    def process_entry(self, entry: Dict, add_job: bool = False) -> None:
+    def process_entry(self, entry: dict, *, add_job: bool = False) -> None:
         """Update the jobs collection with information from the provided entry.
 
         Args:
@@ -223,7 +226,7 @@ class JobCollection:
 
         self.jobs[job_id].update(entry)
 
-    def get_sorted_jobs(self, change_sort: bool) -> List[Job]:
+    def get_sorted_jobs(self, *, change_sort: bool) -> list[Job]:
         """Sort the jobs.
 
         Args:
@@ -240,16 +243,18 @@ class JobCollection:
             # handle None and '', use numeric representation of name
             idnum = float(re.sub("[^0-9.]", "", job.jobid.replace("_", ".")))
             file = job.filename
-            if file and self.dir_name:
-                file = os.path.join(self.dir_name, file)
-            if file and os.path.exists(file):
-                return os.path.getmtime(file)
+            if file:
+                path = Path(file)
+                if self.dir_name:
+                    path = self.dir_name / file
+                if path.exists():
+                    return path.stat().st_mtime
             return idnum
 
-        def get_file_name(job: Job) -> Tuple[bool, int, str]:
-            file = job.name()
-            file = os.path.join(self.dir_name, file)
-            return (not os.path.exists(file), len(file), file)
+        def get_file_name(job: Job) -> tuple[bool, int, str]:
+            file = Path(job.name())
+            file = self.dir_name / file if self.dir_name else file
+            return (not file.exists(), len(str(file)), str(file))
 
         if change_sort:
             return sorted(self.jobs.values(), key=get_time, reverse=True)

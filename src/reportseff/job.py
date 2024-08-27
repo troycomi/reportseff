@@ -1,12 +1,13 @@
 """Module for representing scheduler jobs."""
 
+from __future__ import annotations
+
 import base64
-from datetime import timedelta
 import gzip
 import json
 import re
-from typing import Any, Dict, Generator, Optional, Union
-
+from datetime import timedelta
+from typing import Any, Generator
 
 multiple_map = {
     "K": 1024**0,
@@ -40,12 +41,13 @@ MMSSMMM_RE = re.compile(
 MEM_RE = re.compile(
     r"(?P<memory>[-+]?\d*\.\d+|\d+)(?P<multiple>[KMGTE]?)(?P<type>[nc]?)"
 )
+ADMIN_COMMENT_MIN_LENGTH = 10
 
 
 class Job:
     """Representation of scheduler job."""
 
-    def __init__(self, job: str, jobid: str, filename: Optional[str]) -> None:
+    def __init__(self, job: str, jobid: str, filename: str | None) -> None:
         """Initialize new job.
 
         Args:
@@ -57,19 +59,19 @@ class Job:
         self.jobid = jobid
         self.filename = filename
         self.stepmem = 0.0
-        self.totalmem: Optional[float] = None
-        self.time: Optional[str] = "---"
-        self.time_eff: Union[str, float] = "---"
-        self.cpu: Optional[Union[str, float]] = "---"
-        self.state: Optional[str] = None
-        self.mem_eff: Optional[float] = None
-        self.gpu: Optional[float] = None
-        self.gpu_mem: Optional[float] = None
+        self.totalmem: float | None = None
+        self.time: str | None = "---"
+        self.time_eff: str | float = "---"
+        self.cpu: str | float | None = "---"
+        self.state: str | None = None
+        self.mem_eff: float | None = None
+        self.gpu: float | None = None
+        self.gpu_mem: float | None = None
         self.energy: int = 0
-        self.other_entries: Dict[str, Any] = {}
+        self.other_entries: dict[str, Any] = {}
         # safe to cache now
         self.other_entries["JobID"] = self.name()
-        self.comment_data: Dict = {}
+        self.comment_data: dict = {}
 
     def __eq__(self, other: Any) -> bool:
         """Test for equality.
@@ -93,7 +95,7 @@ class Job:
         """
         return f"Job(job={self.job}, jobid={self.jobid}, filename={self.filename})"
 
-    def update(self, entry: Dict) -> None:
+    def update(self, entry: dict) -> None:
         """Update the job properties based on the db_inquirer entry.
 
         Args:
@@ -125,7 +127,7 @@ class Job:
                     _parse_energy(entry["TRESUsageOutAve"]),
                 )
 
-    def _update_main_job(self, entry: Dict) -> None:
+    def _update_main_job(self, entry: dict) -> None:
         """Update properties for the main job.
 
         Args:
@@ -134,7 +136,7 @@ class Job:
         for k, value in entry.items():
             if k not in self.other_entries or not self.other_entries[k]:
                 self.other_entries[k] = value
-        self.time = entry["Elapsed"] if "Elapsed" in entry else None
+        self.time = entry.get("Elapsed")
 
         requested = 0
         if "Timelimit" in entry and entry["Timelimit"] not in (
@@ -154,7 +156,7 @@ class Job:
         total_cpu = _parse_slurm_timedelta(entry.get("TotalCPU", "00:00.000"))
         alloc_cpus = int(entry.get("AllocCPUS", 0))
 
-        cpu_time = cpu_time = total_cpu / alloc_cpus if alloc_cpus != 0 else 0.0
+        cpu_time = total_cpu / alloc_cpus if alloc_cpus != 0 else 0.0
 
         if wall == 0:
             self.cpu = None
@@ -166,7 +168,10 @@ class Job:
                 entry["REQMEM"], int(entry["NNodes"]), int(entry["AllocCPUS"])
             )
 
-        if "AdminComment" in entry and len(entry["AdminComment"]) > 10:
+        if (
+            "AdminComment" in entry
+            and len(entry["AdminComment"]) > ADMIN_COMMENT_MIN_LENGTH
+        ):
             self._parse_admin_comment(entry["AdminComment"])
 
     def _parse_admin_comment(self, comment: str) -> None:
@@ -233,7 +238,7 @@ class Job:
         return self.other_entries.get(key, "---")
 
     def get_node_entries(
-        self, key: str, gpu: bool = False
+        self, key: str, *, gpu: bool = False
     ) -> Generator[Any, None, None]:
         """Get an attribute by name for each node in job.
 
@@ -316,7 +321,8 @@ def _parse_slurm_timedelta(delta: str) -> int:
                 milliseconds=int(match.group("milliseconds")),
             ).total_seconds()
         )
-    raise ValueError(f"Failed to parse time {delta!r}")
+    msg = f"Failed to parse time {delta!r}"
+    raise ValueError(msg)
 
 
 def parsemem(mem: str, nodes: int = 1, cpus: int = 1) -> float:
@@ -336,11 +342,12 @@ def parsemem(mem: str, nodes: int = 1, cpus: int = 1) -> float:
     Raises:
         ValueError: if unable to parse mem
     """
-    if mem == "" or mem == "0":
+    if mem in ("", "0"):
         return 0
     match = re.fullmatch(MEM_RE, mem)
     if not match:
-        raise ValueError(f"Failed to parse memory {mem!r}")
+        msg = f"Failed to parse memory {mem!r}"
+        raise ValueError(msg)
     memory = float(match.group("memory"))
 
     if match.group("multiple") != "":
@@ -370,7 +377,7 @@ def _parse_energy(tres: str) -> int:
     return 0
 
 
-def _parse_admin_comment_to_dict(comment: str) -> Optional[dict]:
+def _parse_admin_comment_to_dict(comment: str) -> dict | None:
     """Attempt to parse AdminComment.
 
     Args:
@@ -391,11 +398,13 @@ def _parse_admin_comment_to_dict(comment: str) -> Optional[dict]:
         return None
 
     if comment_type not in ("JS1",):
-        raise ValueError(f"Unknown comment type {comment_type!r}")
+        msg = f"Unknown comment type {comment_type!r}"
+        raise ValueError(msg)
     try:
         return json.loads(gzip.decompress(base64.b64decode(comment[4:])))
     except Exception as exception:
-        raise ValueError(f"Cannot decode comment {comment!r}") from exception
+        msg = f"Cannot decode comment {comment!r}"
+        raise ValueError(msg) from exception
 
 
 def _get_node_data(comment_data: dict, node_data: dict) -> dict:
@@ -410,9 +419,8 @@ def _get_node_data(comment_data: dict, node_data: dict) -> dict:
     """
 
     def get_gpu_value(comment_data: dict, key: str, gpu_number: int) -> float:
-        if key in comment_data:
-            if gpu_number in comment_data[key]:
-                return comment_data[key][gpu_number]
+        if key in comment_data and gpu_number in comment_data[key]:
+            return comment_data[key][gpu_number]
         return 0
 
     result = {

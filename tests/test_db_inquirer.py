@@ -4,11 +4,10 @@ import datetime
 import subprocess
 
 import pytest
-
 from reportseff import db_inquirer
 
 
-@pytest.fixture
+@pytest.fixture()
 def sacct():
     """Default sacct inquirer."""
     return db_inquirer.SacctInquirer()
@@ -60,9 +59,10 @@ def test_sacct_get_valid_formats(sacct, mocker):
         "\nWorkDir            \n"
     )
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=mock_sacct)
-    with pytest.raises(Exception) as exception:
+    with pytest.raises(
+        Exception, match="Error retrieving sacct options with --helpformat"
+    ):
         sacct.get_valid_formats()
-    assert "Error retrieving sacct options with --helpformat" in str(exception)
 
     mock_sacct.returncode = 0
     result = [
@@ -203,7 +203,7 @@ def test_sacct_get_db_output(sacct, mocker):
         encoding=mocker.ANY,
         check=mocker.ANY,
         shell=False,
-        universal_newlines=True,
+        text=True,
     )
 
     debug = []
@@ -277,9 +277,8 @@ def test_sacct_get_db_output_user(sacct, mocker):
     mock_date.today.return_value = datetime.date(2018, 1, 20)
     mock_date.side_effect = datetime.date
     mocker.patch("reportseff.db_inquirer.datetime.date", mock_date)
-    with pytest.raises(Exception) as exception:
+    with pytest.raises(Exception, match="Error running sacct!"):
         sacct.get_db_output("c1 c2".split(), "j1 j2 j3".split())
-    assert "Error running sacct!" in str(exception)
 
     mock_sacct = mocker.MagicMock()
     mock_sacct.returncode = 0
@@ -301,7 +300,7 @@ def test_sacct_get_db_output_user(sacct, mocker):
         stdout=mocker.ANY,
         encoding=mocker.ANY,
         check=mocker.ANY,
-        universal_newlines=True,
+        text=True,
         shell=False,
     )
 
@@ -338,7 +337,7 @@ def test_sacct_get_db_output_partition(sacct, mocker):
         stdout=mocker.ANY,
         encoding=mocker.ANY,
         check=mocker.ANY,
-        universal_newlines=True,
+        text=True,
         shell=False,
     )
 
@@ -369,7 +368,7 @@ def test_sacct_get_db_output_since(sacct, mocker):
         stdout=mocker.ANY,
         encoding=mocker.ANY,
         check=mocker.ANY,
-        universal_newlines=True,
+        text=True,
         shell=False,
     )
 
@@ -400,7 +399,7 @@ def test_sacct_get_db_output_until(sacct, mocker):
         stdout=mocker.ANY,
         encoding=mocker.ANY,
         check=mocker.ANY,
-        universal_newlines=True,
+        text=True,
         shell=False,
     )
 
@@ -441,7 +440,7 @@ def test_sacct_set_state(sacct, capsys):
 
     sacct.set_state("unknown,z")
     assert sacct.state == {None}
-    assert {string for string in capsys.readouterr().err.split("\n")} == {
+    assert set(capsys.readouterr().err.split("\n")) == {
         "Unknown state UNKNOWN",
         "Unknown state Z",
         "No valid states provided to include",
@@ -451,7 +450,7 @@ def test_sacct_set_state(sacct, capsys):
     # remove duplicate unknowns
     sacct.set_state("unknown,z,z,z")
     assert sacct.state == {None}
-    assert {string for string in capsys.readouterr().err.split("\n")} == {
+    assert set(capsys.readouterr().err.split("\n")) == {
         "Unknown state UNKNOWN",
         "Unknown state Z",
         "No valid states provided to include",
@@ -613,9 +612,8 @@ def test_sacct_get_db_output_user_state(sacct, mocker):
     mock_date.today.return_value = datetime.date(2018, 1, 20)
     mock_date.side_effect = datetime.date
     mocker.patch("reportseff.db_inquirer.datetime.date", mock_date)
-    with pytest.raises(Exception) as exception:
+    with pytest.raises(Exception, match="Error running sacct!"):
         sacct.get_db_output("c1 c2".split(), "j1 j2 j3".split())
-    assert "Error running sacct!" in str(exception)
 
     mock_sacct = mocker.MagicMock()
     mock_sacct.returncode = 0
@@ -640,7 +638,7 @@ def test_sacct_get_db_output_user_state(sacct, mocker):
         stdout=mocker.ANY,
         encoding=mocker.ANY,
         check=mocker.ANY,
-        universal_newlines=True,
+        text=True,
         shell=False,
     )
 
@@ -768,7 +766,7 @@ def test_sacct_get_db_output_issue_30(sacct, mocker):
         encoding=mocker.ANY,
         check=mocker.ANY,
         shell=False,
-        universal_newlines=True,
+        text=True,
     )
 
     debug = []

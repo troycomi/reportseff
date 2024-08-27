@@ -19,21 +19,14 @@ pytest = "^8.2.2"
 pytest-mock = "^3.14.0"
 coverage = {extras = ["toml"], version = "^7.5.4"}
 pytest-cov = "^5.0.0"
-black = { version = "^24.4.2", allow-prereleases = true }
-flake8 = "^7.1.0"
-flake8-bandit = "^4.1.1"
-flake8-black = "^0.3.6"
-flake8-bugbear = "^24.4.26"
-flake8-import-order = "^0.18.1"
 safety = "^3.2.4"
 mypy = "^1.10.1"
 types-click = "^7.1.8"
 pytype = "^2024.4.11"
 typeguard = "^4.3.0"
-flake8-annotations = "^3.1.1"
-flake8-docstrings = ">=1.7.0"
 darglint = ">=1.8.1"
 codecov = ">=2.1.13"
+ruff = "^0.5.5"
 
 [tool.poetry.scripts]
 reportseff = "reportseff.console:main"
@@ -53,3 +46,69 @@ source = ["reportseff"]
 [tool.coverage.report]
 show_missing = true
 fail_under = 100
+
+[tool.ruff.lint]
+select = [
+  "A",  # builtins
+  "ANN",  # annotations
+  "ARG",  # tidy imports
+  "B",  # bugbear
+  "BLE",
+  "C4",  # comprehensions
+  "COM",  # commas
+  "D",  # pydocstyle
+  "E",  # pycode style Error
+  "ERA",  # commented out code
+  "F",  # pyflakes
+  "FA",  # error message
+  "FBT",  # boolean trap
+  "FURB",  # refurb
+  "I",  # isort
+  "ICN",  # import conventions
+  "INT",  # gettext
+  "ISC",  # String concatenation
+  "N",  # pep8-naming
+  "PERF",  # perflint
+  "PIE",  # pie
+  "PL",  # pylint
+  "PT",  # pytest style
+  "PTH",  # use pathlib
+  "Q",  # Quotes
+  "RET",  # return
+  "RSE",  # raise
+  "RUF",  # ruff
+  "S",  # bandit
+  "SIM",  # simplify
+  "SLF",  # Self
+  "T10",  # debugger
+  "T20",  # print
+  "TCH",  # type checking
+  "TD",  # todos
+  "TID",  # tidy imports
+  "TRY",  # tryceratops
+  "UP",  # pyupgrade
+  "W",  # pycode style Warning
+]
+
+ignore = [
+  "ANN101",  # missing self
+  "ANN401",  # allow Any
+  "COM812",  # allow missing commas on last element
+  "ISC001",  # recommended by format
+]
+
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = [
+  "ANN",  # type annotations
+  "S101",  # use assert
+  "PLR2004",  # magic numbers in tests
+  "SLF001",  # allow private methods in tests
+]
+
+"noxfile.py" = [
+  "ANN",  # type annotations
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"

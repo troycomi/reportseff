@@ -4,10 +4,8 @@ import re
 
 import click
 import pytest
-
 from reportseff import job as job_module
 from reportseff import output_renderer
-
 
 min_required = (
     "JobID,State,Elapsed,JobIDRaw,State,TotalCPU,AllocCPUS,"
@@ -15,13 +13,13 @@ min_required = (
 ).split(",")
 
 
-@pytest.fixture
+@pytest.fixture()
 def renderer():
     """Default renderer with valid names for only default string."""
     return output_renderer.OutputRenderer(min_required)
 
 
-@pytest.fixture
+@pytest.fixture()
 def some_jobs():
     """A few test jobs for generating an output table."""
     jobs = []
@@ -124,17 +122,10 @@ def some_jobs():
     return jobs
 
 
-@pytest.fixture
-def some_multi_core_jobs(
-    single_core, multi_node, single_gpu, multi_gpu, multi_node_multi_gpu, short_job
-):
-    """A collection of jobs with multiple cores/gpus."""
+@pytest.fixture()
+def gpu_jobs(single_gpu, multi_gpu, multi_node_multi_gpu):
+    """A collection of jobs with gpus."""
     jobs = []
-
-    job = job_module.Job("8205464", "8205464", None)
-    for line in short_job:
-        job.update(line)
-    jobs.append(job)
 
     job = job_module.Job("8189521", "8189521", None)
     for line in multi_node_multi_gpu:
@@ -151,6 +142,19 @@ def some_multi_core_jobs(
         job.update(line)
     jobs.append(job)
 
+    return jobs
+
+
+@pytest.fixture()
+def cpu_jobs(single_core, multi_node, short_job):
+    """A collection of cpu jobs."""
+    jobs = []
+
+    job = job_module.Job("8205464", "8205464", None)
+    for line in short_job:
+        job.update(line)
+    jobs.append(job)
+
     job = job_module.Job("8205048", "8205048", None)
     for line in multi_node:
         job.update(line)
@@ -162,6 +166,16 @@ def some_multi_core_jobs(
     jobs.append(job)
 
     return jobs
+
+
+@pytest.fixture()
+def some_multi_core_jobs(gpu_jobs, cpu_jobs):
+    """A collection of jobs with multiple cores/gpus."""
+    result = []
+    result.append(cpu_jobs[0])
+    result += gpu_jobs
+    result += cpu_jobs[1:]
+    return result
 
 
 def test_renderer_init(renderer):
@@ -232,7 +246,7 @@ def test_renderer_validate_formatters(renderer):
 
 def test_renderer_validate_formatters_with_node(renderer):
     """Validating formatters with GPUs can alter formatters."""
-    min_gpu = min_required + ["GPU", "GPUEff", "GPUMem"]
+    min_gpu = [*min_required, "GPU", "GPUEff", "GPUMem"]
     # normal function
     renderer.node = False
     renderer.gpu = False
@@ -469,31 +483,32 @@ def test_formatter_init():
     assert result.end is None
 
     # with invalid width
-    with pytest.raises(ValueError) as exception:
+    with pytest.raises(ValueError, match="Unable to parse format token 'test%1<0'"):
         result = output_renderer.ColumnFormatter("test%1<0")
-    assert "Unable to parse format token 'test%1<0'" in str(exception)
 
     # empty
-    with pytest.raises(ValueError) as exception:
+    with pytest.raises(ValueError, match="Unable to parse format token ''"):
         result = output_renderer.ColumnFormatter("")
-    assert "Unable to parse format token ''" in str(exception)
 
     # if unable to parse with %, recommend using ""
-    with pytest.raises(ValueError) as exception:
+    with pytest.raises(
+        ValueError,
+        match=(
+            "Unable to parse format token 'test%a', "
+            "did you forget to wrap in quotes?"
+        ),
+    ):
         result = output_renderer.ColumnFormatter("test%a")
-    assert (
-        "Unable to parse format token 'test%a', " "did you forget to wrap in quotes?"
-    ) in str(exception)
 
     # if unable to parse with %, recommend using "" even when matching
-    with pytest.raises(ValueError) as exception:
+    with pytest.raises(
+        ValueError,
+        match="Unable to parse format token 'test%', did you forget to wrap in quotes?",
+    ):
         result = output_renderer.ColumnFormatter("test%")
-    assert (
-        "Unable to parse format token 'test%', " "did you forget to wrap in quotes?"
-    ) in str(exception)
 
     # end without width is an error
-    with pytest.raises(ValueError) as exception:
+    with pytest.raises(ValueError, match="Unable to parse format token 'test%e'"):
         result = output_renderer.ColumnFormatter("test%e")
 
     # can specify end with width
@@ -519,10 +534,10 @@ def test_formatter_eq():
     assert fmt == fmt2
     assert fmt != fmt3
 
-    assert fmt != list()
+    assert fmt != []
     assert repr(fmt) == "Name%^None"
 
-    assert "Name" == fmt
+    assert "Name" == fmt  # noqa: SIM300 need to check both sides for equality
     assert fmt == "Name"
     assert fmt != "NaMe"
 
@@ -535,9 +550,8 @@ def test_formatter_validate_title():
     """Can validate titles against a column formatter."""
     fmt = output_renderer.ColumnFormatter("NaMe")
 
-    with pytest.raises(ValueError) as exception:
+    with pytest.raises(ValueError, match="'NaMe' is not a valid title"):
         fmt.validate_title(["JobID", "State"])
-    assert "'NaMe' is not a valid title" in str(exception)
 
     fmt.title = "jOBid"
     assert fmt.validate_title(["other", "JobID", "State"]) == "JobID"

@@ -19,9 +19,8 @@ repos:
   - id: python-check-blanket-noqa
   - id: python-no-eval
   - id: python-use-type-annotations
-  - id: rst-backticks
-  - id: rst-directive-colons
-  - id: rst-inline-touching-normal
+  - id: python-check-blanket-type-ignore
+  - id: python-check-mock-methods
 
 - repo: https://github.com/codespell-project/codespell
   rev: v2.1.0
@@ -34,19 +33,9 @@ repos:
   hooks:
   - id: shellcheck
 
-- repo: https://github.com/psf/black
-  rev: 24.4.2
+- repo: https://github.com/astral-sh/ruff-pre-commit
+  rev: v0.5.5
   hooks:
-  -   id: black
-      language_version: "3.10"
-
-- repo: https://github.com/PyCQA/flake8
-  rev: 3.9.2
-  hooks:
-  - id: flake8
-
-- repo: https://github.com/dhruvmanila/remove-print-statements
-  rev: 'v0.5.0'
-  hooks:
-  - id: remove-print-statements
-    args: ['--verbose']   # Show all the print statements to be removed
+    - id: ruff
+      args: [ --fix ]
+    - id: ruff-format
