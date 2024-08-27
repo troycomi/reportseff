@@ -243,12 +243,12 @@ class JobCollection:
             # handle None and '', use numeric representation of name
             idnum = float(re.sub("[^0-9.]", "", job.jobid.replace("_", ".")))
             file = job.filename
-            if file and self.dir_name:
-                file = self.dir_name / file
             if file:
-                file = Path(file)
-                if file.exists():
-                    return file.stat().st_mtime
+                path = Path(file)
+                if self.dir_name:
+                    path = self.dir_name / file
+                if path.exists():
+                    return path.stat().st_mtime
             return idnum
 
         def get_file_name(job: Job) -> tuple[bool, int, str]:
