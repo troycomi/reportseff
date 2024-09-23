@@ -892,3 +892,46 @@ def test_extra_args(mocker):
     )
 
     assert result.exit_code == 0
+
+
+@pytest.mark.usefixtures("_mock_inquirer")
+def test_issue_58(mocker):
+    """Incorrect memory usage when filtering by state."""
+    mocker.patch("reportseff.console.which", return_value=True)
+    runner = CliRunner()
+    sub_result = mocker.MagicMock()
+    sub_result.returncode = 0
+    sub_result.stdout = """
+^|^2^|^01:00:29^|^1234^|^1234^|^^|^1^|^^|^40G^|^TIMEOUT^|^01:00:00^|^01:01:06
+^|^2^|^01:00:33^|^1234.batch^|^1234.batch^|^19855760K^|^1^|^1^|^^|^CANCELLED^|^^|^01:01:06
+"""
+    mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
+    result = runner.invoke(console.main, "--no-color 1234".split())
+
+    assert result.exit_code == 0
+    # remove header
+    output = result.output.split("\n")[1:-1]
+    assert output[0].split() == [
+        "1234",
+        "TIMEOUT",
+        "01:00:29",
+        "100.8%",
+        "50.5%",
+        "47.3%",
+    ]
+    assert len(output) == 1
+
+    result = runner.invoke(console.main, "--state TIMEOUT --no-color 1234".split())
+
+    assert result.exit_code == 0
+    # remove header
+    output = result.output.split("\n")[1:-1]
+    assert output[0].split() == [
+        "1234",
+        "TIMEOUT",
+        "01:00:29",
+        "100.8%",
+        "50.5%",
+        "47.3%",
+    ]
+    assert len(output) == 1

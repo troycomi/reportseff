@@ -613,7 +613,7 @@ def test_sacct_get_db_output_user_state(sacct, mocker):
     mock_date.side_effect = datetime.date
     mocker.patch("reportseff.db_inquirer.datetime.date", mock_date)
     with pytest.raises(Exception, match="Error running sacct!"):
-        sacct.get_db_output("c1 c2".split(), "j1 j2 j3".split())
+        sacct.get_db_output("JobID c2".split(), "j1 j2 j3".split())
 
     mock_sacct = mocker.MagicMock()
     mock_sacct.returncode = 0
@@ -625,14 +625,14 @@ def test_sacct_get_db_output_user_state(sacct, mocker):
     )
     sacct.set_user("user")
     sacct.set_state("R")
-    result = sacct.get_db_output("c1 c2 State".split(), {})
+    result = sacct.get_db_output("JobID c2 State".split(), {})
     assert result == [
-        {"c1": "c1j1", "c2": "c2j1", "State": "RUNNING"},
-        {"c1": "c1j2", "c2": "c2j2", "State": "RUNNING"},
+        {"JobID": "c1j1", "c2": "c2j1", "State": "RUNNING"},
+        {"JobID": "c1j2", "c2": "c2j2", "State": "RUNNING"},
     ]
     mock_sub.assert_called_once_with(
         args=(
-            "sacct -P -n --delimiter=^|^ --format=c1,c2,State"
+            "sacct -P -n --delimiter=^|^ --format=JobID,c2,State"
             " --user=user --starttime=011318"
         ).split(),
         stdout=mocker.ANY,
@@ -644,7 +644,7 @@ def test_sacct_get_db_output_user_state(sacct, mocker):
 
     # debug is not affected by state
     debug = []
-    sacct.get_db_output("c1 c2 State".split(), "j1 j2 j3".split(), debug.append)
+    sacct.get_db_output("JobID c2 State".split(), "j1 j2 j3".split(), debug.append)
     assert debug[0] == (
         "c1j1^|^c2j1^|^RUNNING\nc1j2^|^c2j2^|^RUNNING\nc1j3^|^c2j3^|^COMPLETED\n"
     )
