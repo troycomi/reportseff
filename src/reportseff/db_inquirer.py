@@ -266,13 +266,26 @@ class SacctInquirer(BaseInquirer):
         sacct_split = re.compile(r"\^\|\^")
         result = [dict(zip(columns, sacct_split.split(line))) for line in lines if line]
 
-        if self.state:
-            # split to get first word in entries like "CANCELLED BY X"
-            result = [r for r in result if r["State"].split()[0] in self.state]
+        # Sometimes the main job has a different state than the sub jobs
+        # e.g. timeouts have a state of canceled for the batch jobs.
+        # When state filtering is active, need to filter main ids, then retain
+        # only the jobs with matching job ids
+        if self.state or self.not_state:
+            main_jobs = [r for r in result if "." not in r["JobID"]]
+            if self.state:
+                # split to get first word in entries like "CANCELLED BY X"
+                main_jobs = [
+                    r for r in main_jobs if r["State"].split()[0] in self.state
+                ]
 
-        if self.not_state:
-            # split to get first word in entries like "CANCELLED BY X"
-            result = [r for r in result if r["State"].split()[0] not in self.not_state]
+            if self.not_state:
+                # split to get first word in entries like "CANCELLED BY X"
+                main_jobs = [
+                    r for r in main_jobs if r["State"].split()[0] not in self.not_state
+                ]
+
+            main_job_ids = {r["JobID"] for r in main_jobs}
+            result = [r for r in result if r["JobID"].split(".")[0] in main_job_ids]
 
         return result
 
