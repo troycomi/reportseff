@@ -71,6 +71,12 @@ MAX_ENTRIES_TO_ECHO = 20
     help="Only include jobs with the specified partition",
 )
 @click.option(
+    "-M",
+    "--cluster",
+    default="",
+    help="Select specific cluster, for multi-cluster system only",
+)
+@click.option(
     "--extra-args",
     default="",
     help="Extra arguments to forward to sacct",
@@ -164,6 +170,7 @@ def get_jobs(args: ReportseffParameters) -> tuple[str, int]:
     inquirer.set_until(args.until)
 
     inquirer.set_partition(args.partition)
+    inquirer.set_cluster(args.cluster)
 
     inquirer.set_extra_args(args.extra_args)
 

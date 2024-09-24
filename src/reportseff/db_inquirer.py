@@ -79,6 +79,14 @@ class BaseInquirer(ABC):
         """
 
     @abstractmethod
+    def set_cluster(self, cluster: str) -> None:
+        """Set the collection of jobs based on the provided cluster.
+
+        Args:
+            cluster: cluster name
+        """
+
+    @abstractmethod
     def set_extra_args(self, extra_args: str) -> None:
         """Set extra arguments to be forwarded to sacct.
 
@@ -165,6 +173,7 @@ class SacctInquirer(BaseInquirer):
         self.until: str | None = None
         self.query_all_users: bool = False
         self.partition: str | None = None
+        self.cluster: str | None = None
         self.extra_args: str | None = None
 
     def get_valid_formats(self) -> list[str]:
@@ -215,6 +224,8 @@ class SacctInquirer(BaseInquirer):
             args += [f"--starttime={self.since}"]
         if self.partition:
             args += [f"--partition={self.partition}"]
+        if self.cluster:
+            args += [f"--cluster={self.cluster}"]
         if self.until:
             args += [f"--endtime={self.until}"]
         if self.extra_args:
@@ -304,6 +315,14 @@ class SacctInquirer(BaseInquirer):
             partition: partition name
         """
         self.partition = partition
+
+    def set_cluster(self, cluster: str) -> None:
+        """Set the specific cluster in multi-cluster environment.
+
+        Args:
+            cluster: cluster name
+        """
+        self.cluster = cluster
 
     def set_extra_args(self, extra_args: str) -> None:
         """Set extra arguments to be forwarded to sacct.
@@ -438,7 +457,7 @@ class SacctInquirer(BaseInquirer):
         Raises:
             RuntimeError: if scontrol raises an error
         """
-        command_args = "scontrol show partition".split()
+        command_args = f"scontrol {self.extra_args} show partition".split()
         cmd_result = subprocess.run(
             args=command_args,
             stdout=subprocess.PIPE,

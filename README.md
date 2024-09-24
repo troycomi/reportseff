@@ -219,6 +219,7 @@ directory to check for slurm outputs.
   sacct formats and a comma separated list of key/value pairs.
   Useful in combination with the 'since' option to query a specific range.
 - `--partition`: Limit results to a specific partition.
+- `--cluster/-M`: Select specific cluster (for multi-cluster system)
 - `--node/-n`: Display information for multi-node jobs; requires additional
   sacct fields from jobstats.
 - `--node-and-gpu/-g`: Display information for multi-node jobs and GPU information;

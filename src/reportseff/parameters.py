@@ -26,6 +26,7 @@ class ReportseffParameters:
     slurm_format: str = ""
     user: str = ""
     partition: str = ""
+    cluster: str = ""
     extra_args: str = ""
 
     def __post_init__(self) -> None:
