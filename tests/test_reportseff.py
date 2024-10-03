@@ -223,7 +223,7 @@ def test_simple_user(mocker, console_jobs):
 
 @pytest.mark.usefixtures("_mock_inquirer")
 def test_simple_partition(mocker, console_jobs):
-    """Can limit outputs by partition."""
+    """Can limit outputs by partition and cluster."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
     sub_result = mocker.MagicMock()
@@ -234,7 +234,7 @@ def test_simple_partition(mocker, console_jobs):
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
     result = runner.invoke(
         console.main,
-        "--no-color --partition partition 24418435 25569410 "
+        "--no-color --partition partition --cluster cluster 24418435 25569410 "
         "--format JobID%>,State,Elapsed%>,CPUEff,MemEff".split(),
     )
 
