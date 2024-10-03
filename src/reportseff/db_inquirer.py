@@ -457,7 +457,11 @@ class SacctInquirer(BaseInquirer):
         Raises:
             RuntimeError: if scontrol raises an error
         """
-        command_args = f"scontrol {self.extra_args} show partition".split()
+        args = ""
+        if self.cluster:
+            args = f"--cluster {self.cluster}"
+
+        command_args = f"scontrol {args} show partition".split()
         cmd_result = subprocess.run(
             args=command_args,
             stdout=subprocess.PIPE,

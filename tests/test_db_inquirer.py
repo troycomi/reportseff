@@ -315,6 +315,12 @@ def test_sacct_set_partition(sacct):
     assert sacct.partition == "partition"
 
 
+def test_sacct_set_cluster(sacct):
+    """Can set cluster."""
+    sacct.set_cluster("cluster")
+    assert sacct.cluster == "cluster"
+
+
 def test_sacct_get_db_output_partition(sacct, mocker):
     """Subprocess call is affected by partition argument."""
     mock_sacct = mocker.MagicMock()
