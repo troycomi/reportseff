@@ -686,7 +686,9 @@ def test_partition_timelimit(sacct, mocker):
         "   AllowGroups=ALL AllowAccounts=ALL AllowQos=ALL\n"
         "   MaxNodes=UNLIMITED MaxTime=12-00:00:00 MinNodes=0\n"
     )
-    mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=mock_sacct)
+    mock_run = mocker.patch(
+        "reportseff.db_inquirer.subprocess.run", return_value=mock_sacct
+    )
 
     limits = sacct.get_partition_timelimits()
     assert limits == {
@@ -694,6 +696,43 @@ def test_partition_timelimit(sacct, mocker):
         "datascience": "MAXTIME",
         "gpu": "12-00:00:00",
     }
+
+    assert mock_run.call_args.kwargs["args"] == "scontrol show partition".split()
+
+
+def test_partition_timelimit_with_cluster(sacct, mocker):
+    """Can process scontrol output."""
+    mock_sacct = mocker.MagicMock()
+    mock_sacct.returncode = 0
+    mock_sacct.stdout = (
+        "PartitionName=cpu\n"
+        "   AllowGroups=ALL AllowAccounts=ALL AllowQos=ALL\n"
+        "   MaxNodes=UNLIMITED MaxTime=15-00:00:00 MinNodes=0\n"
+        "\n"
+        "PartitionName=datascience\n"
+        "   AllowGroups=ALL AllowAccounts=ALL AllowQos=ALL\n"
+        "   MaxNodes=UNLIMITED MaxTime=MAXTIME MinNodes=0\n"
+        "\n"
+        "PartitionName=gpu\n"
+        "   AllowGroups=ALL AllowAccounts=ALL AllowQos=ALL\n"
+        "   MaxNodes=UNLIMITED MaxTime=12-00:00:00 MinNodes=0\n"
+    )
+    mock_run = mocker.patch(
+        "reportseff.db_inquirer.subprocess.run", return_value=mock_sacct
+    )
+
+    sacct.set_cluster("Testing")
+    limits = sacct.get_partition_timelimits()
+    assert limits == {
+        "cpu": "15-00:00:00",
+        "datascience": "MAXTIME",
+        "gpu": "12-00:00:00",
+    }
+
+    assert (
+        mock_run.call_args.kwargs["args"]
+        == "scontrol --cluster Testing show partition".split()
+    )
 
 
 def test_partition_timelimit_issue_11(sacct, mocker):
