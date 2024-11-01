@@ -165,7 +165,7 @@ class SacctInquirer(BaseInquirer):
 
     def __init__(self) -> None:
         """Initialize a new inquirer."""
-        self.default_args = "sacct -P -n --delimiter=^|^".split()
+        self.default_args = "sacct --parsable -n --delimiter=^|^".split()
         self.user: str | None = None
         self.state: set | None = None
         self.not_state: set | None = None
@@ -270,9 +270,10 @@ class SacctInquirer(BaseInquirer):
             msg = f"Error running sacct!\n{error.stderr}"
             raise RuntimeError(msg) from error
 
-        lines = cmd_result.stdout.split("\n")
+        sacct_line_split = re.compile(r"\^\|\^\n")
+        lines = sacct_line_split.split(cmd_result.stdout)
         if debug_cmd is not None:
-            debug_cmd("\n".join(lines))
+            debug_cmd("\n".join(line.replace("\n", "\\n") for line in lines))
 
         sacct_split = re.compile(r"\^\|\^")
         result = [dict(zip(columns, sacct_split.split(line))) for line in lines if line]

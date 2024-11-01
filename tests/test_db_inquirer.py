@@ -15,7 +15,7 @@ def sacct():
 
 def test_sacct_init(sacct):
     """Check default options on new object."""
-    assert sacct.default_args == ["sacct", "-P", "-n", "--delimiter=^|^"]
+    assert sacct.default_args == ["sacct", "--parsable", "-n", "--delimiter=^|^"]
     assert sacct.user is None
 
 
@@ -187,7 +187,7 @@ def test_sacct_get_db_output(sacct, mocker):
 
     mock_sacct = mocker.MagicMock()
     mock_sacct.returncode = 0
-    mock_sacct.stdout = "c1j1^|^c2j1\nc1j2^|^c2j2\nc1j3^|^c2j3\n"
+    mock_sacct.stdout = "c1j1^|^c2j1^|^\nc1j2^|^c2j2^|^\nc1j3^|^c2j3^|^\n"
     mock_sub = mocker.patch(
         "reportseff.db_inquirer.subprocess.run", return_value=mock_sacct
     )
@@ -198,7 +198,9 @@ def test_sacct_get_db_output(sacct, mocker):
         {"c1": "c1j3", "c2": "c2j3"},
     ]
     mock_sub.assert_called_once_with(
-        args="sacct -P -n --delimiter=^|^ --format=c1,c2 --jobs=j1,j2,j3".split(),
+        args=(
+            "sacct --parsable -n --delimiter=^|^ " "--format=c1,c2 --jobs=j1,j2,j3"
+        ).split(),
         stdout=mocker.ANY,
         encoding=mocker.ANY,
         check=mocker.ANY,
@@ -282,7 +284,7 @@ def test_sacct_get_db_output_user(sacct, mocker):
 
     mock_sacct = mocker.MagicMock()
     mock_sacct.returncode = 0
-    mock_sacct.stdout = "c1j1^|^c2j1\nc1j2^|^c2j2\nc1j3^|^c2j3\n"
+    mock_sacct.stdout = "c1j1^|^c2j1^|^\nc1j2^|^c2j2^|^\nc1j3^|^c2j3^|^\n"
     mock_sub = mocker.patch(
         "reportseff.db_inquirer.subprocess.run", return_value=mock_sacct
     )
@@ -295,7 +297,8 @@ def test_sacct_get_db_output_user(sacct, mocker):
     ]
     mock_sub.assert_called_once_with(
         args=(
-            "sacct -P -n --delimiter=^|^ --format=c1,c2 --user=user --starttime=011318"
+            "sacct --parsable -n --delimiter=^|^ "
+            "--format=c1,c2 --user=user --starttime=011318"
         ).split(),
         stdout=mocker.ANY,
         encoding=mocker.ANY,
@@ -325,7 +328,7 @@ def test_sacct_get_db_output_partition(sacct, mocker):
     """Subprocess call is affected by partition argument."""
     mock_sacct = mocker.MagicMock()
     mock_sacct.returncode = 0
-    mock_sacct.stdout = "c1j1^|^c2j1\nc1j2^|^c2j2\nc1j3^|^c2j3\n"
+    mock_sacct.stdout = "c1j1^|^c2j1^|^\nc1j2^|^c2j2^|^\nc1j3^|^c2j3^|^\n"
     mock_sub = mocker.patch(
         "reportseff.db_inquirer.subprocess.run", return_value=mock_sacct
     )
@@ -338,7 +341,8 @@ def test_sacct_get_db_output_partition(sacct, mocker):
     ]
     mock_sub.assert_called_once_with(
         args=(
-            "sacct -P -n --delimiter=^|^ --format=c1,c2 --jobs= --partition=partition"
+            "sacct --parsable -n --delimiter=^|^ "
+            "--format=c1,c2 --jobs= --partition=partition"
         ).split(),
         stdout=mocker.ANY,
         encoding=mocker.ANY,
@@ -356,7 +360,7 @@ def test_sacct_get_db_output_since(sacct, mocker):
     """Subprocess call is affected by since argument."""
     mock_sacct = mocker.MagicMock()
     mock_sacct.returncode = 0
-    mock_sacct.stdout = "c1j1^|^c2j1\nc1j2^|^c2j2\nc1j3^|^c2j3\n"
+    mock_sacct.stdout = "c1j1^|^c2j1^|^\nc1j2^|^c2j2^|^\nc1j3^|^c2j3^|^\n"
     mock_sub = mocker.patch(
         "reportseff.db_inquirer.subprocess.run", return_value=mock_sacct
     )
@@ -369,7 +373,8 @@ def test_sacct_get_db_output_since(sacct, mocker):
     ]
     mock_sub.assert_called_once_with(
         args=(
-            "sacct -P -n --delimiter=^|^ --format=c1,c2 --jobs= --starttime=time "
+            "sacct --parsable -n --delimiter=^|^ "
+            "--format=c1,c2 --jobs= --starttime=time "
         ).split(),
         stdout=mocker.ANY,
         encoding=mocker.ANY,
@@ -387,7 +392,7 @@ def test_sacct_get_db_output_until(sacct, mocker):
     """Subprocess call is affected by until argument."""
     mock_sacct = mocker.MagicMock()
     mock_sacct.returncode = 0
-    mock_sacct.stdout = "c1j1^|^c2j1\nc1j2^|^c2j2\nc1j3^|^c2j3\n"
+    mock_sacct.stdout = "c1j1^|^c2j1^|^\nc1j2^|^c2j2^|^\nc1j3^|^c2j3^|^\n"
     mock_sub = mocker.patch(
         "reportseff.db_inquirer.subprocess.run", return_value=mock_sacct
     )
@@ -400,7 +405,7 @@ def test_sacct_get_db_output_until(sacct, mocker):
     ]
     mock_sub.assert_called_once_with(
         args=(
-            "sacct -P -n --delimiter=^|^ --format=c1,c2 --jobs= --endtime=time "
+            "sacct --parsable -n --delimiter=^|^ --format=c1,c2 --jobs= --endtime=time "
         ).split(),
         stdout=mocker.ANY,
         encoding=mocker.ANY,
@@ -624,7 +629,9 @@ def test_sacct_get_db_output_user_state(sacct, mocker):
     mock_sacct = mocker.MagicMock()
     mock_sacct.returncode = 0
     mock_sacct.stdout = (
-        "c1j1^|^c2j1^|^RUNNING\nc1j2^|^c2j2^|^RUNNING\nc1j3^|^c2j3^|^COMPLETED\n"
+        "c1j1^|^c2j1^|^RUNNING^|^\n"
+        "c1j2^|^c2j2^|^RUNNING^|^\n"
+        "c1j3^|^c2j3^|^COMPLETED^|^\n"
     )
     mock_sub = mocker.patch(
         "reportseff.db_inquirer.subprocess.run", return_value=mock_sacct
@@ -638,7 +645,7 @@ def test_sacct_get_db_output_user_state(sacct, mocker):
     ]
     mock_sub.assert_called_once_with(
         args=(
-            "sacct -P -n --delimiter=^|^ --format=JobID,c2,State"
+            "sacct --parsable -n --delimiter=^|^ --format=JobID,c2,State"
             " --user=user --starttime=011318"
         ).split(),
         stdout=mocker.ANY,
@@ -788,14 +795,9 @@ def test_extra_args_setting(sacct):
 
 def test_sacct_get_db_output_issue_30(sacct, mocker):
     """Handle cases where jobname has a pipe."""
-    mocker.patch(
-        "reportseff.db_inquirer.subprocess.run",
-        side_effect=subprocess.CalledProcessError(1, "test"),
-    )
-
     mock_sacct = mocker.MagicMock()
     mock_sacct.returncode = 0
-    mock_sacct.stdout = "c1 | j1^|^c2j1\nc1j2^|^c2j2\nc1j3^|^c2j3\n"
+    mock_sacct.stdout = "c1 | j1^|^c2j1^|^\nc1j2^|^c2j2^|^\nc1j3^|^c2j3^|^\n"
     mock_sub = mocker.patch(
         "reportseff.db_inquirer.subprocess.run", return_value=mock_sacct
     )
@@ -806,7 +808,9 @@ def test_sacct_get_db_output_issue_30(sacct, mocker):
         {"c1": "c1j3", "c2": "c2j3"},
     ]
     mock_sub.assert_called_once_with(
-        args="sacct -P -n --delimiter=^|^ --format=c1,c2 --jobs=j1,j2,j3".split(),
+        args=(
+            "sacct --parsable -n --delimiter=^|^ " "--format=c1,c2 --jobs=j1,j2,j3"
+        ).split(),
         stdout=mocker.ANY,
         encoding=mocker.ANY,
         check=mocker.ANY,
@@ -817,3 +821,33 @@ def test_sacct_get_db_output_issue_30(sacct, mocker):
     debug = []
     sacct.get_db_output("c1 c2".split(), "j1 j2 j3".split(), debug.append)
     assert debug[0] == ("c1 | j1^|^c2j1\nc1j2^|^c2j2\nc1j3^|^c2j3\n")
+
+
+def test_sacct_newline_jobs_issue_63(sacct, mocker):
+    """Handle cases when the job name contains a newline."""
+    mock_sacct = mocker.MagicMock()
+    mock_sacct.returncode = 0
+    mock_sacct.stdout = "c1 \n j1^|^c2j1^|^\nc1j2^|^c2j2^|^\nc1j3^|^c2j3^|^\n"
+    mock_sub = mocker.patch(
+        "reportseff.db_inquirer.subprocess.run", return_value=mock_sacct
+    )
+    result = sacct.get_db_output("c1 c2".split(), "j1 j2 j3".split())
+    assert result == [
+        {"c1": "c1 \n j1", "c2": "c2j1"},
+        {"c1": "c1j2", "c2": "c2j2"},
+        {"c1": "c1j3", "c2": "c2j3"},
+    ]
+    mock_sub.assert_called_once_with(
+        args=(
+            "sacct --parsable -n --delimiter=^|^ " "--format=c1,c2 --jobs=j1,j2,j3"
+        ).split(),
+        stdout=mocker.ANY,
+        encoding=mocker.ANY,
+        check=mocker.ANY,
+        shell=False,
+        text=True,
+    )
+
+    debug = []
+    sacct.get_db_output("c1 c2".split(), "j1 j2 j3".split(), debug.append)
+    assert debug[0] == ("c1 \\n j1^|^c2j1\nc1j2^|^c2j2\nc1j3^|^c2j3\n")
