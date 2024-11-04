@@ -833,7 +833,7 @@ def test_sacct_newline_jobs_issue_63(sacct, mocker):
     )
     result = sacct.get_db_output("c1 c2".split(), "j1 j2 j3".split())
     assert result == [
-        {"c1": "c1 \n j1", "c2": "c2j1"},
+        {"c1": "c1 \\n j1", "c2": "c2j1"},
         {"c1": "c1j2", "c2": "c2j2"},
         {"c1": "c1j3", "c2": "c2j3"},
     ]

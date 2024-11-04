@@ -271,7 +271,11 @@ class SacctInquirer(BaseInquirer):
             raise RuntimeError(msg) from error
 
         sacct_line_split = re.compile(r"\^\|\^\n")
-        lines = sacct_line_split.split(cmd_result.stdout)
+        # convert newlines to printable \n
+        lines = [
+            line.replace("\n", "\\n")
+            for line in sacct_line_split.split(cmd_result.stdout)
+        ]
         if debug_cmd is not None:
             debug_cmd("\n".join(line.replace("\n", "\\n") for line in lines))
 
