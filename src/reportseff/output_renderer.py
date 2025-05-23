@@ -38,6 +38,7 @@ class OutputRenderer:
         node: bool = False,
         gpu: bool = False,
         parsable: bool = False,
+        delimiter: str = " ",
     ) -> None:
         """Initialize renderer with format string and list of valid titles.
 
@@ -64,6 +65,7 @@ class OutputRenderer:
         }
 
         self.parsable = parsable
+        self.delimiter = delimiter
 
         # build formatters
         self.formatters = build_formatters(format_str)
@@ -137,7 +139,7 @@ class OutputRenderer:
             Formatted table as single string
         """
         result = ""
-        delimiter = "|" if self.parsable else " "
+        delimiter = self.delimiter
 
         if len(self.formatters) == 0:
             return result
