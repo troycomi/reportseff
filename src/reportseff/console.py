@@ -140,6 +140,7 @@ def main(**kwargs: Any) -> None:
     """Main entry point for reportseff."""
     if kwargs.get("delimiter") != " " and not kwargs.get("parsable"):
         click.echo("WARNING: --delimiter will be ignored since it can only be used with --parsable.", err=True)
+        kwargs["delimiter"] = " "
     elif kwargs.get("delimiter") == " " and kwargs.get("parsable"):
         kwargs["delimiter"] = "|"
     args = ReportseffParameters(**kwargs)
