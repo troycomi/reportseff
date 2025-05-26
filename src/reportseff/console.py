@@ -125,24 +125,21 @@ MAX_ENTRIES_TO_ECHO = 20
     "-p",
     is_flag=True,
     default=False,
-    help="Output will be delmited without a delimiter at the end."
+    help="Output will be delmited without a delimiter at the end. "
     "Delimiter is by default '|', to change it see --delimiter flag.",
 )
 @click.option(
     "--delimiter",
     "-d",
-    default=" ",
-    help="Delimiter used for parsable output. Default is '|'.",
+    default=None,
+    help="Delimiter used for parsable output. The default default "
+    "delimiter is '|' when --parsable is specified. "
+    "This option is ignored if --parsable or -p is not specified.",
 )
 @click.version_option(version=__version__)
 @click.argument("jobs", nargs=-1)
 def main(**kwargs: Any) -> None:
     """Main entry point for reportseff."""
-    if kwargs.get("delimiter") != " " and not kwargs.get("parsable"):
-        click.echo("WARNING: --delimiter will be ignored since it can only be used with --parsable.", err=True)
-        kwargs["delimiter"] = " "
-    elif kwargs.get("delimiter") == " " and kwargs.get("parsable"):
-        kwargs["delimiter"] = "|"
     args = ReportseffParameters(**kwargs)
 
     output, entries = get_jobs(args)

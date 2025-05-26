@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import copy
 import re
-from typing import Any, Callable, Generator
+from typing import Any, Callable, Generator, Optional
 
 import click
 
@@ -38,7 +38,7 @@ class OutputRenderer:
         node: bool = False,
         gpu: bool = False,
         parsable: bool = False,
-        delimiter: str = " ",
+        delimiter: Optional[str] = None,
     ) -> None:
         """Initialize renderer with format string and list of valid titles.
 
@@ -65,7 +65,11 @@ class OutputRenderer:
         }
 
         self.parsable = parsable
-        self.delimiter = delimiter
+
+        if parsable:
+            self.delimiter = delimiter if delimiter else "|"
+        else:
+            self.delimiter = " "
 
         # build formatters
         self.formatters = build_formatters(format_str)
