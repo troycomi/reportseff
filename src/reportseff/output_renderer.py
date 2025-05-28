@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import copy
 import re
-from typing import Any, Callable, Generator, Optional
+from dataclasses import dataclass
+from typing import Any, Callable, Generator
 
 import click
 
@@ -27,30 +28,45 @@ HIGH_LIMIT_LOW = 20
 HIGH_LIMIT_GOOD = 80
 
 
+@dataclass
+class RenderOptions:
+    """Data class for holding output rendering options.
+
+    Args:
+        node: bool indicating if node-level data should be reported
+        gpu: in addition to node, should each GPU be reported
+        parsable: should output be rendered in a parsable format
+        delimiter: string to use for separating columns when parsable is set
+    """
+
+    node: bool = False
+    gpu: bool = False
+    parsable: bool = False
+    delimiter: str = "|"
+
+    def __post_init__(self) -> None:
+        """Post init method to handle delimiter and parsable."""
+        if not self.parsable:
+            self.delimiter = " "
+
+
 class OutputRenderer:
     """A collection of formatting columns for rendering output."""
 
     def __init__(
         self,
         valid_titles: list,
+        options: RenderOptions,
         format_str: str = "JobID%>,State,Elapsed%>,CPUEff,MemEff",
-        *,
-        node: bool = False,
-        gpu: bool = False,
-        parsable: bool = False,
-        delimiter: Optional[str] = None,
     ) -> None:
         """Initialize renderer with format string and list of valid titles.
 
         Args:
             valid_titles: List of valid options for format tokens
             format_str: comma separated list of format tokens
-            node: bool indicating if node-level data should be reported
-            gpu: in addition to node, should each GPU be reported
-            parsable: should output be rendered in a parsable format
+            options: RenderOptions controlling display behavior
         """
-        self.node = node
-        self.gpu = gpu
+        self.options = options
         # values required for proper parsing, need not be included in output
         self.required = ["JobID", "JobIDRaw", "State", "AdminComment"]
         # values derived from other values, list includes all dependent values
@@ -63,13 +79,6 @@ class OutputRenderer:
             "GPUEff": [],
             "Energy": ["TRESUsageOutAve"],
         }
-
-        self.parsable = parsable
-
-        if parsable:
-            self.delimiter = delimiter if delimiter else "|"
-        else:
-            self.delimiter = " "
 
         # build formatters
         self.formatters = build_formatters(format_str)
@@ -94,7 +103,7 @@ class OutputRenderer:
         """
         result = [fmt.validate_title(valid_titles) for fmt in self.formatters]
 
-        if self.node:
+        if self.options.node:
             if "JobID" not in self.formatters:
                 self.formatters.insert(0, ColumnFormatter("JobID"))
             # ensure alignment is <, regardless of inputs
@@ -109,7 +118,7 @@ class OutputRenderer:
             self.formatters.insert(ind + 1, gpu_mem)
 
         if (
-            self.gpu
+            self.options.gpu
             and "GPUEff" not in self.formatters
             and "GPUMem" not in self.formatters
         ):
@@ -143,7 +152,7 @@ class OutputRenderer:
             Formatted table as single string
         """
         result = ""
-        delimiter = self.delimiter
+        delimiter = self.options.delimiter
 
         if len(self.formatters) == 0:
             return result
@@ -155,18 +164,21 @@ class OutputRenderer:
 
         else:
             for fmt in self.formatters:
-                if self.parsable:
+                if self.options.parsable:
                     fmt.no_formatting()
                 else:
-                    fmt.compute_width(jobs, node=self.node, gpu=self.gpu)
+                    fmt.compute_width(
+                        jobs, node=self.options.node, gpu=self.options.gpu
+                    )
 
             result += delimiter.join(
-                fmt.format_title(bold=not self.parsable) for fmt in self.formatters
+                fmt.format_title(bold=not self.options.parsable)
+                for fmt in self.formatters
             )
             if len(jobs) != 0:
                 result += "\n"
 
-        if self.node:
+        if self.options.node:
             # join each row by newlines
             result += "\n".join(
                 # join each column entry by spaces
@@ -176,7 +188,7 @@ class OutputRenderer:
                 # columns is a tuple of generators from format_node_job
                 for columns in zip(
                     *(
-                        fmt.format_node_job(job, gpu=self.gpu)
+                        fmt.format_node_job(job, gpu=self.options.gpu)
                         for fmt in self.formatters
                     ),
                 )

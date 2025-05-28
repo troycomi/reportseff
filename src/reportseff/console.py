@@ -11,7 +11,7 @@ import click
 from . import __version__
 from .db_inquirer import BaseInquirer, SacctInquirer
 from .job_collection import JobCollection
-from .output_renderer import OutputRenderer
+from .output_renderer import OutputRenderer, RenderOptions
 from .parameters import ReportseffParameters
 
 MAX_ENTRIES_TO_ECHO = 20
@@ -131,7 +131,7 @@ MAX_ENTRIES_TO_ECHO = 20
 @click.option(
     "--delimiter",
     "-d",
-    default=None,
+    default="|",
     help="Delimiter used for parsable output. The default default "
     "delimiter is '|' when --parsable is specified. "
     "This option is ignored if --parsable or -p is not specified.",
@@ -246,11 +246,13 @@ def get_implementation(
         inquirer = SacctInquirer()
         renderer = OutputRenderer(
             inquirer.get_valid_formats(),
+            RenderOptions(
+                node=node or node_and_gpu,
+                gpu=node_and_gpu,
+                parsable=parsable,
+                delimiter=delimiter,
+            ),
             format_str,
-            node=node or node_and_gpu,
-            gpu=node_and_gpu,
-            parsable=parsable,
-            delimiter=delimiter,
         )
     else:
         click.secho("No supported scheduling systems found!", fg="red", err=True)
