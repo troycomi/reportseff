@@ -20,6 +20,7 @@ class ReportseffParameters:
     node_and_gpu: bool = False
     not_state: str = ""
     parsable: bool = False
+    delimiter: str = ""
     since: str = ""
     until: str = ""
     state: str = ""

@@ -11,7 +11,7 @@ import click
 from . import __version__
 from .db_inquirer import BaseInquirer, SacctInquirer
 from .job_collection import JobCollection
-from .output_renderer import OutputRenderer
+from .output_renderer import OutputRenderer, RenderOptions
 from .parameters import ReportseffParameters
 
 MAX_ENTRIES_TO_ECHO = 20
@@ -125,7 +125,16 @@ MAX_ENTRIES_TO_ECHO = 20
     "-p",
     is_flag=True,
     default=False,
-    help="Output will be '|' delmited without a '|' at the end.",
+    help="Output will be delmited without a delimiter at the end. "
+    "Delimiter is by default '|', to change it see --delimiter flag.",
+)
+@click.option(
+    "--delimiter",
+    "-d",
+    default="|",
+    help="Delimiter used for parsable output. The default default "
+    "delimiter is '|' when --parsable is specified. "
+    "This option is ignored if --parsable or -p is not specified.",
 )
 @click.version_option(version=__version__)
 @click.argument("jobs", nargs=-1)
@@ -161,6 +170,7 @@ def get_jobs(args: ReportseffParameters) -> tuple[str, int]:
         node=args.node,
         node_and_gpu=args.node_and_gpu,
         parsable=args.parsable,
+        delimiter=args.delimiter,
     )
 
     inquirer.set_state(args.state)
@@ -217,6 +227,7 @@ def get_implementation(
     node: bool = False,
     node_and_gpu: bool = False,
     parsable: bool = False,
+    delimiter: str = " ",
 ) -> tuple[BaseInquirer, OutputRenderer]:
     """Get system-specific objects.
 
@@ -225,6 +236,7 @@ def get_implementation(
         node: control if node-level stats are displayed
         node_and_gpu: control if node and gpu stats are displayed
         parsable: produce output with a delimiter separating columns
+        delimiter: delimiter used for parsable output
 
     Returns:
         A db_inqurirer
@@ -234,10 +246,13 @@ def get_implementation(
         inquirer = SacctInquirer()
         renderer = OutputRenderer(
             inquirer.get_valid_formats(),
+            RenderOptions(
+                node=node or node_and_gpu,
+                gpu=node_and_gpu,
+                parsable=parsable,
+                delimiter=delimiter,
+            ),
             format_str,
-            node=node or node_and_gpu,
-            gpu=node_and_gpu,
-            parsable=parsable,
         )
     else:
         click.secho("No supported scheduling systems found!", fg="red", err=True)

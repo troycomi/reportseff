@@ -16,7 +16,10 @@ min_required = (
 @pytest.fixture()
 def renderer():
     """Default renderer with valid names for only default string."""
-    return output_renderer.OutputRenderer(min_required)
+    return output_renderer.OutputRenderer(
+        min_required,
+        output_renderer.RenderOptions(),
+    )
 
 
 @pytest.fixture()
@@ -194,13 +197,21 @@ def test_renderer_init(renderer):
         ).split()
     )
 
-    renderer = output_renderer.OutputRenderer(min_required, "")
+    renderer = output_renderer.OutputRenderer(
+        min_required,
+        output_renderer.RenderOptions(),
+        "",
+    )
     assert renderer.formatters == []
     assert sorted(renderer.query_columns) == sorted(
         ("JobID JobIDRaw State AdminComment").split()
     )
 
-    renderer = output_renderer.OutputRenderer(min_required, "TotalCPU%<5")
+    renderer = output_renderer.OutputRenderer(
+        min_required,
+        output_renderer.RenderOptions(),
+        "TotalCPU%<5",
+    )
     assert renderer.formatters == [output_renderer.ColumnFormatter("TotalCPU%<5")]
     assert sorted(renderer.query_columns) == sorted(
         ("JobID JobIDRaw State TotalCPU AdminComment").split()
@@ -248,30 +259,30 @@ def test_renderer_validate_formatters_with_node(renderer):
     """Validating formatters with GPUs can alter formatters."""
     min_gpu = [*min_required, "GPU", "GPUEff", "GPUMem"]
     # normal function
-    renderer.node = False
-    renderer.gpu = False
+    renderer.options.node = False
+    renderer.options.gpu = False
     renderer.formatters = output_renderer.build_formatters("State")
     assert renderer.validate_formatters(min_gpu) == ["State"]
     assert renderer.formatters == ["State"]
 
     # add in job id
-    renderer.node = True
-    renderer.gpu = False
+    renderer.options.node = True
+    renderer.options.gpu = False
     renderer.formatters = output_renderer.build_formatters("State")
     assert renderer.validate_formatters(min_gpu) == ["State"]
     assert renderer.formatters == ["JobID", "State"]
 
     # add in both gpus, gpu implies node
-    renderer.node = True
-    renderer.gpu = True
+    renderer.options.node = True
+    renderer.options.gpu = True
     renderer.formatters = output_renderer.build_formatters("State")
     assert renderer.validate_formatters(min_gpu) == ["State"]
     assert renderer.formatters == ["JobID", "State", "GPUEff", "GPUMem"]
     assert renderer.formatters[0].alignment == "<"  # switched by node reporting
 
     # since format already has jobid and gpumem, will not override
-    renderer.node = True
-    renderer.gpu = True
+    renderer.options.node = True
+    renderer.options.gpu = True
     renderer.formatters = output_renderer.build_formatters("GPUMEM,State,JobID:>")
     assert renderer.validate_formatters(min_gpu) == "GPUMem State JobID".split()
     assert renderer.formatters == ["GPUMem", "State", "JobID"]
@@ -306,7 +317,9 @@ def test_renderer_correct_columns(renderer):
 def test_renderer_format_jobs(some_jobs):
     """Can render output as table with colored entries."""
     renderer = output_renderer.OutputRenderer(
-        min_required, "JobID,State,Elapsed,CPUEff,REQMEM,TimeEff"
+        min_required,
+        output_renderer.RenderOptions(),
+        "JobID,State,Elapsed,CPUEff,REQMEM,TimeEff",
     )
     result = renderer.format_jobs(some_jobs)
     ansi_escape = re.compile(r"\x1B[@-_][0-?]*[ -/]*[@-~]")
@@ -342,6 +355,7 @@ def test_renderer_format_jobs_multi_node(some_multi_core_jobs):
     """Can render output as table with colored entries."""
     renderer = output_renderer.OutputRenderer(
         min_required,
+        output_renderer.RenderOptions(),
         "JobID,State,CPUEff,TimeEff,MemEff,GPU",
     )
     result = renderer.format_jobs(some_multi_core_jobs)
@@ -363,8 +377,8 @@ def test_renderer_format_jobs_multi_node_with_nodes(some_multi_core_jobs):
     """Can render output as table with colored entries."""
     renderer = output_renderer.OutputRenderer(
         min_required,
+        output_renderer.RenderOptions(node=True),
         "JobID,State,CPUEff,TimeEff,MemEff,GPU",
-        node=True,
     )
     result = renderer.format_jobs(some_multi_core_jobs)
     ansi_escape = re.compile(r"\x1B[@-_][0-?]*[ -/]*[@-~]")
@@ -390,7 +404,9 @@ def test_renderer_format_jobs_multi_node_with_nodes(some_multi_core_jobs):
 def test_renderer_format_jobs_multi_node_with_nodes_and_gpu(some_multi_core_jobs):
     """Can render output as table with colored entries."""
     renderer = output_renderer.OutputRenderer(
-        min_required, "JobID,State,CPUEff,TimeEff,MemEff,GPU", node=True, gpu=True
+        min_required,
+        output_renderer.RenderOptions(node=True, gpu=True),
+        "JobID,State,CPUEff,TimeEff,MemEff,GPU",
     )
     result = renderer.format_jobs(some_multi_core_jobs)
     ansi_escape = re.compile(r"\x1B[@-_][0-?]*[ -/]*[@-~]")
@@ -430,14 +446,22 @@ def test_renderer_format_jobs_multi_node_with_nodes_and_gpu(some_multi_core_jobs
 
 def test_format_jobs_empty(some_jobs):
     """Empty format string produces empty outputs."""
-    renderer = output_renderer.OutputRenderer(min_required, "")
+    renderer = output_renderer.OutputRenderer(
+        min_required,
+        output_renderer.RenderOptions(),
+        "",
+    )
     result = renderer.format_jobs(some_jobs)
     assert result == ""
 
 
 def test_format_jobs_single_str(some_jobs):
     """A single format string left aligns and suppresses title for piping."""
-    renderer = output_renderer.OutputRenderer(min_required, "JobID%>")
+    renderer = output_renderer.OutputRenderer(
+        min_required,
+        output_renderer.RenderOptions(),
+        "JobID%>",
+    )
     assert len(renderer.formatters) == 1
     assert renderer.formatters[0].alignment == ">"
 

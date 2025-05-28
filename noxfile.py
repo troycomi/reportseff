@@ -5,7 +5,7 @@ import tempfile
 import nox
 
 locations = "src", "tests", "noxfile.py"
-nox.options.sessions = "lint", "safety", "mypy", "pytype", "tests", "tests_old_click"
+nox.options.sessions = "lint", "pip_audit", "mypy", "pytype", "tests", "tests_old_click"
 package = "reportseff"
 
 
@@ -33,7 +33,7 @@ def install_with_constraints(session, *args, **kwargs):
         session.install(f"--constraint={requirements.name}", *args, **kwargs)
 
 
-@nox.session(python=["3.8", "3.9", "3.10", "3.11"])
+@nox.session(python=["3.9", "3.10", "3.11"])
 def tests(session):
     """Run test suite with pytest and coverage."""
     args = session.posargs
@@ -44,7 +44,7 @@ def tests(session):
     session.run("pytest", "--cov", *args)
 
 
-@nox.session(python=["3.8", "3.9", "3.10", "3.11"])
+@nox.session(python=["3.9", "3.10", "3.11"])
 def tests_old_click(session):
     """Run test suite with pytest and coverage, using click 6.7."""
     args = session.posargs
@@ -76,7 +76,7 @@ def lint(session):
 
 
 @nox.session(python="3.10")
-def safety(session):
+def pip_audit(session):
     """Scan dependencies for insecure packages."""
     with tempfile.NamedTemporaryFile() as requirements:
         session.run(
@@ -89,17 +89,15 @@ def safety(session):
             f"--output={requirements.name}",
             external=True,
         )
-        install_with_constraints(session, "safety")
+        install_with_constraints(session, "pip-audit")
         session.run(
-            "safety",
-            "check",
-            "--ignore=70612",  # jinja template injection
-            f"--file={requirements.name}",
-            "--full-report",
+            "pip-audit",
+            "-r",
+            requirements.name,
         )
 
 
-@nox.session(python=["3.8", "3.9"])
+@nox.session(python=["3.9", "3.10"])
 def mypy(session):
     """Type-check with mypy."""
     args = session.posargs or locations

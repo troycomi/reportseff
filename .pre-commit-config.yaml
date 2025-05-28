@@ -1,41 +1,43 @@
 repos:
-- repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v4.1.0
-  hooks:
-    - id: check-added-large-files
-    - id: check-case-conflict
-    - id: check-merge-conflict
-    - id: check-symlinks
-    - id: check-yaml
-    - id: debug-statements
-    - id: end-of-file-fixer
-    - id: mixed-line-ending
-    - id: requirements-txt-fixer
-    - id: trailing-whitespace
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: "v5.0.0"
+    hooks:
+      - id: check-added-large-files
+      - id: check-case-conflict
+      - id: check-merge-conflict
+      - id: check-symlinks
+      - id: check-yaml
+      - id: debug-statements
+      - id: end-of-file-fixer
+      - id: mixed-line-ending
+      - id: name-tests-test
+        args: ["--pytest-test-first"]
+      - id: requirements-txt-fixer
+      - id: trailing-whitespace
 
-- repo: https://github.com/pre-commit/pygrep-hooks
-  rev: v1.9.0
-  hooks:
-  - id: python-check-blanket-noqa
-  - id: python-no-eval
-  - id: python-use-type-annotations
-  - id: python-check-blanket-type-ignore
-  - id: python-check-mock-methods
+  - repo: https://github.com/pre-commit/pygrep-hooks
+    rev: v1.9.0
+    hooks:
+    - id: python-check-blanket-noqa
+    - id: python-no-eval
+    - id: python-use-type-annotations
+    - id: python-check-blanket-type-ignore
+    - id: python-check-mock-methods
 
-- repo: https://github.com/codespell-project/codespell
-  rev: v2.1.0
-  hooks:
-  - id: codespell
-    args: [--ignore-words-list, "absense,inout"]
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.1.0
+    hooks:
+    - id: codespell
+      args: [--ignore-words-list, "absense,inout"]
 
-- repo: https://github.com/shellcheck-py/shellcheck-py
-  rev: v0.8.0.4
-  hooks:
-  - id: shellcheck
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.8.0.4
+    hooks:
+    - id: shellcheck
 
-- repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.5.5
-  hooks:
-    - id: ruff
-      args: [ --fix ]
-    - id: ruff-format
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.5.5
+    hooks:
+      - id: ruff
+        args: [ --fix ]
+      - id: ruff-format
