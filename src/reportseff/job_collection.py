@@ -198,7 +198,7 @@ class JobCollection:
         """Filter jobs to only include array jobs above a minimum size threshold.
 
         Args:
-            min_size: Minimum number of array tasks required to show job array. 
+            min_size: Minimum number of array tasks required to show job array.
                     If value is 0, then no filtering is applied.
                     Non-array jobs are always included regardless of this value.
         """
@@ -215,7 +215,7 @@ class JobCollection:
 
         # Filter out array jobs that don't meet the minimum size
         jobs_to_keep = {}
-        for _base_job, job_list in job_groups.items():
+        for job_list in job_groups.values():
             # Single job (not an array) - always keep
             if len(job_list) == 1 and "_" not in job_list[0].jobid:
                 jobs_to_keep[job_list[0].jobid] = job_list[0]
