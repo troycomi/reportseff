@@ -895,6 +895,57 @@ def test_extra_args(mocker):
 
 
 @pytest.mark.usefixtures("_mock_inquirer")
+def test_filter_by_array_size(mocker):
+    """Include energy reporting with the `energy` format code."""
+    mocker.patch("reportseff.console.which", return_value=True)
+    runner = CliRunner()
+    sub_result = mocker.MagicMock()
+    sub_result.returncode = 0
+    sub_result.stdout = (
+        "^|^32^|^00:01:09^|^37403870_1^|^37403937^|^^|^1^|^1^|^32000M^|^"
+        "COMPLETED^|^^|^00:02:00^|^00:47.734^|^\n"
+        "^|^32^|^00:01:09^|^37403870_1.batch^|^37403937.batch^|^6300K^|^1^|^1^|^^|^"
+        "COMPLETED^|^energy=33,fs/disk=0^|^^|^00:47.733^|^\n"
+        "^|^32^|^00:01:09^|^37403870_1.extern^|^37403937.extern^|^4312K^|^1^|^1^|^^|^"
+        "COMPLETED^|^energy=33,fs/disk=0^|^^|^00:00.001^|^\n"
+        "^|^32^|^00:01:21^|^37403870_2^|^37403938^|^^|^1^|^1^|^32000M^|^"
+        "COMPLETED^|^^|^00:02:00^|^00:41.211^|^\n"
+        "^|^32^|^00:01:21^|^37403870_2.batch^|^37403938.batch^|^6316K^|^1^|^1^|^^|^"
+        "COMPLETED^|^energy=32,fs/disk=0^|^^|^00:41.210^|^\n"
+        "^|^32^|^00:01:21^|^37403870_2.extern^|^37403938.extern^|^4312K^|^1^|^1^|^^|^"
+        "COMPLETED^|^energy=32,fs/disk=0^|^^|^00:00:00^|^\n"
+        "^|^32^|^00:01:34^|^37403870_3^|^37403939^|^^|^1^|^1^|^32000M^|^"
+        "COMPLETED^|^^|^00:02:00^|^00:51.669^|^\n"
+        "^|^32^|^00:01:34^|^37403870_3.batch^|^37403939.batch^|^6184K^|^1^|^1^|^^|^"
+        "COMPLETED^|^energy=30,fs/disk=0^|^^|^00:51.667^|^\n"
+        "^|^32^|^00:01:35^|^37403870_3.extern^|^37403939.extern^|^4312K^|^1^|^1^|^^|^"
+        "COMPLETED^|^fs/disk=0,energy=30^|^^|^00:00.001^|^\n"
+        "^|^32^|^00:01:11^|^37403870_4^|^37403870^|^^|^1^|^1^|^32000M^|^"
+        "COMPLETED^|^^|^00:02:00^|^01:38.184^|^\n"
+        "^|^32^|^00:01:11^|^37403870_4.batch^|^37403870.batch^|^6300K^|^1^|^1^|^^|^"
+        "COMPLETED^|^fs/disk=0^|^^|^01:38.183^|^\n"
+        "^|^32^|^00:01:11^|^37403870_4.extern^|^37403870.extern^|^4312K^|^1^|^1^|^^|^"
+        "COMPLETED^|^energy=27,fs/disk=0^|^^|^00:00.001^|^\n"
+    )
+    mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
+    result = runner.invoke(
+        console.main, "--no-color --array-min-size 10 --format=+energy 37403870".split()
+    )
+    assert result.exit_code == 0
+    output = result.output.split("\n")[:-1]
+    assert output[0].split() == [
+        "JobID",
+        "State",
+        "Elapsed",
+        "TimeEff",
+        "CPUEff",
+        "MemEff",
+        "Energy",
+    ]
+    assert len(output) == 1
+
+
+@pytest.mark.usefixtures("_mock_inquirer")
 def test_issue_58(mocker):
     """Incorrect memory usage when filtering by state."""
     mocker.patch("reportseff.console.which", return_value=True)

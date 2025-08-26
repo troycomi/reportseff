@@ -206,7 +206,7 @@ class JobCollection:
             return
 
         # Group jobs by their base job number to count array tasks
-        job_groups = {}
+        job_groups: dict[str, list[Job]] = {}
         for job in self.jobs.values():
             base_job = job.job
             if base_job not in job_groups:

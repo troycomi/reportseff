@@ -141,7 +141,7 @@ MAX_ENTRIES_TO_ECHO = 20
     default=0,
     type=int,
     help="Only include array jobs with at least this many tasks. "
-    "Non-array jobs are always included. Set to 0 to include all jobs (default)."
+    "Non-array jobs are always included. Set to 0 to include all jobs (default).",
 )
 @click.version_option(version=__version__)
 @click.argument("jobs", nargs=-1)

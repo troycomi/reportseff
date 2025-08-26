@@ -528,3 +528,26 @@ def test_process_entry_array_user(jobs):
     expected_job.state = "PENDING"
     expected_job._cache_entries()
     assert jobs.jobs == {"14729857_[737-999]": expected_job}
+
+
+def test_filter_by_array_size(jobs):
+    """Can filter array jobs when requested, singletons always accepted."""
+    jobs.jobs = {
+        "1": Job("1", "1", None),  # singleton job
+        "2_1": Job("2", "2_1", None),
+        "2_2": Job("2", "2_2", None),  # two jobs
+        "3_1": Job("3", "3_1", None),
+        "3_2": Job("3", "3_2", None),
+        "3_3": Job("3", "3_3", None),  # three jobs
+    }
+
+    assert jobs.get_jobs() == "1,2,3".split(",")
+
+    jobs.filter_by_array_size(0)
+    assert jobs.get_jobs() == "1,2,3".split(",")
+
+    jobs.filter_by_array_size(1)
+    assert jobs.get_jobs() == "1,2,3".split(",")
+
+    jobs.filter_by_array_size(3)
+    assert jobs.get_jobs() == "1,3".split(",")

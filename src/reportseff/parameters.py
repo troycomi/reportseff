@@ -29,7 +29,7 @@ class ReportseffParameters:
     partition: str = ""
     cluster: str = ""
     extra_args: str = ""
-    array_min_size: int = 0 # Minimum size for job arrays to be reported
+    array_min_size: int = 0  # Minimum size for job arrays to be reported
 
     def __post_init__(self) -> None:
         """Post init method to handle prepending format string with +."""
