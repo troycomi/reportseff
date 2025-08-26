@@ -986,3 +986,57 @@ def test_issue_58(mocker):
         "47.3%",
     ]
     assert len(output) == 1
+
+
+@pytest.mark.usefixtures("_mock_inquirer")
+def test_issue_73_maxrss(mocker):
+    """Incorrect maxrss with multi-step jobs."""
+    mocker.patch("reportseff.console.which", return_value=True)
+    runner = CliRunner()
+    sub_result = mocker.MagicMock()
+    sub_result.returncode = 0
+    sub_result.stdout = """^|^128^|^1234^|^1234^|^^|^1^|^^|^655G^|^655G^|^COMPLETED
+^|^128^|^1234.batch^|^1234.batch^|^6044K^|^1^|^1^|^^|^^|^COMPLETED
+^|^128^|^1234.extern^|^1234.extern^|^1330K^|^1^|^1^|^^|^^|^COMPLETED
+^|^128^|^1234.0^|^1234.0^|^39503310K^|^1^|^1^|^^|^^|^COMPLETED
+^|^128^|^1234.1^|^1234.1^|^39538757K^|^1^|^1^|^^|^^|^COMPLETED
+^|^128^|^1234.2^|^1234.2^|^38352353K^|^1^|^1^|^^|^^|^COMPLETED
+^|^128^|^1234.3^|^1234.3^|^38842343K^|^1^|^1^|^^|^^|^COMPLETED
+^|^128^|^1234.4^|^1234.4^|^38445087K^|^1^|^1^|^^|^^|^COMPLETED
+^|^128^|^1234.5^|^1234.5^|^38637714K^|^1^|^1^|^^|^^|^COMPLETED
+^|^128^|^1234.6^|^1234.6^|^38573618K^|^1^|^1^|^^|^^|^COMPLETED
+^|^128^|^1234.7^|^1234.7^|^38505592K^|^1^|^1^|^^|^^|^COMPLETED
+^|^128^|^1234.8^|^1234.8^|^38951143K^|^1^|^1^|^^|^^|^COMPLETED
+"""
+    mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
+    result = runner.invoke(
+        console.main, '-format "JobID,ReqMem,MaxRSS,MemEff" --no-color 1234'.split()
+    )
+
+    assert result.exit_code == 0
+    # remove header
+    output = result.output.split("\n")[1:-1]
+    assert output[0].split() == [
+        "1234",
+        "TIMEOUT",
+        "01:00:29",
+        "100.8%",
+        "50.5%",
+        "47.3%",
+    ]
+    assert len(output) == 1
+
+    result = runner.invoke(console.main, "--state TIMEOUT --no-color 1234".split())
+
+    assert result.exit_code == 0
+    # remove header
+    output = result.output.split("\n")[1:-1]
+    assert output[0].split() == [
+        "1234",
+        "TIMEOUT",
+        "01:00:29",
+        "100.8%",
+        "50.5%",
+        "47.3%",
+    ]
+    assert len(output) == 1
