@@ -136,6 +136,13 @@ MAX_ENTRIES_TO_ECHO = 20
     "delimiter is '|' when --parsable is specified. "
     "This option is ignored if --parsable or -p is not specified.",
 )
+@click.option(
+    "--array-min-size",
+    default=0,
+    type=int,
+    help="Only include array jobs with at least this many tasks. "
+    "Non-array jobs are always included. Set to 0 to include all jobs (default).",
+)
 @click.version_option(version=__version__)
 @click.argument("jobs", nargs=-1)
 def main(**kwargs: Any) -> None:
@@ -214,6 +221,10 @@ def get_jobs(args: ReportseffParameters) -> tuple[str, int]:
     except Exception:
         click.echo(f"Error processing entry: {entry}", err=True)
         raise
+
+    # Apply array size filtering if specified
+    if args.array_min_size > 0:
+        job_collection.filter_by_array_size(args.array_min_size)
 
     found_jobs = job_collection.get_sorted_jobs(change_sort=args.modified_sort)
     found_jobs = [j for j in found_jobs if j.state]

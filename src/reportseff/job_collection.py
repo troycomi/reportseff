@@ -194,6 +194,38 @@ class JobCollection:
         """
         self.jobs[jobid] = Job(job, jobid, filename)
 
+    def filter_by_array_size(self, min_size: int) -> None:
+        """Filter jobs to only include array jobs above a minimum size threshold.
+
+        Args:
+            min_size: Minimum number of array tasks required to show job array.
+                    If value is 0, then no filtering is applied.
+                    Non-array jobs are always included regardless of this value.
+        """
+        if min_size <= 0:
+            return
+
+        # Group jobs by their base job number to count array tasks
+        job_groups: dict[str, list[Job]] = {}
+        for job in self.jobs.values():
+            base_job = job.job
+            if base_job not in job_groups:
+                job_groups[base_job] = []
+            job_groups[base_job].append(job)
+
+        # Filter out array jobs that don't meet the minimum size
+        jobs_to_keep = {}
+        for job_list in job_groups.values():
+            # Single job (not an array) - always keep
+            if len(job_list) == 1 and "_" not in job_list[0].jobid:
+                jobs_to_keep[job_list[0].jobid] = job_list[0]
+            # Array job - keep only if it meets minimum size
+            elif len(job_list) >= min_size:
+                for job in job_list:
+                    jobs_to_keep[job.jobid] = job
+
+        self.jobs = jobs_to_keep
+
     def process_entry(self, entry: dict, *, add_job: bool = False) -> None:
         """Update the jobs collection with information from the provided entry.
 
