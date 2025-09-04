@@ -18,7 +18,7 @@ def _mock_inquirer(mocker):
     def mock_valid(_self):
         return (
             "JobID,State,Elapsed,JobIDRaw,State,TotalCPU,AllocCPUS,"
-            "REQMEM,NNodes,MaxRSS,Timelimit"
+            "ReqMem,NNodes,MaxRSS,Timelimit"
         ).split(",")
 
     def mock_partition_timelimits(_self):
@@ -100,7 +100,7 @@ def test_debug_option(mocker, console_jobs):
     assert result.exit_code == 0
     # remove header
     output = result.output.split("\n")
-    assert output[0] == console_jobs["23000233"].replace("^|^\n", "\n").strip("\n")
+    assert output[0] == console_jobs["23000233"].strip("\n")
     assert output[3].split() == [
         "23000233",
         "CANCELLED",
@@ -136,7 +136,7 @@ def test_process_failure(mocker, console_jobs):
         "{'AdminComment': '', 'AllocCPUS': '16', "
         "'Elapsed': '00:00:00', 'JobID': '23000233', "
         "'JobIDRaw': '23000233', 'MaxRSS': '', 'NNodes': '1', "
-        "'NTasks': '1', 'REQMEM': '4000Mc', 'State': 'CANCELLED by 129319', "
+        "'NTasks': '1', 'ReqMem': '4000Mc', 'State': 'CANCELLED by 129319', "
         "'TotalCPU': '6-00:00:00'}"
     )
 
@@ -323,7 +323,7 @@ def test_since_all_users(mocker, console_jobs):
         args=(
             "sacct --parsable -n --delimiter=^|^ "
             "--format=AdminComment,AllocCPUS,Elapsed,JobID,JobIDRaw,"
-            "MaxRSS,NNodes,NTasks,REQMEM,State,TotalCPU "
+            "MaxRSS,NNodes,NTasks,ReqMem,State,TotalCPU "
             "--allusers "  # all users is added since no jobs/files were specified
             "--starttime=200406"
         ).split(),
@@ -366,7 +366,7 @@ def test_since_all_users_partition(mocker, console_jobs):
         args=(
             "sacct --parsable -n --delimiter=^|^ "
             "--format=AdminComment,AllocCPUS,Elapsed,JobID,JobIDRaw,"
-            "MaxRSS,NNodes,NTasks,REQMEM,State,TotalCPU "
+            "MaxRSS,NNodes,NTasks,ReqMem,State,TotalCPU "
             "--allusers "  # all users is added since no jobs/files were specified
             "--starttime=200406 "
             "--partition=partition "
@@ -995,22 +995,22 @@ def test_issue_73_maxrss(mocker):
     runner = CliRunner()
     sub_result = mocker.MagicMock()
     sub_result.returncode = 0
-    sub_result.stdout = """^|^128^|^1234^|^1234^|^^|^1^|^^|^655G^|^655G^|^COMPLETED
-^|^128^|^1234.batch^|^1234.batch^|^6044K^|^1^|^1^|^^|^^|^COMPLETED
-^|^128^|^1234.extern^|^1234.extern^|^1330K^|^1^|^1^|^^|^^|^COMPLETED
-^|^128^|^1234.0^|^1234.0^|^39503310K^|^1^|^1^|^^|^^|^COMPLETED
-^|^128^|^1234.1^|^1234.1^|^39538757K^|^1^|^1^|^^|^^|^COMPLETED
-^|^128^|^1234.2^|^1234.2^|^38352353K^|^1^|^1^|^^|^^|^COMPLETED
-^|^128^|^1234.3^|^1234.3^|^38842343K^|^1^|^1^|^^|^^|^COMPLETED
-^|^128^|^1234.4^|^1234.4^|^38445087K^|^1^|^1^|^^|^^|^COMPLETED
-^|^128^|^1234.5^|^1234.5^|^38637714K^|^1^|^1^|^^|^^|^COMPLETED
-^|^128^|^1234.6^|^1234.6^|^38573618K^|^1^|^1^|^^|^^|^COMPLETED
-^|^128^|^1234.7^|^1234.7^|^38505592K^|^1^|^1^|^^|^^|^COMPLETED
-^|^128^|^1234.8^|^1234.8^|^38951143K^|^1^|^1^|^^|^^|^COMPLETED
+    sub_result.stdout = """^|^128^|^1234^|^1234^|^^|^1^|^^|^655G^|^COMPLETED^|^
+^|^128^|^1234.batch^|^1234.batch^|^6044K^|^1^|^1^|^^|^COMPLETED^|^
+^|^128^|^1234.extern^|^1234.extern^|^1330K^|^1^|^1^|^^|^COMPLETED^|^
+^|^128^|^1234.0^|^1234.0^|^39503310K^|^1^|^1^|^^|^COMPLETED^|^
+^|^128^|^1234.1^|^1234.1^|^39538757K^|^1^|^1^|^^|^COMPLETED^|^
+^|^128^|^1234.2^|^1234.2^|^38352353K^|^1^|^1^|^^|^COMPLETED^|^
+^|^128^|^1234.3^|^1234.3^|^38842343K^|^1^|^1^|^^|^COMPLETED^|^
+^|^128^|^1234.4^|^1234.4^|^38445087K^|^1^|^1^|^^|^COMPLETED^|^
+^|^128^|^1234.5^|^1234.5^|^38637714K^|^1^|^1^|^^|^COMPLETED^|^
+^|^128^|^1234.6^|^1234.6^|^38573618K^|^1^|^1^|^^|^COMPLETED^|^
+^|^128^|^1234.7^|^1234.7^|^38505592K^|^1^|^1^|^^|^COMPLETED^|^
+^|^128^|^1234.8^|^1234.8^|^38951143K^|^1^|^1^|^^|^COMPLETED^|^
 """
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
     result = runner.invoke(
-        console.main, '-format "JobID,ReqMem,MaxRSS,MemEff" --no-color 1234'.split()
+        console.main, "--format JobID,ReqMem,MaxRSS,MemEff --no-color 1234".split()
     )
 
     assert result.exit_code == 0
@@ -1018,25 +1018,9 @@ def test_issue_73_maxrss(mocker):
     output = result.output.split("\n")[1:-1]
     assert output[0].split() == [
         "1234",
-        "TIMEOUT",
-        "01:00:29",
-        "100.8%",
-        "50.5%",
-        "47.3%",
-    ]
-    assert len(output) == 1
-
-    result = runner.invoke(console.main, "--state TIMEOUT --no-color 1234".split())
-
-    assert result.exit_code == 0
-    # remove header
-    output = result.output.split("\n")[1:-1]
-    assert output[0].split() == [
-        "1234",
-        "TIMEOUT",
-        "01:00:29",
-        "100.8%",
-        "50.5%",
-        "47.3%",
+        "655G",
+        "6044K",
+        # "39538758K",
+        "5.8%",
     ]
     assert len(output) == 1

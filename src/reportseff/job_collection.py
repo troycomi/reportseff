@@ -25,7 +25,7 @@ class JobCollection:
             "TotalCPU",
             "Elapsed",
             "Timelimit",
-            "REQMEM",
+            "ReqMem",
             "MaxRSS",
             "NNodes",
             "NTasks",

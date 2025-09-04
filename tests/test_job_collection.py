@@ -17,7 +17,7 @@ def test_get_columns(jobs):
     """Default get columns are reasonable."""
     assert jobs.get_columns() == (
         "JobIDRaw,JobID,State,AllocCPUS,TotalCPU,Elapsed,Timelimit,"
-        "REQMEM,MaxRSS,NNodes,NTasks,Partition"
+        "ReqMem,MaxRSS,NNodes,NTasks,Partition"
     ).split(",")
 
 
@@ -140,7 +140,7 @@ def test_process_line(jobs, mocker):
                 "JobID": "24371655",
                 "State": "COMPLETED",
                 "AllocCPUS": "1",
-                "REQMEM": "1Gn",
+                "ReqMem": "1Gn",
                 "TotalCPU": "01:29:47",
                 "Elapsed": "01:29:56",
                 "Timelimit": "03:00:00",
@@ -155,7 +155,7 @@ def test_process_line(jobs, mocker):
                 "JobID": "24371655.batch",
                 "State": "COMPLETED",
                 "AllocCPUS": "1",
-                "REQMEM": "1Gn",
+                "ReqMem": "1Gn",
                 "TotalCPU": "01:29:47",
                 "Elapsed": "01:29:56",
                 "Timelimit": "",
@@ -170,7 +170,7 @@ def test_process_line(jobs, mocker):
                 "JobID": "24371655.extern",
                 "State": "COMPLETED",
                 "AllocCPUS": "1",
-                "REQMEM": "1Gn",
+                "ReqMem": "1Gn",
                 "TotalCPU": "00:00:00",
                 "Elapsed": "01:29:56",
                 "Timelimit": "",
@@ -203,7 +203,7 @@ def test_process_line_partition_timelimit_not_set(jobs, mocker):
                 "JobID": "24371655",
                 "State": "COMPLETED",
                 "AllocCPUS": "1",
-                "REQMEM": "1Gn",
+                "ReqMem": "1Gn",
                 "TotalCPU": "01:29:47",
                 "Elapsed": "01:29:56",
                 "Timelimit": "Partition_Limit",
@@ -238,7 +238,7 @@ def test_process_line_partition_timelimit(jobs, mocker):
                 "JobID": "24371655",
                 "State": "COMPLETED",
                 "AllocCPUS": "1",
-                "REQMEM": "1Gn",
+                "ReqMem": "1Gn",
                 "TotalCPU": "01:29:47",
                 "Elapsed": "01:29:56",
                 "Timelimit": "01:02:03",
@@ -273,7 +273,7 @@ def test_process_line_partition_timelimit_no_match(jobs, mocker):
                 "JobID": "24371655",
                 "State": "COMPLETED",
                 "AllocCPUS": "1",
-                "REQMEM": "1Gn",
+                "ReqMem": "1Gn",
                 "TotalCPU": "01:29:47",
                 "Elapsed": "01:29:56",
                 "Timelimit": "Partition_Limit",
@@ -518,7 +518,7 @@ def test_process_entry_array_user(jobs):
             "JobIDRaw": "14729857",
             "MaxRSS": "",
             "NNodes": "1",
-            "REQMEM": "50Gn",
+            "ReqMem": "50Gn",
             "State": "PENDING",
             "TotalCPU": "00:00:00",
         },

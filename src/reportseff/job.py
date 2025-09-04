@@ -115,6 +115,7 @@ class Job:
 
         elif self.state != "RUNNING":
             for k, value in entry.items():
+                # record first job step
                 if k not in self.other_entries or not self.other_entries[k]:
                     self.other_entries[k] = value
             mem = parsemem(entry["MaxRSS"]) if "MaxRSS" in entry else 0
@@ -163,9 +164,9 @@ class Job:
         else:
             self.cpu = round(cpu_time / wall * 100, 1)
 
-        if "REQMEM" in entry and "NNodes" in entry and "AllocCPUS" in entry:
+        if "ReqMem" in entry and "NNodes" in entry and "AllocCPUS" in entry:
             self.totalmem = parsemem(
-                entry["REQMEM"], int(entry["NNodes"]), int(entry["AllocCPUS"])
+                entry["ReqMem"], int(entry["NNodes"]), int(entry["AllocCPUS"])
             )
 
         if (

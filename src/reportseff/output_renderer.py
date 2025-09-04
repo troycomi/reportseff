@@ -72,7 +72,7 @@ class OutputRenderer:
         # values derived from other values, list includes all dependent values
         self.derived: dict[str, list] = {
             "CPUEff": ["TotalCPU", "AllocCPUS", "Elapsed"],
-            "MemEff": ["REQMEM", "NNodes", "AllocCPUS", "MaxRSS", "NTasks"],
+            "MemEff": ["ReqMem", "NNodes", "AllocCPUS", "MaxRSS", "NTasks"],
             "TimeEff": ["Elapsed", "Timelimit"],
             "GPU": [],
             "GPUMem": [],
