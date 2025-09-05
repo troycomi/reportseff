@@ -239,12 +239,12 @@ def test_renderer_build_formatters():
 def test_renderer_validate_formatters(renderer):
     """Can validate formatters as members of a provided collection, normalizing name."""
     renderer.formatters = output_renderer.build_formatters("JobID,JOBid,jObId")
-    assert renderer.validate_formatters(["JobID"]) == "JobID JobID JobID".split()
+    assert renderer.validate_formatters(["JobID"], []) == "JobID JobID JobID".split()
     assert renderer.formatters == "JobID JobID JobID".split()
 
     renderer.formatters = output_renderer.build_formatters("JobID,GPU%>10")
     assert (
-        renderer.validate_formatters(["JobID", "GPU", "GPUEff", "GPUMem"])
+        renderer.validate_formatters(["JobID"], ["GPU", "GPUEff", "GPUMem"])
         == "JobID GPU".split()
     )
     assert renderer.formatters == "JobID GPUEff GPUMem".split()
@@ -257,26 +257,26 @@ def test_renderer_validate_formatters(renderer):
 
 def test_renderer_validate_formatters_with_node(renderer):
     """Validating formatters with GPUs can alter formatters."""
-    min_gpu = [*min_required, "GPU", "GPUEff", "GPUMem"]
+    min_gpu = (min_required, ["GPU", "GPUEff", "GPUMem"])
     # normal function
     renderer.options.node = False
     renderer.options.gpu = False
     renderer.formatters = output_renderer.build_formatters("State")
-    assert renderer.validate_formatters(min_gpu) == ["State"]
+    assert renderer.validate_formatters(*min_gpu) == ["State"]
     assert renderer.formatters == ["State"]
 
     # add in job id
     renderer.options.node = True
     renderer.options.gpu = False
     renderer.formatters = output_renderer.build_formatters("State")
-    assert renderer.validate_formatters(min_gpu) == ["State"]
+    assert renderer.validate_formatters(*min_gpu) == ["State"]
     assert renderer.formatters == ["JobID", "State"]
 
     # add in both gpus, gpu implies node
     renderer.options.node = True
     renderer.options.gpu = True
     renderer.formatters = output_renderer.build_formatters("State")
-    assert renderer.validate_formatters(min_gpu) == ["State"]
+    assert renderer.validate_formatters(*min_gpu) == ["State"]
     assert renderer.formatters == ["JobID", "State", "GPUEff", "GPUMem"]
     assert renderer.formatters[0].alignment == "<"  # switched by node reporting
 
@@ -284,7 +284,7 @@ def test_renderer_validate_formatters_with_node(renderer):
     renderer.options.node = True
     renderer.options.gpu = True
     renderer.formatters = output_renderer.build_formatters("GPUMEM,State,JobID:>")
-    assert renderer.validate_formatters(min_gpu) == "GPUMem State JobID".split()
+    assert renderer.validate_formatters(*min_gpu) == "GPUMem State JobID".split()
     assert renderer.formatters == ["GPUMem", "State", "JobID"]
     assert renderer.formatters[2].alignment == "<"  # switched by node reporting
 
@@ -583,15 +583,50 @@ def test_formatter_validate_title():
     fmt = output_renderer.ColumnFormatter("NaMe")
 
     with pytest.raises(ValueError, match="'NaMe' is not a valid title"):
-        fmt.validate_title(["JobID", "State"])
+        fmt.validate_title(["JobID", "State"], [])
 
     fmt.title = "jOBid"
-    assert fmt.validate_title(["other", "JobID", "State"]) == "JobID"
+    assert fmt.validate_title(["other", "JobID", "State"], []) == "JobID"
     assert fmt.title == "JobID"
 
     fmt.title = "ReqMem"
-    assert fmt.validate_title(["ReqMem", "JobID", "State"]) == "ReqMem"
+    assert fmt.validate_title(["ReqMem", "JobID", "State"], []) == "ReqMem"
     assert fmt.title == "ReqMem"
+
+
+def test_formatter_validate_title_totals():
+    """Can validate titles against a column formatter that start with Total."""
+    # total cpu is from sacct and will short any total logic
+    fmt = output_renderer.ColumnFormatter("TOTALCPU")
+    assert fmt.validate_title(["TotalCPU"], []) == "TotalCPU"
+    assert fmt.title == "TotalCPU"
+
+    # totalreqmem is valid
+    fmt = output_renderer.ColumnFormatter("TOTALreqMEM")
+    assert fmt.validate_title(["ReqMem"], []) == "ReqMem"
+    assert fmt.title == "TotalReqMem"
+
+    # totalblah is invalid as it doesn't match anything
+    fmt = output_renderer.ColumnFormatter("TOTALblah")
+    with pytest.raises(ValueError, match="'TOTALblah' is not a valid title") as ex:
+        fmt.validate_title(["ReqMem"], [])
+
+    assert str(ex.value) == (
+        "'TOTALblah' is not a valid title. "
+        "'blah' does not match allowed values. "
+        "Run `sacct --helpformat` for a list of allowed values."
+    )
+
+    # totalMemEff isn't allowed as it's a derived value
+    fmt = output_renderer.ColumnFormatter("totalMemeff")
+    with pytest.raises(ValueError, match="'totalMemeff' is not a valid title") as ex:
+        fmt.validate_title(["ReqMem"], ["TimeEff", "MemEff"])
+
+    assert str(ex.value) == (
+        "'totalMemeff' is not a valid title. "
+        "'MemEff' is a derived value and cannot be summed. "
+        "Run `sacct --helpformat` for a list of allowed values."
+    )
 
 
 def test_formatter_compute_width():

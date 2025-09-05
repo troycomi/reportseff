@@ -64,7 +64,7 @@ def test_update_main_job():
     assert job.time == "00:10:00"
     assert job.time_eff == 50.0
     assert job.cpu == 90.0
-    assert job.totalmem == 1 * 1024**2
+    assert job.totalmem == 1 * 1024**3
 
     job = job_module.Job("24371655", "24371655", None)
     job.update(
@@ -85,7 +85,7 @@ def test_update_main_job():
     assert job.time == "00:10:00"
     assert job.time_eff == 50.0
     assert job.cpu == 90.0
-    assert job.totalmem == 1 * 1024**2
+    assert job.totalmem == 1 * 1024**3
 
     job = job_module.Job("24371655", "24371655", None)
     job.update(
@@ -181,7 +181,7 @@ def test_update_main_job():
     assert job.time == "00:00:00"
     assert job.time_eff == 0.0
     assert job.cpu is None
-    assert job.totalmem == 1024**2
+    assert job.totalmem == 1024**3
 
 
 def test_update_main_job_unlimited():
@@ -206,7 +206,7 @@ def test_update_main_job_unlimited():
     assert job.time == "03:22:47"
     assert job.time_eff == "---"
     assert job.cpu == 9.3
-    assert job.totalmem == 4 * 7 * 1024**2
+    assert job.totalmem == 4 * 7 * 1024**3
 
 
 def test_update_main_job_partition_limit():
@@ -233,7 +233,7 @@ def test_update_main_job_partition_limit():
     assert job.time == "00:00:00"
     assert job.time_eff == "---"
     assert job.cpu is None
-    assert job.totalmem == 4 * 1000 * 1024**2
+    assert job.totalmem == 4 * 1000 * 1024**3
 
 
 def test_update_part_job():
@@ -256,7 +256,7 @@ def test_update_part_job():
     assert job.time == "---"
     assert job.cpu == "---"
     assert job.totalmem is None
-    assert job.stepmem == 495644
+    assert job.stepmem == 507539456
 
 
 def test_parse_bug():
@@ -332,7 +332,7 @@ def test_parse_slurm_timedelta():
 def test_parsemem_nodes():
     """Can parse memory entries with nodes provided."""
     for mem in (1, 2, 4):
-        for exp, multiple in enumerate("K M G T E".split()):
+        for exp, multiple in enumerate("KMGTE", start=1):
             for alloc in (1, 2, 4):
                 assert (
                     job_module.parsemem(f"{mem}{multiple}n", alloc, -1)
@@ -343,7 +343,7 @@ def test_parsemem_nodes():
 def test_parsemem_cpus():
     """Can parse memory entries with cpus provided."""
     for mem in (1, 2, 4):
-        for exp, multiple in enumerate("K M G T E".split()):
+        for exp, multiple in enumerate("KMGTE", start=1):
             for alloc in (1, 2, 4):
                 assert (
                     job_module.parsemem(f"{mem}{multiple}c", -1, alloc)
@@ -353,7 +353,7 @@ def test_parsemem_cpus():
 
 def test_parsememstep():
     """Can parse memory for steps and handle odd formats."""
-    for exp, multiple in enumerate("K M G T E".split()):
+    for exp, multiple in enumerate("KMGTE", start=1):
         for mem in (2, 4, 6):
             assert job_module.parsemem(f"{mem}{multiple}") == mem * 1024**exp
 
@@ -363,7 +363,20 @@ def test_parsememstep():
     assert job_module.parsemem("") == 0
     assert job_module.parsemem("0") == 0
     assert job_module.parsemem("5") == 5
-    assert job_module.parsemem("1084.50M") == 1084.5 * 1024
+    assert job_module.parsemem("1084.50M") == 1084.5 * 1024**2
+
+
+def test_render_num():
+    """Can render numbers in human readable format."""
+    assert job_module.render_num("string") == "string"
+    assert job_module.render_num(1) == "1"
+    assert job_module.render_num(1024) == "1K"
+    for ind, suffix in enumerate("KMGTE", start=1):
+        assert job_module.render_num(1024**ind) == f"1{suffix}"
+
+    assert job_module.render_num(2436) == "2K"
+    assert job_module.render_num(2736) == "3K"
+    assert job_module.render_num(1000 * 1024) == "1000K"
 
 
 def test_unknown_admin_comment(job):

@@ -18,7 +18,7 @@ def _mock_inquirer(mocker):
     def mock_valid(_self):
         return (
             "JobID,State,Elapsed,JobIDRaw,State,TotalCPU,AllocCPUS,"
-            "ReqMem,NNodes,MaxRSS,Timelimit"
+            "ReqMem,NNodes,MaxRSS,Timelimit,MaxDiskReadNode"
         ).split(",")
 
     def mock_partition_timelimits(_self):
@@ -779,7 +779,9 @@ def test_issue_16(mocker):
 ^|^15^|^00:00:06^|^65638294.35^|^65638294.35^|^0^|^1^|^1^|^^|^COMPLETED^|^^|^00:04.527^|^
 """
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
-    result = runner.invoke(console.main, "--no-color 65638294".split())
+    result = runner.invoke(
+        console.main, "--format +totalcpu --no-color 65638294".split()
+    )
 
     assert result.exit_code == 0
     # remove header
@@ -791,6 +793,7 @@ def test_issue_16(mocker):
         "4.5%",
         "98.6%",
         "24.1%",
+        "4-23:56:21",
     ]
     assert len(output) == 1
 
@@ -1019,8 +1022,77 @@ def test_issue_73_maxrss(mocker):
     assert output[0].split() == [
         "1234",
         "655G",
-        "6044K",
-        # "39538758K",
+        "38G",
         "5.8%",
+    ]
+    assert len(output) == 1
+
+
+@pytest.mark.usefixtures("_mock_inquirer")
+def test_issue_73_maxdiskreadnode(mocker):
+    """Incorrect maxrss with multi-step jobs."""
+    mocker.patch("reportseff.console.which", return_value=True)
+    runner = CliRunner()
+    sub_result = mocker.MagicMock()
+    sub_result.returncode = 0
+    sub_result.stdout = """^|^128^|^1234^|^1234^|^^|^^|^1^|^^|^655G^|^COMPLETED^|^
+^|^128^|^1234.batch^|^1234.batch^|^node-l1g2^|^6044K^|^1^|^1^|^^|^COMPLETED^|^
+^|^128^|^1234.extern^|^1234.extern^|^won't update^|^1330K^|^1^|^1^|^^|^COMPLETED^|^
+^|^128^|^1234.0^|^1234.0^|^keepfirst^|^39503310K^|^1^|^1^|^^|^COMPLETED^|^
+^|^128^|^1234.1^|^1234.1^|^node-asdf^|^39538757K^|^1^|^1^|^^|^COMPLETED^|^
+"""
+    mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
+    result = runner.invoke(
+        console.main,
+        "--format JobID,ReqMem,MaxRSS,MemEff,MaxDiskReadNode --no-color 1234".split(),
+    )
+
+    assert result.exit_code == 0
+    # remove header
+    output = result.output.split("\n")[1:-1]
+    assert output[0].split() == [
+        "1234",
+        "655G",
+        "38G",
+        "5.8%",
+        "node-l1g2",
+    ]
+    assert len(output) == 1
+
+
+@pytest.mark.usefixtures("_mock_inquirer")
+def test_issue_73_totals(mocker):
+    """Incorrect maxrss with multi-step jobs."""
+    mocker.patch("reportseff.console.which", return_value=True)
+    runner = CliRunner()
+    sub_result = mocker.MagicMock()
+    sub_result.returncode = 0
+    sub_result.stdout = """^|^128^|^1234^|^1234^|^^|^^|^1^|^^|^655G^|^COMPLETED^|^
+^|^128^|^1234.batch^|^1234.batch^|^node-l1g2^|^6044K^|^1^|^1^|^^|^COMPLETED^|^
+^|^128^|^1234.extern^|^1234.extern^|^won't update^|^1330K^|^1^|^1^|^^|^COMPLETED^|^
+^|^128^|^1234.0^|^1234.0^|^keepfirst^|^39503310K^|^1^|^1^|^^|^COMPLETED^|^
+^|^128^|^1234.1^|^1234.1^|^node-asdf^|^39538757K^|^1^|^1^|^^|^COMPLEteD^|^
+"""
+    mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
+    result = runner.invoke(
+        console.main,
+        [
+            "--format",
+            "JobID,ReqMem,TotalMaxRSS,MemEff,TotalMaxDiskReadNode,TotalState",
+            "--no-color",
+            "1234",
+        ],
+    )
+
+    assert result.exit_code == 0
+    # remove header
+    output = result.output.split("\n")[1:-1]
+    assert output[0].split() == [
+        "1234",
+        "655G",
+        "75G",
+        "5.8%",
+        "node-l1g2",
+        "COMPLETED",
     ]
     assert len(output) == 1

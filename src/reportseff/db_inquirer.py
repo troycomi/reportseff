@@ -405,7 +405,7 @@ class SacctInquirer(BaseInquirer):
             if toks[0] in abbrev_to_key:
                 toks[0] = abbrev_to_key[toks[0]]
 
-            toks[0] = toks[0].lower()
+            toks[0] = toks[0].casefold()
 
             if toks[0] in valid_args:
                 try:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import itertools
 import re
 from dataclasses import dataclass
 from typing import Any, Callable, Generator
@@ -84,24 +85,29 @@ class OutputRenderer:
         self.formatters = build_formatters(format_str)
 
         # validate with titles and derived keys
-        valid_titles += self.derived.keys()
-        self.query_columns = self.validate_formatters(valid_titles)
+        self.query_columns = self.validate_formatters(
+            valid_titles, list(self.derived.keys())
+        )
 
         # build columns for sacct call
         self.correct_columns()
 
-    def validate_formatters(self, valid_titles: list) -> list:
+    def validate_formatters(self, valid_titles: list, derived_titles: list) -> list:
         """Validate titles of formatters attribute.
 
         Expands GPU to GPUEff and GPUMem in formatters
 
         Args:
             valid_titles: List of valid options for format tokens
+            derived_titles: list of derived title strings, are valid unless
+                requesting a total value
 
         Returns:
             Return list of validated strings to query
         """
-        result = [fmt.validate_title(valid_titles) for fmt in self.formatters]
+        result = [
+            fmt.validate_title(valid_titles, derived_titles) for fmt in self.formatters
+        ]
 
         if self.options.node:
             if "JobID" not in self.formatters:
@@ -275,7 +281,7 @@ class ColumnFormatter:
         """
         return f"{self.title}%{self.alignment}{self.width}"
 
-    def validate_title(self, valid_titles: list[str]) -> str:
+    def validate_title(self, valid_titles: list[str], derived_titles: list[str]) -> str:
         """Validate the title against a list.
 
         Tries to find this formatter's title in the valid titles list in a case
@@ -284,6 +290,8 @@ class ColumnFormatter:
 
         Args:
             valid_titles: list of valid title strings
+            derived_titles: list of derived title strings, are valid unless
+                requesting a total value
 
         Returns:
             The self title validated from the valid_titles list
@@ -292,15 +300,33 @@ class ColumnFormatter:
             ValueError: if self.title is not found in the valid list
         """
         fold_title = self.title.casefold()
-        for title in valid_titles:
+        for title in itertools.chain(valid_titles, derived_titles):
             if fold_title == title.casefold():
                 self.title = title
                 return title
 
-        msg = (
-            f"{self.title!r} is not a valid title. "
-            "Run sacct --helpformat for a list of allowed values."
-        )
+        if fold_title.startswith("total"):
+            fold_title = fold_title.removeprefix("total")
+            for title in valid_titles:
+                if fold_title == title.casefold():
+                    self.title = f"Total{title}"
+                    return title
+
+            # not valid, could be derived and need to inform user
+            msg = f"{self.title!r} is not a valid title. "
+            for title in derived_titles:
+                if fold_title == title.casefold():
+                    msg += f"{title!r} is a derived value and cannot be summed. "
+                    break
+            else:  # not derived
+                msg += f"{fold_title!r} does not match allowed values. "
+            msg += "Run `sacct --helpformat` for a list of allowed values."
+
+        else:
+            msg = (
+                f"{self.title!r} is not a valid title. "
+                "Run `sacct --helpformat` for a list of allowed values."
+            )
         raise ValueError(msg)
 
     def compute_width(
