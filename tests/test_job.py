@@ -378,6 +378,12 @@ def test_render_num():
     assert job_module.render_num(2736) == "3K"
     assert job_module.render_num(1000 * 1024) == "1000K"
 
+    assert job_module.render_num(0) == "0"
+    assert job_module.render_num(0.0) == "0"
+
+    assert job_module.render_num(-1) == "-1"
+    assert job_module.render_num(-20 * 1024) == "-20K"
+
 
 def test_unknown_admin_comment(job):
     """Unknown comment types raise informative errors."""

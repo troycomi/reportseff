@@ -416,7 +416,11 @@ def render_num(value: Any) -> str:
     """
     if not isinstance(value, (int, float)):
         return str(value)
-    scale = int(math.log2(value) // 10)
+
+    if value == 0:
+        return "0"
+
+    scale = int(math.log2(abs(value)) // 10)
     suffix = ""
     if scale > 0:
         suffix = " KMGTE"[scale]
