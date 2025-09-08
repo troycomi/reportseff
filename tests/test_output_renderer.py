@@ -9,7 +9,7 @@ from reportseff import output_renderer
 
 min_required = (
     "JobID,State,Elapsed,JobIDRaw,State,TotalCPU,AllocCPUS,"
-    "REQMEM,NNodes,MaxRSS,Timelimit"
+    "ReqMem,NNodes,MaxRSS,Timelimit"
 ).split(",")
 
 
@@ -32,7 +32,7 @@ def some_jobs():
             "JobID": "24371655",
             "State": "COMPLETED",
             "AllocCPUS": "1",
-            "REQMEM": "1Gn",
+            "ReqMem": "1Gn",
             "TotalCPU": "00:09:00",
             "Elapsed": "00:10:00",
             "Timelimit": "00:20:00",
@@ -48,7 +48,7 @@ def some_jobs():
             "JobID": "24371656",
             "State": "PENDING",
             "AllocCPUS": "1",
-            "REQMEM": "1Gn",
+            "ReqMem": "1Gn",
             "TotalCPU": "00:09:00",
             "Elapsed": "00:10:00",
             "Timelimit": "00:20:00",
@@ -64,7 +64,7 @@ def some_jobs():
             "JobID": "24371657",
             "State": "RUNNING",
             "AllocCPUS": "1",
-            "REQMEM": "1Gn",
+            "ReqMem": "1Gn",
             "TotalCPU": "00:09:00",
             "Elapsed": "00:10:00",
             "Timelimit": "00:20:00",
@@ -80,7 +80,7 @@ def some_jobs():
             "JobID": "24371658",
             "State": "CANCELLED",
             "AllocCPUS": "1",
-            "REQMEM": "1Gn",
+            "ReqMem": "1Gn",
             "TotalCPU": "00:09:00",
             "Elapsed": "00:00:00",
             "Timelimit": "00:20:00",
@@ -96,7 +96,7 @@ def some_jobs():
             "JobID": "24371659",
             "State": "TIMEOUT",
             "AllocCPUS": "1",
-            "REQMEM": "2Gn",
+            "ReqMem": "2Gn",
             "TotalCPU": "00:04:00",
             "Elapsed": "00:21:00",
             "Timelimit": "00:20:00",
@@ -112,7 +112,7 @@ def some_jobs():
             "JobID": "24371660",
             "State": "OTHER",
             "AllocCPUS": "1",
-            "REQMEM": "2Gn",
+            "ReqMem": "2Gn",
             "TotalCPU": "00:09:00",
             "Elapsed": "00:12:05",
             "Timelimit": "00:20:00",
@@ -193,7 +193,7 @@ def test_renderer_init(renderer):
     assert sorted(renderer.query_columns) == sorted(
         (
             "JobID JobIDRaw State Elapsed TotalCPU "
-            "AllocCPUS REQMEM NNodes NTasks MaxRSS AdminComment"
+            "AllocCPUS ReqMem NNodes NTasks MaxRSS AdminComment"
         ).split()
     )
 
@@ -239,12 +239,12 @@ def test_renderer_build_formatters():
 def test_renderer_validate_formatters(renderer):
     """Can validate formatters as members of a provided collection, normalizing name."""
     renderer.formatters = output_renderer.build_formatters("JobID,JOBid,jObId")
-    assert renderer.validate_formatters(["JobID"]) == "JobID JobID JobID".split()
+    assert renderer.validate_formatters(["JobID"], []) == "JobID JobID JobID".split()
     assert renderer.formatters == "JobID JobID JobID".split()
 
     renderer.formatters = output_renderer.build_formatters("JobID,GPU%>10")
     assert (
-        renderer.validate_formatters(["JobID", "GPU", "GPUEff", "GPUMem"])
+        renderer.validate_formatters(["JobID"], ["GPU", "GPUEff", "GPUMem"])
         == "JobID GPU".split()
     )
     assert renderer.formatters == "JobID GPUEff GPUMem".split()
@@ -257,26 +257,26 @@ def test_renderer_validate_formatters(renderer):
 
 def test_renderer_validate_formatters_with_node(renderer):
     """Validating formatters with GPUs can alter formatters."""
-    min_gpu = [*min_required, "GPU", "GPUEff", "GPUMem"]
+    min_gpu = (min_required, ["GPU", "GPUEff", "GPUMem"])
     # normal function
     renderer.options.node = False
     renderer.options.gpu = False
     renderer.formatters = output_renderer.build_formatters("State")
-    assert renderer.validate_formatters(min_gpu) == ["State"]
+    assert renderer.validate_formatters(*min_gpu) == ["State"]
     assert renderer.formatters == ["State"]
 
     # add in job id
     renderer.options.node = True
     renderer.options.gpu = False
     renderer.formatters = output_renderer.build_formatters("State")
-    assert renderer.validate_formatters(min_gpu) == ["State"]
+    assert renderer.validate_formatters(*min_gpu) == ["State"]
     assert renderer.formatters == ["JobID", "State"]
 
     # add in both gpus, gpu implies node
     renderer.options.node = True
     renderer.options.gpu = True
     renderer.formatters = output_renderer.build_formatters("State")
-    assert renderer.validate_formatters(min_gpu) == ["State"]
+    assert renderer.validate_formatters(*min_gpu) == ["State"]
     assert renderer.formatters == ["JobID", "State", "GPUEff", "GPUMem"]
     assert renderer.formatters[0].alignment == "<"  # switched by node reporting
 
@@ -284,7 +284,7 @@ def test_renderer_validate_formatters_with_node(renderer):
     renderer.options.node = True
     renderer.options.gpu = True
     renderer.formatters = output_renderer.build_formatters("GPUMEM,State,JobID:>")
-    assert renderer.validate_formatters(min_gpu) == "GPUMem State JobID".split()
+    assert renderer.validate_formatters(*min_gpu) == "GPUMem State JobID".split()
     assert renderer.formatters == ["GPUMem", "State", "JobID"]
     assert renderer.formatters[2].alignment == "<"  # switched by node reporting
 
@@ -301,7 +301,7 @@ def test_renderer_correct_columns(renderer):
     renderer.correct_columns()
     assert sorted(renderer.query_columns) == sorted(
         (
-            "JobID TotalCPU Elapsed REQMEM"
+            "JobID TotalCPU Elapsed ReqMem"
             " JobIDRaw State AdminComment"
             " NNodes NTasks AllocCPUS MaxRSS Timelimit"
         ).split()
@@ -313,13 +313,21 @@ def test_renderer_correct_columns(renderer):
         "JobID JobIDRaw State AdminComment".split()
     )
 
+    renderer.query_columns = "JobID ReqMem MemEff".split()
+    renderer.correct_columns()
+    assert sorted(renderer.query_columns) == sorted(
+        (
+            "JobID JobIDRaw State AdminComment AllocCPUS " "MaxRSS NNodes NTasks ReqMem"
+        ).split()
+    )
+
 
 def test_renderer_format_jobs(some_jobs):
     """Can render output as table with colored entries."""
     renderer = output_renderer.OutputRenderer(
         min_required,
         output_renderer.RenderOptions(),
-        "JobID,State,Elapsed,CPUEff,REQMEM,TimeEff",
+        "JobID,State,Elapsed,CPUEff,ReqMem,TimeEff",
     )
     result = renderer.format_jobs(some_jobs)
     ansi_escape = re.compile(r"\x1B[@-_][0-?]*[ -/]*[@-~]")
@@ -342,7 +350,7 @@ def test_renderer_format_jobs(some_jobs):
     # remove color codes
     result = ansi_escape.sub("", result)
     lines = result.split("\n")
-    assert lines[0].split() == "JobID State Elapsed CPUEff REQMEM TimeEff".split()
+    assert lines[0].split() == "JobID State Elapsed CPUEff ReqMem TimeEff".split()
     assert lines[1].split() == "24371655 COMPLETED 00:10:00 90.0% 1Gn 50.0%".split()
     assert lines[2].split() == "24371656 PENDING --- --- --- ---".split()
     assert lines[3].split() == "24371657 RUNNING 00:10:00 --- 1Gn 50.0%".split()
@@ -575,11 +583,50 @@ def test_formatter_validate_title():
     fmt = output_renderer.ColumnFormatter("NaMe")
 
     with pytest.raises(ValueError, match="'NaMe' is not a valid title"):
-        fmt.validate_title(["JobID", "State"])
+        fmt.validate_title(["JobID", "State"], [])
 
     fmt.title = "jOBid"
-    assert fmt.validate_title(["other", "JobID", "State"]) == "JobID"
+    assert fmt.validate_title(["other", "JobID", "State"], []) == "JobID"
     assert fmt.title == "JobID"
+
+    fmt.title = "ReqMem"
+    assert fmt.validate_title(["ReqMem", "JobID", "State"], []) == "ReqMem"
+    assert fmt.title == "ReqMem"
+
+
+def test_formatter_validate_title_totals():
+    """Can validate titles against a column formatter that start with Total."""
+    # total cpu is from sacct and will short any total logic
+    fmt = output_renderer.ColumnFormatter("TOTALCPU")
+    assert fmt.validate_title(["TotalCPU"], []) == "TotalCPU"
+    assert fmt.title == "TotalCPU"
+
+    # totalreqmem is valid
+    fmt = output_renderer.ColumnFormatter("TOTALreqMEM")
+    assert fmt.validate_title(["ReqMem"], []) == "ReqMem"
+    assert fmt.title == "TotalReqMem"
+
+    # totalblah is invalid as it doesn't match anything
+    fmt = output_renderer.ColumnFormatter("TOTALblah")
+    with pytest.raises(ValueError, match="'TOTALblah' is not a valid title") as ex:
+        fmt.validate_title(["ReqMem"], [])
+
+    assert str(ex.value) == (
+        "'TOTALblah' is not a valid title. "
+        "'blah' does not match allowed values. "
+        "Run `sacct --helpformat` for a list of allowed values."
+    )
+
+    # totalMemEff isn't allowed as it's a derived value
+    fmt = output_renderer.ColumnFormatter("totalMemeff")
+    with pytest.raises(ValueError, match="'totalMemeff' is not a valid title") as ex:
+        fmt.validate_title(["ReqMem"], ["TimeEff", "MemEff"])
+
+    assert str(ex.value) == (
+        "'totalMemeff' is not a valid title. "
+        "'MemEff' is a derived value and cannot be summed. "
+        "Run `sacct --helpformat` for a list of allowed values."
+    )
 
 
 def test_formatter_compute_width():

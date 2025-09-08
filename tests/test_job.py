@@ -51,7 +51,7 @@ def test_update_main_job():
             "JobID": "24371655",
             "State": "COMPLETED",
             "AllocCPUS": "1",
-            "REQMEM": "1Gn",
+            "ReqMem": "1Gn",
             "TotalCPU": "00:09:00",
             "Elapsed": "00:10:00",
             "Timelimit": "00:20:00",
@@ -64,7 +64,7 @@ def test_update_main_job():
     assert job.time == "00:10:00"
     assert job.time_eff == 50.0
     assert job.cpu == 90.0
-    assert job.totalmem == 1 * 1024**2
+    assert job.totalmem == 1 * 1024**3
 
     job = job_module.Job("24371655", "24371655", None)
     job.update(
@@ -72,7 +72,7 @@ def test_update_main_job():
             "JobID": "24371655",
             "State": "COMPLETED",
             "AllocCPUS": "1",
-            "REQMEM": "1G",
+            "ReqMem": "1G",
             "TotalCPU": "00:09:00",
             "Elapsed": "00:10:00",
             "Timelimit": "00:20:00",
@@ -85,7 +85,7 @@ def test_update_main_job():
     assert job.time == "00:10:00"
     assert job.time_eff == 50.0
     assert job.cpu == 90.0
-    assert job.totalmem == 1 * 1024**2
+    assert job.totalmem == 1 * 1024**3
 
     job = job_module.Job("24371655", "24371655", None)
     job.update(
@@ -93,7 +93,7 @@ def test_update_main_job():
             "JobID": "24371655",
             "State": "COMPLETED",
             "AllocCPUS": "1",
-            "REQMEM": "1G",
+            "ReqMem": "1G",
             "TotalCPU": "00:09:00",
             "Elapsed": "00:10:00",
             "Timelimit": "00:20:00",
@@ -112,7 +112,7 @@ def test_update_main_job():
             "JobID": "24371655",
             "State": "PENDING",
             "AllocCPUS": "1",
-            "REQMEM": "1Gn",
+            "ReqMem": "1Gn",
             "TotalCPU": "00:09:00",
             "Elapsed": "00:10:00",
             "Timelimit": "00:20:00",
@@ -133,7 +133,7 @@ def test_update_main_job():
             "JobID": "24371655",
             "State": "RUNNING",
             "AllocCPUS": "1",
-            "REQMEM": "1Gn",
+            "ReqMem": "1Gn",
             "TotalCPU": "00:09:00",
             "Elapsed": "00:10:00",
             "Timelimit": "00:20:00",
@@ -147,7 +147,7 @@ def test_update_main_job():
             "JobID": "24371655.batch",
             "State": "RUNNING",
             "AllocCPUS": "1",
-            "REQMEM": "1Gn",
+            "ReqMem": "1Gn",
             "TotalCPU": "00:09:00",
             "Elapsed": "00:10:00",
             "Timelimit": "00:20:00",
@@ -168,7 +168,7 @@ def test_update_main_job():
             "JobID": "24371655",
             "State": "CANCELLED",
             "AllocCPUS": "1",
-            "REQMEM": "1Gn",
+            "ReqMem": "1Gn",
             "TotalCPU": "00:09:00",
             "Elapsed": "00:00:00",
             "Timelimit": "00:20:00",
@@ -181,7 +181,7 @@ def test_update_main_job():
     assert job.time == "00:00:00"
     assert job.time_eff == 0.0
     assert job.cpu is None
-    assert job.totalmem == 1024**2
+    assert job.totalmem == 1024**3
 
 
 def test_update_main_job_unlimited():
@@ -196,7 +196,7 @@ def test_update_main_job_unlimited():
             "JobIDRaw": "11741520",
             "MaxRSS": "",
             "NNodes": "1",
-            "REQMEM": "7Gc",
+            "ReqMem": "7Gc",
             "State": "COMPLETED",
             "Timelimit": "UNLIMITED",
             "TotalCPU": "01:15:11",
@@ -206,7 +206,7 @@ def test_update_main_job_unlimited():
     assert job.time == "03:22:47"
     assert job.time_eff == "---"
     assert job.cpu == 9.3
-    assert job.totalmem == 4 * 7 * 1024**2
+    assert job.totalmem == 4 * 7 * 1024**3
 
 
 def test_update_main_job_partition_limit():
@@ -223,7 +223,7 @@ def test_update_main_job_partition_limit():
             "NNodes": "1",
             "Partition": "mainqueue",
             "QOS": "normal",
-            "REQMEM": "4000G",
+            "ReqMem": "4000G",
             "State": "CANCELLED by 1001",
             "Timelimit": "Partition_Limit",
             "TotalCPU": "00:00:00",
@@ -233,7 +233,7 @@ def test_update_main_job_partition_limit():
     assert job.time == "00:00:00"
     assert job.time_eff == "---"
     assert job.cpu is None
-    assert job.totalmem == 4 * 1000 * 1024**2
+    assert job.totalmem == 4 * 1000 * 1024**3
 
 
 def test_update_part_job():
@@ -244,7 +244,7 @@ def test_update_part_job():
             "JobID": "24371655.batch",
             "State": "COMPLETED",
             "AllocCPUS": "1",
-            "REQMEM": "1Gn",
+            "ReqMem": "1Gn",
             "TotalCPU": "00:09:00",
             "Elapsed": "00:10:00",
             "MaxRSS": "495644K",
@@ -256,7 +256,7 @@ def test_update_part_job():
     assert job.time == "---"
     assert job.cpu == "---"
     assert job.totalmem is None
-    assert job.stepmem == 495644
+    assert job.stepmem == 507539456
 
 
 def test_parse_bug():
@@ -271,7 +271,7 @@ def test_parse_bug():
             "JobName": "extern",
             "MaxRSS": "0",
             "NNodes": "1",
-            "REQMEM": "4Gn",
+            "ReqMem": "4Gn",
             "State": "COMPLETED",
             "Timelimit": "",
             "TotalCPU": "00:00:00",
@@ -300,7 +300,7 @@ def test_get_entry(job):
             "JobID": "24371655",
             "State": "CANCELLED",
             "AllocCPUS": "1",
-            "REQMEM": "1Gn",
+            "ReqMem": "1Gn",
             "TotalCPU": "00:09:00",
             "Elapsed": "00:00:00",
             "Timelimit": "00:20:00",
@@ -332,7 +332,7 @@ def test_parse_slurm_timedelta():
 def test_parsemem_nodes():
     """Can parse memory entries with nodes provided."""
     for mem in (1, 2, 4):
-        for exp, multiple in enumerate("K M G T E".split()):
+        for exp, multiple in enumerate("KMGTE", start=1):
             for alloc in (1, 2, 4):
                 assert (
                     job_module.parsemem(f"{mem}{multiple}n", alloc, -1)
@@ -343,7 +343,7 @@ def test_parsemem_nodes():
 def test_parsemem_cpus():
     """Can parse memory entries with cpus provided."""
     for mem in (1, 2, 4):
-        for exp, multiple in enumerate("K M G T E".split()):
+        for exp, multiple in enumerate("KMGTE", start=1):
             for alloc in (1, 2, 4):
                 assert (
                     job_module.parsemem(f"{mem}{multiple}c", -1, alloc)
@@ -353,7 +353,7 @@ def test_parsemem_cpus():
 
 def test_parsememstep():
     """Can parse memory for steps and handle odd formats."""
-    for exp, multiple in enumerate("K M G T E".split()):
+    for exp, multiple in enumerate("KMGTE", start=1):
         for mem in (2, 4, 6):
             assert job_module.parsemem(f"{mem}{multiple}") == mem * 1024**exp
 
@@ -363,7 +363,26 @@ def test_parsememstep():
     assert job_module.parsemem("") == 0
     assert job_module.parsemem("0") == 0
     assert job_module.parsemem("5") == 5
-    assert job_module.parsemem("1084.50M") == 1084.5 * 1024
+    assert job_module.parsemem("1084.50M") == 1084.5 * 1024**2
+
+
+def test_render_num():
+    """Can render numbers in human readable format."""
+    assert job_module.render_num("string") == "string"
+    assert job_module.render_num(1) == "1"
+    assert job_module.render_num(1024) == "1K"
+    for ind, suffix in enumerate("KMGTE", start=1):
+        assert job_module.render_num(1024**ind) == f"1{suffix}"
+
+    assert job_module.render_num(2436) == "2K"
+    assert job_module.render_num(2736) == "3K"
+    assert job_module.render_num(1000 * 1024) == "1000K"
+
+    assert job_module.render_num(0) == "0"
+    assert job_module.render_num(0.0) == "0"
+
+    assert job_module.render_num(-1) == "-1"
+    assert job_module.render_num(-20 * 1024) == "-20K"
 
 
 def test_unknown_admin_comment(job):
@@ -743,7 +762,7 @@ def test_issue_26(get_jobstats):
         "JobIDRaw": "13421658",
         "MaxRSS": "",
         "NNodes": "1",
-        "REQMEM": "60G",
+        "ReqMem": "60G",
         "State": "FAILED",
         "Timelimit": "3-00:00:00",
         "TotalCPU": "00:00.001",

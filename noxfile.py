@@ -41,7 +41,7 @@ def tests(session):
     install_with_constraints(
         session, "coverage[toml]", "pytest", "pytest-cov", "pytest-mock"
     )
-    session.run("pytest", "--cov", *args)
+    session.run("pytest", *args, "--cov")
 
 
 @nox.session(python=["3.9", "3.10", "3.11"])

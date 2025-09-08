@@ -30,7 +30,7 @@ def to_sacct_dict(sacct_line: str) -> dict:
         "JobIDRaw",
         "MaxRSS",
         "NNodes",
-        "REQMEM",
+        "ReqMem",
         "State",
         "Timelimit",
         "TotalCPU",

@@ -277,7 +277,7 @@ class SacctInquirer(BaseInquirer):
             for line in sacct_line_split.split(cmd_result.stdout)
         ]
         if debug_cmd is not None:
-            debug_cmd("\n".join(line.replace("\n", "\\n") for line in lines))
+            debug_cmd("^|^\n".join(line.replace("\n", "\\n") for line in lines))
 
         sacct_split = re.compile(r"\^\|\^")
         result = [dict(zip(columns, sacct_split.split(line))) for line in lines if line]
@@ -405,7 +405,7 @@ class SacctInquirer(BaseInquirer):
             if toks[0] in abbrev_to_key:
                 toks[0] = abbrev_to_key[toks[0]]
 
-            toks[0] = toks[0].lower()
+            toks[0] = toks[0].casefold()
 
             if toks[0] in valid_args:
                 try:

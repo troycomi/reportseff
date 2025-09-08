@@ -3,18 +3,20 @@
 from __future__ import annotations
 
 import base64
+import contextlib
 import gzip
 import json
+import math
 import re
 from datetime import timedelta
 from typing import Any, Generator
 
 multiple_map = {
-    "K": 1024**0,
-    "M": 1024**1,
-    "G": 1024**2,
-    "T": 1024**3,
-    "E": 1024**4,
+    "K": 1024**1,
+    "M": 1024**2,
+    "G": 1024**3,
+    "T": 1024**4,
+    "E": 1024**5,
 }
 
 state_colors = {
@@ -68,6 +70,7 @@ class Job:
         self.gpu: float | None = None
         self.gpu_mem: float | None = None
         self.energy: int = 0
+        self.totals: dict[str, Any] = {}
         self.other_entries: dict[str, Any] = {}
         # safe to cache now
         self.other_entries["JobID"] = self.name()
@@ -115,8 +118,32 @@ class Job:
 
         elif self.state != "RUNNING":
             for k, value in entry.items():
+                # record first non-empty job step
                 if k not in self.other_entries or not self.other_entries[k]:
                     self.other_entries[k] = value
+
+                # record max of all steps
+                elif k.casefold().startswith("max"):
+                    with contextlib.suppress(ValueError):
+                        # will convert numerics to floats as well
+                        new_value = parsemem(value)
+                        old_value = parsemem(self.other_entries[k])
+                        if new_value > old_value:
+                            self.other_entries[k] = value
+
+                # record totals
+                total_val = value
+                with contextlib.suppress(ValueError):
+                    total_val = parsemem(value)
+
+                if k in self.totals:
+                    if isinstance(total_val, float) and isinstance(
+                        self.totals[k], float
+                    ):
+                        self.totals[k] += total_val
+                elif total_val not in (0, ""):
+                    self.totals[k] = total_val
+
             mem = parsemem(entry["MaxRSS"]) if "MaxRSS" in entry else 0
             tasks = int(entry.get("NTasks", 1))
             self.stepmem = max(self.stepmem, mem * tasks)
@@ -163,9 +190,9 @@ class Job:
         else:
             self.cpu = round(cpu_time / wall * 100, 1)
 
-        if "REQMEM" in entry and "NNodes" in entry and "AllocCPUS" in entry:
+        if "ReqMem" in entry and "NNodes" in entry and "AllocCPUS" in entry:
             self.totalmem = parsemem(
-                entry["REQMEM"], int(entry["NNodes"]), int(entry["AllocCPUS"])
+                entry["ReqMem"], int(entry["NNodes"]), int(entry["AllocCPUS"])
             )
 
         if (
@@ -226,16 +253,32 @@ class Job:
             The value of that attribute or "---" if not found
         """
         if key == "MemEff":
-            if self.mem_eff:  # set by admin comment
-                return self.mem_eff
-            if self.totalmem:
-                return round(self.stepmem / self.totalmem * 100, 1)
-            return "---"
+            return self._get_mem_entry()
 
         if key == "Energy":
             return self.energy
 
+        if key.casefold().startswith("max"):
+            # need to render as human readable
+            entry = self.other_entries.get(key, "---")
+            with contextlib.suppress(ValueError):
+                entry = parsemem(entry)  # if encoded
+            return render_num(entry)
+
+        if key.casefold().startswith("total") and key not in self.other_entries:
+            # need to render as human readable
+            entry = self.totals.get(key.removeprefix("Total"), "---")
+            return render_num(entry)
+
         return self.other_entries.get(key, "---")
+
+    def _get_mem_entry(self) -> Any:
+        """Get the memory entry."""
+        if self.mem_eff:  # set by admin comment
+            return self.mem_eff
+        if self.totalmem:
+            return round(self.stepmem / self.totalmem * 100, 1)
+        return "---"
 
     def get_node_entries(
         self, key: str, *, gpu: bool = False
@@ -359,6 +402,30 @@ def parsemem(mem: str, nodes: int = 1, cpus: int = 1) -> float:
         else:
             memory *= cpus
     return memory
+
+
+def render_num(value: Any) -> str:
+    """Render a number in human readable form.
+
+    Args:
+        value: the value to render
+
+    Returns:
+        A human readable value.
+        Values less than 1024 are left as is, above is scaled by K, M, etc
+    """
+    if not isinstance(value, (int, float)):
+        return str(value)
+
+    if value == 0:
+        return "0"
+
+    scale = int(math.log2(abs(value)) // 10)
+    suffix = ""
+    if scale > 0:
+        suffix = " KMGTE"[scale]
+
+    return f"{round(value / 1024**scale)}{suffix}"
 
 
 def _parse_energy(tres: str) -> int:

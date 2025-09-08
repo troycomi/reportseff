@@ -210,7 +210,7 @@ def test_sacct_get_db_output(sacct, mocker):
 
     debug = []
     sacct.get_db_output("c1 c2".split(), "j1 j2 j3".split(), debug.append)
-    assert debug[0] == ("c1j1^|^c2j1\nc1j2^|^c2j2\nc1j3^|^c2j3\n")
+    assert debug[0] == ("c1j1^|^c2j1^|^\nc1j2^|^c2j2^|^\nc1j3^|^c2j3^|^\n")
 
 
 def test_sacct_get_db_output_no_newline(sacct, mocker):
@@ -233,7 +233,7 @@ def test_sacct_get_db_output_no_newline(sacct, mocker):
             "JobIDRaw",
             "MaxRSS",
             "NNodes",
-            "REQMEM",
+            "ReqMem",
             "State",
             "Timelimit",
             "TotalCPU",
@@ -249,7 +249,7 @@ def test_sacct_get_db_output_no_newline(sacct, mocker):
             "JobIDRaw": "23000233",
             "MaxRSS": "",
             "NNodes": "1",
-            "REQMEM": "4000Mc",
+            "ReqMem": "4000Mc",
             "State": "CANCELLED by 129319",
             "Timelimit": "6-00:00:00",
             "TotalCPU": "00:00:00",
@@ -309,7 +309,7 @@ def test_sacct_get_db_output_user(sacct, mocker):
 
     debug = []
     sacct.get_db_output("c1 c2".split(), "j1 j2 j3".split(), debug.append)
-    assert debug[0] == ("c1j1^|^c2j1\nc1j2^|^c2j2\nc1j3^|^c2j3\n")
+    assert debug[0] == ("c1j1^|^c2j1^|^\nc1j2^|^c2j2^|^\nc1j3^|^c2j3^|^\n")
 
 
 def test_sacct_set_partition(sacct):
@@ -353,7 +353,7 @@ def test_sacct_get_db_output_partition(sacct, mocker):
 
     debug = []
     sacct.get_db_output("c1 c2".split(), "j1 j2 j3".split(), debug.append)
-    assert debug[0] == ("c1j1^|^c2j1\nc1j2^|^c2j2\nc1j3^|^c2j3\n")
+    assert debug[0] == ("c1j1^|^c2j1^|^\nc1j2^|^c2j2^|^\nc1j3^|^c2j3^|^\n")
 
 
 def test_sacct_get_db_output_since(sacct, mocker):
@@ -385,7 +385,7 @@ def test_sacct_get_db_output_since(sacct, mocker):
 
     debug = []
     sacct.get_db_output("c1 c2".split(), "j1 j2 j3".split(), debug.append)
-    assert debug[0] == ("c1j1^|^c2j1\nc1j2^|^c2j2\nc1j3^|^c2j3\n")
+    assert debug[0] == ("c1j1^|^c2j1^|^\nc1j2^|^c2j2^|^\nc1j3^|^c2j3^|^\n")
 
 
 def test_sacct_get_db_output_until(sacct, mocker):
@@ -416,7 +416,7 @@ def test_sacct_get_db_output_until(sacct, mocker):
 
     debug = []
     sacct.get_db_output("c1 c2".split(), "j1 j2 j3".split(), debug.append)
-    assert debug[0] == ("c1j1^|^c2j1\nc1j2^|^c2j2\nc1j3^|^c2j3\n")
+    assert debug[0] == ("c1j1^|^c2j1^|^\nc1j2^|^c2j2^|^\nc1j3^|^c2j3^|^\n")
 
 
 def test_sacct_set_state(sacct, capsys):
@@ -659,7 +659,7 @@ def test_sacct_get_db_output_user_state(sacct, mocker):
     debug = []
     sacct.get_db_output("JobID c2 State".split(), "j1 j2 j3".split(), debug.append)
     assert debug[0] == (
-        "c1j1^|^c2j1^|^RUNNING\nc1j2^|^c2j2^|^RUNNING\nc1j3^|^c2j3^|^COMPLETED\n"
+        "c1j1^|^c2j1^|^RUNNING^|^\nc1j2^|^c2j2^|^RUNNING^|^\nc1j3^|^c2j3^|^COMPLETED^|^\n"
     )
 
 
@@ -820,7 +820,7 @@ def test_sacct_get_db_output_issue_30(sacct, mocker):
 
     debug = []
     sacct.get_db_output("c1 c2".split(), "j1 j2 j3".split(), debug.append)
-    assert debug[0] == ("c1 | j1^|^c2j1\nc1j2^|^c2j2\nc1j3^|^c2j3\n")
+    assert debug[0] == ("c1 | j1^|^c2j1^|^\nc1j2^|^c2j2^|^\nc1j3^|^c2j3^|^\n")
 
 
 def test_sacct_newline_jobs_issue_63(sacct, mocker):
@@ -850,4 +850,4 @@ def test_sacct_newline_jobs_issue_63(sacct, mocker):
 
     debug = []
     sacct.get_db_output("c1 c2".split(), "j1 j2 j3".split(), debug.append)
-    assert debug[0] == ("c1 \\n j1^|^c2j1\nc1j2^|^c2j2\nc1j3^|^c2j3\n")
+    assert debug[0] == ("c1 \\n j1^|^c2j1^|^\nc1j2^|^c2j2^|^\nc1j3^|^c2j3^|^\n")
