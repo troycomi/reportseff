@@ -281,11 +281,38 @@ some extra printing on stderr, the output is not affected.
 ### My jobs don't have any information about multiple nodes or GPU efficiency
 
 Because `sacct` doesn't currently record this information, `reportseff`
-retrieves it from a custom field from `jobstats`, developed at Princeton
-University.  If you are outside a Research Computing cluster, that information
-will likely be absent.  Node-level reporting is only shown for jobs which use
-multiple nodes or GPUs.  If you need a list of where jobs were run, you can add
-`--format +NodeList`.
+retrieves it from a custom field from
+[`jobstats`](https://github.com/princetonuniversity/jobstats). If you are
+outside a Research Computing cluster, that information will likely be absent.
+Node-level reporting is only shown for jobs which use multiple nodes or GPUs.
+If you need a list of where jobs were run, you can add `--format +NodeList`.
+
+### My slurm outputs don't follow the expected format!
+
+By default, slurmise will parse outputs like `slurm-123.out` or `myjob_123`.
+The specific regex is `^.*?[_-](?P<jobid>(?P<job>[0-9]+)(_[0-9]+)?)(\.out)?$`
+and is suitable for the default format `slurm-%j.out`.
+
+Usually, you can copy your output filename directly from your slurm script,
+e.g. if you use `--output %x_%u_%A.myoutput` when submitting, you can call
+`reportseff --slurm-format %x_%u_%A.myoutput`.  If you need additional wildcards,
+any format token besides `%A`, `%a` or `%j` is interpreted by reportseff as
+`.*` regex.  So while `%z_%A.out` isn't a valid output file for sbatch, slurmise
+will interpret it as `.*_(?P<jobid>\d+)\.out`.  This can be especially handy
+if you have nested directories with outputs per job.
+```bash
+reportseff --slurm-format %z/%x_%A.out **/*
+# **/* gets all filenames from nested directories
+# %z will match the directory name while slurm outputs match %x_%A.out
+```
+Or if you have specific job names you hard code into the output
+```bash
+sbatch --output job1_%A.out job1.sh
+sbatch --output job2_%A.out job2.sh
+sbatch --output job3_%A.out job3.sh
+# ignore the job prefix
+reportseff --slurm-format %x_%A.out
+```
 
 ## Acknowledgments
 
