@@ -258,14 +258,15 @@ class JobCollection:
 
         self.jobs[job_id].update(entry)
 
-    def get_sorted_jobs(self, *, change_sort: bool) -> list[Job]:
+    def get_sorted_jobs(self, *, sorting: str = "jobid") -> list[Job]:
         """Sort the jobs.
 
         Args:
-            change_sort: a switch to indicate the type of sorting
-                if true will sort by the modified time of the file or job number
-                if false will sort by the if the file exists,
+            sorting: one of mtime, filename, jobid
+                if mtime will sort by the modified time of the file or job number
+                if filename will sort by the if the file exists,
                 the length, then the content
+                if jobid [default] split the job name and cast all numerics to ints
 
         Returns:
             sorted list of jobs to display
@@ -283,15 +284,24 @@ class JobCollection:
                     return path.stat().st_mtime
             return idnum
 
+        if sorting == "mtime":
+            return sorted(self.jobs.values(), key=get_time, reverse=True)
+
         def get_file_name(job: Job) -> tuple[bool, int, str]:
             file = Path(job.name())
             file = self.dir_name / file if self.dir_name else file
             return (not file.exists(), len(str(file)), str(file))
 
-        if change_sort:
-            return sorted(self.jobs.values(), key=get_time, reverse=True)
+        if sorting == "filename":
+            return sorted(self.jobs.values(), key=get_file_name)
 
-        return sorted(self.jobs.values(), key=get_file_name)
+        def get_job_name(job: Job) -> tuple[int, ...]:
+            result = [
+                int(token) if token.isdecimal() else 0 for token in job.jobid.split("_")
+            ]
+            return tuple(result)
+
+        return sorted(self.jobs.values(), key=get_job_name)
 
     def set_partition_limits(self, limits: dict) -> None:
         """Set partition limits from db inquirer.

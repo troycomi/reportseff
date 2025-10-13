@@ -15,7 +15,7 @@ class ReportseffParameters:
     jobs: tuple
     debug: bool = False
     format_str: str = ""
-    modified_sort: bool = False
+    sorting: str = "jobid"
     node: bool = False
     node_and_gpu: bool = False
     not_state: str = ""

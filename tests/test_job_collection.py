@@ -458,7 +458,7 @@ def test_get_sorted_jobs(jobs, mocker):
     jobs.add_job("j2", "jid2")
     jobs.add_job("j13", "jid13")
 
-    assert jobs.get_sorted_jobs(change_sort=False) == [
+    assert jobs.get_sorted_jobs(sorting="filename") == [
         Job("j1", "jid1", None),
         Job("j2", "jid2", None),
         Job("j3", "jid3", None),
@@ -490,7 +490,7 @@ def test_get_sorted_jobs(jobs, mocker):
     )
 
     # still uses other sorting, no dir_name set
-    assert jobs.get_sorted_jobs(change_sort=True) == [
+    assert jobs.get_sorted_jobs(sorting="mtime") == [
         Job("j13", "jid13", None),
         Job("j2", "jid2", "file234"),
         Job("j14", "jid14", "nothing"),
@@ -499,12 +499,104 @@ def test_get_sorted_jobs(jobs, mocker):
     ]
 
     jobs.dir_name = Path("dir")  # now dir/nothing doesn't exist
-    assert jobs.get_sorted_jobs(change_sort=True) == [
+    assert jobs.get_sorted_jobs(sorting="mtime") == [
         Job("j14", "jid14", "nothing"),
         Job("j13", "jid13", None),
         Job("j2", "jid2", "file234"),
         Job("j1", "jid1", "file12"),
         Job("j3", "jid3", "file3"),
+    ]
+
+
+def test_get_sorted_jobs_jobid(jobs):
+    """Can get jobs in sorted order by numeric job id."""
+    jobs.add_job("3", "1_2")
+    jobs.add_job("2", "1_1")
+    jobs.add_job("1", "1")
+    jobs.add_job("4", "2")
+    jobs.add_job("5", "2_100")
+    jobs.add_job("7", "a_2_100")
+    jobs.add_job("6", "a2_100")
+
+    assert jobs.get_sorted_jobs(sorting="jobid") == [
+        Job("7", "a_2_100", None),
+        Job("6", "a2_100", None),
+        Job("1", "1", None),
+        Job("2", "1_1", None),
+        Job("3", "1_2", None),
+        Job("4", "2", None),
+        Job("5", "2_100", None),
+    ]
+
+
+def test_get_sorted_jobs_issue_75(jobs):
+    """Test specific example from issue 75."""
+    jobs.add_job("1", "5163879_8")
+    jobs.add_job("2", "5163879_6")
+    jobs.add_job("3", "5163879_4")
+    jobs.add_job("4", "5163879_2")
+    jobs.add_job("5", "5163879_15")
+    jobs.add_job("6", "5163879_14")
+    jobs.add_job("7", "5163879_13")
+    jobs.add_job("8", "5163879_12")
+    jobs.add_job("9", "5163879_11")
+    jobs.add_job("10", "5163879_10")
+    jobs.add_job("11", "5163543_20")
+    jobs.add_job("12", "5163543_19")
+    jobs.add_job("13", "5163543_18")
+    jobs.add_job("14", "5163543_17")
+    jobs.add_job("15", "5163543_16")
+    jobs.add_job("16", "5163543_15")
+    jobs.add_job("17", "5163543_14")
+    jobs.add_job("18", "5163543_13")
+    jobs.add_job("19", "5163543_12")
+    jobs.add_job("20", "5163543_11")
+    jobs.add_job("21", "5163543_10")
+    jobs.add_job("22", "5159883_8")
+    jobs.add_job("23", "5159883_6")
+    jobs.add_job("24", "5159883_4")
+    jobs.add_job("25", "5159883_2")
+    jobs.add_job("26", "5159883_20")
+    jobs.add_job("27", "5159883_18")
+    jobs.add_job("28", "5159883_16")
+    jobs.add_job("29", "5159883_14")
+    jobs.add_job("30", "5159883_12")
+    jobs.add_job("31", "5159883_10")
+    jobs.add_job("32", "5159883_0")
+
+    assert jobs.get_sorted_jobs(sorting="jobid") == [
+        Job("32", "5159883_0", None),
+        Job("25", "5159883_2", None),
+        Job("24", "5159883_4", None),
+        Job("23", "5159883_6", None),
+        Job("22", "5159883_8", None),
+        Job("31", "5159883_10", None),
+        Job("30", "5159883_12", None),
+        Job("29", "5159883_14", None),
+        Job("28", "5159883_16", None),
+        Job("27", "5159883_18", None),
+        Job("26", "5159883_20", None),
+        Job("21", "5163543_10", None),
+        Job("20", "5163543_11", None),
+        Job("19", "5163543_12", None),
+        Job("18", "5163543_13", None),
+        Job("17", "5163543_14", None),
+        Job("16", "5163543_15", None),
+        Job("15", "5163543_16", None),
+        Job("14", "5163543_17", None),
+        Job("13", "5163543_18", None),
+        Job("12", "5163543_19", None),
+        Job("11", "5163543_20", None),
+        Job("4", "5163879_2", None),
+        Job("3", "5163879_4", None),
+        Job("2", "5163879_6", None),
+        Job("1", "5163879_8", None),
+        Job("10", "5163879_10", None),
+        Job("9", "5163879_11", None),
+        Job("8", "5163879_12", None),
+        Job("7", "5163879_13", None),
+        Job("6", "5163879_14", None),
+        Job("5", "5163879_15", None),
     ]
 
 
