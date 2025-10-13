@@ -123,7 +123,7 @@ split_ubam_24419972     RUNNING        01:26:26    ---      ---
 
 Without arguments, reportseff will try to find slurm output files in the
 current directory. Combine with `watch` to monitor job progress:
-`watch -cn 300 reportseff --color --modified-sort`
+`watch -cn 300 reportseff --color --sorting mtime`
 
 ```txt
                 JobID           State          Elapsed   CPUEff   MemEff
@@ -189,8 +189,10 @@ directory to check for slurm outputs.
 - `--color/--no-color`: Force color output or not.  By default, will force color
   output.  With the no-color flag, click will strip color codes for everything
   besides stdout.
-- `--modified-sort`: Instead of sorting by filename/jobid, sort by last
-  modification time of the slurm output file.
+- `--sorting`: By default, slurmise will sort output jobs by their slurm job ids.
+  You may also set this to `--sorting mtime` to sort by last modification time
+  of the slurm output file or `--sorting filename` to perform a lexicographical
+  sort on the filename.
 - `--debug`: Write sacct result to stderr.
 - `--user/-u`: Ignore job arguments and instead query sacct with provided user.
   Returns all jobs from the last week.
@@ -265,7 +267,7 @@ are some useful settings for your `.bashrc`:
 # have less display colors by default.  Will fix `reportseff` not showing colors
 export LESS="-R"
 # for watch aliases, include the `--color` option
-watch -cn 300 reportseff --color --modified-sort
+watch -cn 300 reportseff --color --sorting mtime
 #      ^                 ^^^^^^^
 ```
 You can always for display of color (or suppress it) with the `--color/--no-color`

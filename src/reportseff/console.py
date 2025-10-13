@@ -19,10 +19,15 @@ MAX_ENTRIES_TO_ECHO = 20
 
 @click.command()
 @click.option(
-    "--modified-sort",
-    default=False,
-    is_flag=True,
-    help="If set, will sort outputs by modified time of files",
+    "--sorting",
+    default="jobid",
+    help=(
+        "One of mtime, filename or jobid.  Controls how jobs are reported."
+        "If mtime will sort by the modified time of the file or job number"
+        "If filename will sort by the if the file exists,"
+        "the length, then the content."
+        "If jobid [default] split the job name and cast all numerics to ints"
+    ),
 )
 @click.option(
     "--color/--no-color",
@@ -226,7 +231,7 @@ def get_jobs(args: ReportseffParameters) -> tuple[str, int]:
     if args.array_min_size > 0:
         job_collection.filter_by_array_size(args.array_min_size)
 
-    found_jobs = job_collection.get_sorted_jobs(change_sort=args.modified_sort)
+    found_jobs = job_collection.get_sorted_jobs(sorting=args.sorting)
     found_jobs = [j for j in found_jobs if j.state]
 
     return renderer.format_jobs(found_jobs), len(found_jobs)
