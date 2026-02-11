@@ -217,8 +217,12 @@ class Job:
         for node, node_data in data["nodes"].items():
             self.comment_data[node] = _get_node_data(data, node_data)
 
-        self.cpu = _average_nested_dict("CPUEff", self.comment_data)
-        self.mem_eff = _average_nested_dict("MemEff", self.comment_data)
+        cpu_eff = _average_nested_dict("CPUEff", self.comment_data)
+        if cpu_eff is not None:
+            self.cpu = cpu_eff
+        mem_eff = _average_nested_dict("MemEff", self.comment_data)
+        if mem_eff is not None:
+            self.mem_eff = mem_eff
         if data["gpus"]:
             self.gpu = _average_nested_dict("GPUEff", self.comment_data)
             self.gpu_mem = _average_nested_dict("GPUMem", self.comment_data)
@@ -490,12 +494,12 @@ def _get_node_data(comment_data: dict, node_data: dict) -> dict:
             return comment_data[key][gpu_number]
         return 0
 
-    result = {
-        "MemEff": node_data["used_memory"] / node_data["total_memory"] * 100,
-    }
+    result = {}
+    if "used_memory" in node_data:
+        result["MemEff"] = node_data["used_memory"] / node_data["total_memory"] * 100
 
-    if node_data["cpus"] == 0 or comment_data["total_time"] == 0:
-        result["CPUEff"] = 0
+    if node_data.get("cpus", 0) == 0 or comment_data.get("total_time", 0) == 0:
+        pass
     else:
         time_per_cpu = node_data["total_time"] / node_data["cpus"]
         result["CPUEff"] = time_per_cpu / comment_data["total_time"] * 100
@@ -518,7 +522,7 @@ def _get_node_data(comment_data: dict, node_data: dict) -> dict:
     return result
 
 
-def _average_nested_dict(nested_key: str, data: dict) -> float:
+def _average_nested_dict(nested_key: str, data: dict) -> float | None:
     """Average nested values in data dictionary.
 
     Args:
@@ -528,8 +532,7 @@ def _average_nested_dict(nested_key: str, data: dict) -> float:
     Returns:
         the mean value, rounded to one decimal
     """
-    return round(
-        sum(value[nested_key] for value in data.values() if nested_key in value)
-        / len(data),
-        1,
-    )
+    values = [value[nested_key] for value in data.values() if nested_key in value]
+    if values == []:
+        return None
+    return round(sum(values) / len(values), 1)

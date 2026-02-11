@@ -770,7 +770,7 @@ def test_issue_26(get_jobstats):
     job = job_module.Job("13421658", "13421658", None)
     job.update(entry)
     assert job.state == "FAILED"
-    assert job.cpu == 0
+    assert job.cpu is None
     assert job.mem_eff == 0
 
 

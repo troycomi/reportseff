@@ -33,6 +33,9 @@ reportseff = "reportseff.console:main"
 [tool.poetry.group.dev-dependencies.dependencies]
 pip-audit = "^2.9.0"
 
+[tool.poetry.requires-plugins]
+poetry-plugin-export = ">=1.8"
+
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
