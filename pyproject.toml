@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "reportseff"
-version = "2.10.0"
+version = "2.10.1"
 description= "Tablular seff output"
 authors = ["Troy Comi <troycomi@gmail.com>"]
 license = "MIT"
@@ -32,6 +32,9 @@ reportseff = "reportseff.console:main"
 
 [tool.poetry.group.dev-dependencies.dependencies]
 pip-audit = "^2.9.0"
+
+[tool.poetry.requires-plugins]
+poetry-plugin-export = ">=1.8"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

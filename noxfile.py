@@ -79,6 +79,7 @@ def lint(session):
 def pip_audit(session):
     """Scan dependencies for insecure packages."""
     with tempfile.NamedTemporaryFile() as requirements:
+        session.run("python", "-m", "pip", "install", "--upgrade", "pip")
         session.run(
             "poetry",
             "export",
@@ -92,8 +93,6 @@ def pip_audit(session):
         install_with_constraints(session, "pip-audit")
         session.run(
             "pip-audit",
-            "-r",
-            requirements.name,
         )
 
 

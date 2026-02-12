@@ -1096,3 +1096,161 @@ def test_issue_73_totals(mocker):
         "COMPLETED",
     ]
     assert len(output) == 1
+
+
+@pytest.mark.usefixtures("_mock_inquirer")
+def test_issue_84_empty_used_memory(mocker):
+    """Crash when the used memory in JS entry is empty."""
+    mocker.patch("reportseff.console.which", return_value=True)
+    runner = CliRunner()
+    sub_result = mocker.MagicMock()
+    sub_result.returncode = 0
+    js_string = (
+        "JS1:H4sIAJnmcGkC/13OTQ4CIQwF4LuwVtKiQ8hcZoJSDQk/hikLZ8LdRdSN274v73UX"
+        "KTtaxbyLO4CS11rYyo2cZXmrxwuV4JN0NMCjLpzZhiVSzOX5vikxIxpE1AD63A4D1ZX"
+        "cn4HpZNAY8xPsg98s+5y+Alrr2aeefeyDatID9+ewvQBAtRncqAAAAA=="
+    )
+    base_output = (
+        "^|^1^|^00:01:17^|^12345678^|^12345678^|^^|^1^|^^|^4000M^|^COMPLETED^|^01:00:00^|^00:02.833^|^\n"
+        "^|^1^|^00:01:17^|^12345678.batch^|^12345678.batch^|^138120K^|^1^|^1^|^^|^COMPLETED^|^^|^00:02.833^|^\n"
+        "^|^1^|^00:01:17^|^12345678.extern^|^12345678.extern^|^^|^1^|^1^|^^|^COMPLETED^|^^|^00:00:00^|^\n"
+        "^|^1^|^00:00:43^|^12345678.0^|^12345678.0^|^2200M^|^1^|^1^|^^|^COMPLETED^|^^|^00:00:00^|^\n"
+    )
+    sub_result.stdout = f"{js_string}{base_output}"
+    mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
+    result = runner.invoke(
+        console.main,
+        [
+            "--no-color",
+            "12345678",
+        ],
+    )
+
+    assert result.exit_code == 0
+    # remove header
+    output = result.output.split("\n")[1:-1]
+    assert output[0].split() == [
+        "12345678",
+        "COMPLETED",
+        "00:01:17",
+        "2.1%",
+        "2.6%",
+        "55.0%",
+    ]
+    assert len(output) == 1
+
+
+@pytest.mark.usefixtures("_mock_inquirer")
+def test_nonempty_used_memory(mocker, strip_js):
+    """Check admin comment is used when available."""
+    mocker.patch("reportseff.console.which", return_value=True)
+    runner = CliRunner()
+    sub_result = mocker.MagicMock()
+    sub_result.returncode = 0
+    js_string = (
+        "JS1:H4sIANsKfWkC/13MQQqDMBCF4bvMOi0zmREaLyOSDFJITNG4KJK7m1pw4fb/eG+"
+        "HOQddod8haIzjY2EvM8kvlFzGOCRNeflCL+SEURDRwLZquIAcd8iWbYP/pLyTto4v97"
+        "QG/Gdr/1TrjYmdgelErAceV8ooiAAAAA=="
+    )
+    base_output = (
+        "^|^1^|^00:18:59^|^4336165^|^4336165^|^^|^1^|^^|^4000M^|^COMPLETED^|^01:30:00^|^18:41.934^|^\n"
+        "^|^1^|^00:18:59^|^4336165.batch^|^4336165.batch^|^4094320K^|^1^|^1^|^^|^COMPLETED^|^^|^18:41.934^|^\n"
+        "^|^1^|^00:18:59^|^4336165.extern^|^4336165.extern^|^^|^1^|^1^|^^|^COMPLETED^|^^|^00:00:00^|^\n"
+    )
+    sub_result.stdout = f"{js_string}{base_output}"
+    mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
+    result = runner.invoke(
+        console.main,
+        [
+            "--no-color",
+            "4336165",
+        ],
+    )
+
+    assert result.exit_code == 0
+    # remove header
+    output = result.output.split("\n")[1:-1]
+    assert output[0].split() == [
+        "4336165",
+        "COMPLETED",
+        "00:18:59",
+        "21.1%",
+        "95.6%",
+        "46.1%",
+    ]
+    assert len(output) == 1
+
+    # this will return a different value for only the memory eff
+    no_memory = strip_js(js_string, ["used_memory", "total_memory"])
+    sub_result.stdout = f"{no_memory}{base_output}"
+    mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
+    result = runner.invoke(
+        console.main,
+        [
+            "--no-color",
+            "4336165",
+        ],
+    )
+
+    assert result.exit_code == 0
+    # remove header
+    output = result.output.split("\n")[1:-1]
+    assert output[0].split() == [
+        "4336165",
+        "COMPLETED",
+        "00:18:59",
+        "21.1%",
+        "95.6%",
+        "100.0%",
+    ]
+    assert len(output) == 1
+
+    # this will return a different value for only the time eff
+    no_time = strip_js(js_string, ["total_time"])
+    sub_result.stdout = f"{no_time}{base_output}"
+    mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
+    result = runner.invoke(
+        console.main,
+        [
+            "--no-color",
+            "4336165",
+        ],
+    )
+
+    assert result.exit_code == 0
+    # remove header
+    output = result.output.split("\n")[1:-1]
+    assert output[0].split() == [
+        "4336165",
+        "COMPLETED",
+        "00:18:59",
+        "21.1%",
+        "98.4%",
+        "46.1%",
+    ]
+    assert len(output) == 1
+
+    # this will return a different value for both the time and mem eff
+    no_time_mem = strip_js(js_string, ["used_memory", "total_memory", "total_time"])
+    sub_result.stdout = f"{no_time_mem}{base_output}"
+    mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
+    result = runner.invoke(
+        console.main,
+        [
+            "--no-color",
+            "4336165",
+        ],
+    )
+
+    assert result.exit_code == 0
+    # remove header
+    output = result.output.split("\n")[1:-1]
+    assert output[0].split() == [
+        "4336165",
+        "COMPLETED",
+        "00:18:59",
+        "21.1%",
+        "98.4%",
+        "100.0%",
+    ]
+    assert len(output) == 1

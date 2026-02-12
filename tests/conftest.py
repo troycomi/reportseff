@@ -1,5 +1,7 @@
 """Collect common fixtures."""
 
+from __future__ import annotations
+
 import base64
 import gzip
 import json
@@ -18,6 +20,24 @@ def to_comment(info: dict) -> str:
 def get_jobstats():
     """Fixture to produce jobstats-like encoding."""
     return to_comment
+
+
+@pytest.fixture()
+def strip_js():
+    """Removes entries from jobstats string, converting to dict internally."""
+
+    # wrap to make a fixture
+    def strip_js_inner(js_string: str, to_remove: list[str]):
+        info = json.loads(gzip.decompress(base64.b64decode(js_string[4:])))
+        for token in to_remove:
+            if token in info:
+                info.pop(token)
+            for value in info["nodes"].values():
+                if token in value:
+                    value.pop(token)
+        return to_comment(info)
+
+    return strip_js_inner
 
 
 def to_sacct_dict(sacct_line: str) -> dict:
