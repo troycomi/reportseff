@@ -289,7 +289,7 @@ def test_sacct_get_db_output_user(sacct, mocker):
         "reportseff.db_inquirer.subprocess.run", return_value=mock_sacct
     )
     sacct.set_user("user")
-    result = sacct.get_db_output("c1 c2".split(), {})
+    result = sacct.get_db_output("c1 c2".split(), [])
     assert result == [
         {"c1": "c1j1", "c2": "c2j1"},
         {"c1": "c1j2", "c2": "c2j2"},
@@ -333,7 +333,7 @@ def test_sacct_get_db_output_partition(sacct, mocker):
         "reportseff.db_inquirer.subprocess.run", return_value=mock_sacct
     )
     sacct.set_partition("partition")
-    result = sacct.get_db_output("c1 c2".split(), {})
+    result = sacct.get_db_output("c1 c2".split(), [])
     assert result == [
         {"c1": "c1j1", "c2": "c2j1"},
         {"c1": "c1j2", "c2": "c2j2"},
@@ -365,7 +365,7 @@ def test_sacct_get_db_output_since(sacct, mocker):
         "reportseff.db_inquirer.subprocess.run", return_value=mock_sacct
     )
     sacct.set_since("time")
-    result = sacct.get_db_output("c1 c2".split(), {})
+    result = sacct.get_db_output("c1 c2".split(), [])
     assert result == [
         {"c1": "c1j1", "c2": "c2j1"},
         {"c1": "c1j2", "c2": "c2j2"},
@@ -397,7 +397,7 @@ def test_sacct_get_db_output_until(sacct, mocker):
         "reportseff.db_inquirer.subprocess.run", return_value=mock_sacct
     )
     sacct.set_until("time")
-    result = sacct.get_db_output("c1 c2".split(), {})
+    result = sacct.get_db_output("c1 c2".split(), [])
     assert result == [
         {"c1": "c1j1", "c2": "c2j1"},
         {"c1": "c1j2", "c2": "c2j2"},
@@ -638,7 +638,7 @@ def test_sacct_get_db_output_user_state(sacct, mocker):
     )
     sacct.set_user("user")
     sacct.set_state("R")
-    result = sacct.get_db_output("JobID c2 State".split(), {})
+    result = sacct.get_db_output("JobID c2 State".split(), [])
     assert result == [
         {"JobID": "c1j1", "c2": "c2j1", "State": "RUNNING"},
         {"JobID": "c1j2", "c2": "c2j2", "State": "RUNNING"},

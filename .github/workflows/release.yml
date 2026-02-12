@@ -2,16 +2,29 @@ name: Release
 on:
   release:
     types: [published]
+  push:
+    tags:
+      - 'v*' # Trigger on version tags (e.g., v1.0.0)
+
 jobs:
   release:
+    name: Build and Publish
     runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      id-token: write
+      contents: write
+
     steps:
-    - uses: actions/checkout@v3
-    - uses: wntrblm/nox@2022.11.21
-      with:
-        python-versions: "3.9, 3.10, 3.11"
-    - run: pipx install poetry==2.2.1
-    - run: poetry self add poetry-plugin-export
-    - run: nox
-    - run: poetry build
-    - run: poetry publish --username=__token__ --password=${{ secrets.PYPI_TOKEN }}
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Build Distribution
+        run: uv build
+
+      - name: Publish to PyPI
+        run: uv publish

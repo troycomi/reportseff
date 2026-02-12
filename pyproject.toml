@@ -1,46 +1,65 @@
-[tool.poetry]
+[project]
 name = "reportseff"
 version = "2.10.1"
 description= "Tablular seff output"
-authors = ["Troy Comi <troycomi@gmail.com>"]
+authors = [
+  {name="Troy Comi", email="<troycomi@gmail.com>"}
+]
 license = "MIT"
 readme = "README.md"
-homepage= "https://github.com/troycomi/reportseff"
-repository= "https://github.com/troycomi/reportseff"
 keywords= ["slurm","seff"]
+requires-python = ">=3.9"
+dependencies = [
+    "click>=6.7",
+]
 
-[tool.poetry.dependencies]
-python = ">=3.9.1,<4.0"
-click = ">=6.7"
-importlib-metadata = {version = "^4.8.2", python = "<3.8"}
-
-[tool.poetry.dev-dependencies]
-pytest = "^8.2.2"
-pytest-mock = "^3.14.0"
-coverage = {extras = ["toml"], version = "^7.5.4"}
-pytest-cov = "^5.0.0"
-mypy = "^1.10.1"
-types-click = "^7.1.8"
-pytype = "^2024.4.11"
-typeguard = "^4.3.0"
-darglint = ">=1.8.1"
-codecov = ">=2.1.13"
-ruff = "^0.5.5"
-
-[tool.poetry.scripts]
+[project.scripts]
 reportseff = "reportseff.console:main"
 
-[tool.poetry.group.dev-dependencies.dependencies]
-pip-audit = "^2.9.0"
-
-[tool.poetry.requires-plugins]
-poetry-plugin-export = ">=1.8"
-
 [build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["uv_build>=0.9.25,<0.10.0"]
+build-backend = "uv_build"
 
-# pyproject.toml
+[urls]
+homepage= "https://github.com/troycomi/reportseff"
+repository= "https://github.com/troycomi/reportseff"
+
+[dependency-groups]
+dev = [
+    "mypy>=1.19.1",
+    "pip-audit>=2.9.0",
+    "poethepoet>=0.37.0",
+    "pytest>=8.4.2",
+    "pytest-cov>=7.0.0",
+    "pytest-mock>=3.15.1",
+    "pytype>=2024.9.13",
+    "ruff>=0.15.0",
+    "typeguard>=4.4.4",
+]
+
+[tool.poe.tasks]
+format = "ruff format"
+
+checks = ["lint", "audit", "mypy", "pytype"]
+lint = "ruff check"
+audit = "pip-audit"
+mypy = "mypy ."
+pytype = "pytype ."
+
+tests = ["pytest", "typed-tests", "coverage-tests", "old-click-tests"]
+pytest = "pytest"
+typed-tests = "pytest --typeguard-packages=reportseff"
+coverage-tests = "pytest --cov"
+old-click-tests = "uv run --with 'click==6.7' pytest"
+
+coverage-xml = "uv run --with coverage[toml] coverage xml --fail-under 0"
+coverage-upload = "uv run --with codecov codecov"
+coverage = ["coverage-xml", "coverage-upload"]
+
+[tool.poetry.dev-dependencies]
+types-click = "^7.1.8"
+darglint = ">=1.8.1"
+
 [tool.coverage.paths]
 source = ["src", "*/site-packages"]
 
@@ -111,9 +130,15 @@ ignore = [
   "SLF001",  # allow private methods in tests
 ]
 
-"noxfile.py" = [
-  "ANN",  # type annotations
-]
-
 [tool.ruff.lint.pydocstyle]
 convention = "google"
+
+[tool.mypy]
+python_version = "3.9"
+strict = true
+warn_unused_configs = true
+show_error_codes = true
+
+[tool.pyright]
+pythonVersion = "3.9"
+typeCheckingMode = "basic"

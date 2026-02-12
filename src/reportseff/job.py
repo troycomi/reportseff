@@ -9,7 +9,11 @@ import json
 import math
 import re
 from datetime import timedelta
-from typing import Any, Generator
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
+
 
 multiple_map = {
     "K": 1024**1,
@@ -489,7 +493,7 @@ def _get_node_data(comment_data: dict, node_data: dict) -> dict:
         the dict with efficiency information for this node
     """
 
-    def get_gpu_value(comment_data: dict, key: str, gpu_number: int) -> float:
+    def get_gpu_value(comment_data: dict, key: str, gpu_number: str) -> float:
         if key in comment_data and gpu_number in comment_data[key]:
             return comment_data[key][gpu_number]
         return 0

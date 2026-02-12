@@ -28,12 +28,14 @@ repos:
     rev: v2.1.0
     hooks:
     - id: codespell
-      args: [--ignore-words-list, "absense,inout"]
+      args: [--ignore-words-list, "inout"]
+      exclude: uv.lock
 
   - repo: https://github.com/shellcheck-py/shellcheck-py
     rev: v0.8.0.4
     hooks:
     - id: shellcheck
+      exclude: uv.lock
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.5.5

@@ -1,13 +1,38 @@
 name: Tests
 on: [push, pull_request]
+
 jobs:
-  tests:
+  lint:
+    name: Lint & Typecheck
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-    - uses: wntrblm/nox@2022.11.21
-      with:
-        python-versions: "3.9, 3.10, 3.11"
-    - run: pipx install poetry==2.2.1
-    - run: poetry self add poetry-plugin-export
-    - run: nox
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          python-version: "3.12"
+
+      - name: Run Linting Tasks
+        run: uvx --from poethepoet poe checks
+
+  test:
+    name: Pytest (Python ${{ matrix.python-version }})
+    needs: lint # Only runs if linting passes
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          python-version: ${{ matrix.python-version }}
+
+      - name: Run Tests
+        run: uvx --from poethepoet poe tests
