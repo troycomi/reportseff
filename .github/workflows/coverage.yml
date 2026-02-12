@@ -9,4 +9,5 @@ jobs:
       with:
         python-versions: "3.9, 3.10, 3.11"
     - run: pipx install poetry==2.2.1
+    - run: poetry self add poetry-plugin-export
     - run: nox --sessions tests-3.10 coverage
