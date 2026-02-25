@@ -11,6 +11,7 @@ repos:
       - id: end-of-file-fixer
       - id: mixed-line-ending
       - id: name-tests-test
+        exclude: ^tests/typings\.py$
         args: ["--pytest-test-first"]
       - id: requirements-txt-fixer
       - id: trailing-whitespace
@@ -36,10 +37,3 @@ repos:
     hooks:
     - id: shellcheck
       exclude: uv.lock
-
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.5.5
-    hooks:
-      - id: ruff
-        args: [ --fix ]
-      - id: ruff-format

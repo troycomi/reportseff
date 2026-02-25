@@ -7,9 +7,12 @@ import re
 import shlex
 import subprocess
 from abc import ABC, abstractmethod
-from typing import Callable
+from typing import TYPE_CHECKING, Any
 
 import click
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 class BaseInquirer(ABC):
@@ -46,7 +49,7 @@ class BaseInquirer(ABC):
         self,
         columns: list[str],
         jobs: list[str],
-        debug_cmd: Callable | None,
+        debug_cmd: Callable[[str], Any] | None,
     ) -> list[dict[str, str]]:
         """Query the database with the supplied columns.
 
@@ -152,7 +155,7 @@ class BaseInquirer(ABC):
         """
 
     @abstractmethod
-    def get_partition_timelimits(self) -> dict:
+    def get_partition_timelimits(self) -> dict[str, str]:
         """Get partition time limits.
 
         Returns:
@@ -165,10 +168,10 @@ class SacctInquirer(BaseInquirer):
 
     def __init__(self) -> None:
         """Initialize a new inquirer."""
-        self.default_args = "sacct --parsable -n --delimiter=^|^".split()
+        self.default_args = ["sacct", "--parsable", "-n", "--delimiter=^|^"]
         self.user: str | None = None
-        self.state: set | None = None
-        self.not_state: set | None = None
+        self.state: set[str] | None = None
+        self.not_state: set[str] | None = None
         self.since: str | None = None
         self.until: str | None = None
         self.query_all_users: bool = False
@@ -185,7 +188,7 @@ class SacctInquirer(BaseInquirer):
         Raises:
             RuntimeError: if sacct raises an error
         """
-        command_args = "sacct --helpformat".split()
+        command_args = ["sacct", "--helpformat"]
         cmd_result = subprocess.run(
             args=command_args,
             stdout=subprocess.PIPE,
@@ -236,7 +239,7 @@ class SacctInquirer(BaseInquirer):
         self,
         columns: list[str],
         jobs: list[str],
-        debug_cmd: Callable | None = None,
+        debug_cmd: Callable[[str], Any] | None = None,
     ) -> list[dict[str, str]]:
         """Query the database with the supplied columns.
 
@@ -280,7 +283,11 @@ class SacctInquirer(BaseInquirer):
             debug_cmd("^|^\n".join(line.replace("\n", "\\n") for line in lines))
 
         sacct_split = re.compile(r"\^\|\^")
-        result = [dict(zip(columns, sacct_split.split(line))) for line in lines if line]
+        result = [
+            dict(zip(columns, sacct_split.split(line), strict=True))
+            for line in lines
+            if line
+        ]
 
         # Sometimes the main job has a different state than the sub jobs
         # e.g. timeouts have a state of canceled for the batch jobs.
@@ -351,10 +358,6 @@ class SacctInquirer(BaseInquirer):
             return
 
         self.state = get_states_as_set(state)
-        # add a single value if it's empty here
-        if not self.state:
-            click.secho("No valid states provided to include", fg="yellow", err=True)
-            self.state.add(None)
 
     def set_not_state(self, state: str) -> None:
         """Set the state to exclude from output jobs.
@@ -367,10 +370,6 @@ class SacctInquirer(BaseInquirer):
             return
 
         self.not_state = get_states_as_set(state)
-        # add a single value if it's empty here
-        if not self.not_state:
-            click.secho("No valid states provided to exclude", fg="yellow", err=True)
-            self.not_state = None
 
     def parse_date(self, d: str) -> str:
         """Parse and convert custom string date format.
@@ -453,7 +452,7 @@ class SacctInquirer(BaseInquirer):
         """
         return bool(self.since)
 
-    def get_partition_timelimits(self) -> dict:
+    def get_partition_timelimits(self) -> dict[str, str]:
         """Get partition time limits.
 
         Returns:
@@ -495,7 +494,7 @@ class SacctInquirer(BaseInquirer):
         return result
 
 
-def get_states_as_set(state_list: str) -> set:
+def get_states_as_set(state_list: str) -> set[str]:
     """Helper method to parse the state string.
 
     Args:
@@ -530,4 +529,9 @@ def get_states_as_set(state_list: str) -> set:
         if state not in possible_states:
             click.secho(f"Unknown state {state}", fg="yellow", err=True)
 
-    return states.intersection(possible_states)
+    result = states.intersection(possible_states)
+    if result == set():
+        click.secho("No valid states provided", fg="yellow", err=True)
+        result.add("")
+
+    return result

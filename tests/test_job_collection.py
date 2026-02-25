@@ -1,27 +1,54 @@
 """Test job collection functions."""
 
+from __future__ import annotations
+
+import re
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
-from reportseff import job_collection
+
 from reportseff.job import Job
+from reportseff.job_collection import JobCollection
+
+if TYPE_CHECKING:
+    from pytest_mock import MockerFixture
 
 
-@pytest.fixture()
-def jobs():
+@pytest.fixture
+def jobs() -> JobCollection:
     """New default job collection."""
-    return job_collection.JobCollection()
+    return JobCollection()
 
 
-def test_get_columns(jobs):
+def process_entries(job_collection: JobCollection, entries: list[str]) -> None:
+    """Process series of bar delimited strings."""
+    for entry in entries:
+        parsed_entry = dict(
+            zip(job_collection.get_columns(), entry.split("|"), strict=False)
+        )
+        job_collection.process_entry(parsed_entry)
+
+
+def test_get_columns(jobs: JobCollection) -> None:
     """Default get columns are reasonable."""
-    assert jobs.get_columns() == (
-        "JobIDRaw,JobID,State,AllocCPUS,TotalCPU,Elapsed,Timelimit,"
-        "ReqMem,MaxRSS,NNodes,NTasks,Partition"
-    ).split(",")
+    assert jobs.get_columns() == [
+        "JobIDRaw",
+        "JobID",
+        "State",
+        "AllocCPUS",
+        "TotalCPU",
+        "Elapsed",
+        "Timelimit",
+        "ReqMem",
+        "MaxRSS",
+        "NNodes",
+        "NTasks",
+        "Partition",
+    ]
 
 
-def test_get_jobs(jobs):
+def test_get_jobs(jobs: JobCollection) -> None:
     """Can hold a set of jobs and access them."""
     assert jobs.get_jobs() == []
 
@@ -30,10 +57,10 @@ def test_get_jobs(jobs):
         "1_2": Job("1", "1_2", None),
         "2_2": Job("2", "2_2", None),
     }
-    assert jobs.get_jobs() == "1,2".split(",")
+    assert jobs.get_jobs() == ["1", "2"]
 
 
-def test_set_out_dir_dir_handling(jobs, mocker):
+def test_set_out_dir_dir_handling(jobs: JobCollection, mocker: MockerFixture) -> None:
     """Can handle setting path from cwd or provided value."""
     # dir handling
     mock_cwd = mocker.patch(
@@ -63,13 +90,13 @@ def test_set_out_dir_dir_handling(jobs, mocker):
     mock_exists.assert_called_once()
 
 
-def test_set_jobs_none_valid(jobs):
+def test_set_jobs_none_valid(jobs: JobCollection) -> None:
     """Set jobs raises exceptions when no valid name is provided."""
     with pytest.raises(ValueError, match="No valid jobs provided!"):
         jobs.set_jobs(("asdf", "qwer", "zxcv", "asdf111"))
 
 
-def test_set_jobs_filter(jobs):
+def test_set_jobs_filter(jobs: JobCollection) -> None:
     """Set jobs take only valid names from list."""
     jobs.set_jobs(("asdf", "1", "1_1", "asdf_1_2", "1_asdf_2"))
     assert jobs.jobs == {
@@ -80,7 +107,7 @@ def test_set_jobs_filter(jobs):
     }
 
 
-def test_set_jobs_dir(jobs, mocker):
+def test_set_jobs_dir(jobs: JobCollection, mocker: MockerFixture) -> None:
     """Can provide a directory to set jobs."""
     jobs.jobs = {}
     mocker.patch("reportseff.job_collection.Path.is_dir", return_value=False)
@@ -91,7 +118,7 @@ def test_set_jobs_dir(jobs, mocker):
     assert jobs.jobs == {"1": Job("1", "1", None)}
 
     mocker.patch("reportseff.job_collection.Path.is_dir", return_value=True)
-    mock_set_out = mocker.patch.object(job_collection.JobCollection, "set_out_dir")
+    mock_set_out = mocker.patch.object(JobCollection, "set_out_dir")
 
     jobs.set_jobs(())
     mock_set_out.assert_called_once()
@@ -101,36 +128,17 @@ def test_set_jobs_dir(jobs, mocker):
     mock_set_out.assert_called_once()
 
 
-def test_process_line(jobs, mocker):
+def test_process_line(jobs: JobCollection, mocker: MockerFixture) -> None:
     """Can process entries from sacct and send to update."""
     jobs.jobs = {"24371655": Job("24371655", "24371655", "test_24371655")}
     mock_update = mocker.patch.object(Job, "update")
-    jobs.process_entry(
-        dict(
-            zip(
-                jobs.get_columns(),
-                "24371655|24371655|COMPLETED|1|"
-                "01:29:47|01:29:56|03:00:00|1Gn||1|".split("|"),
-            )
-        )
-    )
-    jobs.process_entry(
-        dict(
-            zip(
-                jobs.get_columns(),
-                "24371655.batch|24371655.batch|COMPLETED|1|"
-                "01:29:47|01:29:56||1Gn|495644K|1|1".split("|"),
-            )
-        )
-    )
-    jobs.process_entry(
-        dict(
-            zip(
-                jobs.get_columns(),
-                "24371655.extern|24371655.extern|COMPLETED|1|"
-                "00:00:00|01:29:56||1Gn|1372K|1|1".split("|"),
-            )
-        )
+    process_entries(
+        jobs,
+        [
+            "24371655|24371655|COMPLETED|1|01:29:47|01:29:56|03:00:00|1Gn||1|",
+            "24371655.batch|24371655.batch|COMPLETED|1|01:29:47|01:29:56||1Gn|495644K|1|1",
+            "24371655.extern|24371655.extern|COMPLETED|1|00:00:00|01:29:56||1Gn|1372K|1|1",
+        ],
     )
 
     assert mock_update.call_args_list == [
@@ -182,18 +190,18 @@ def test_process_line(jobs, mocker):
     ]
 
 
-def test_process_line_partition_timelimit_not_set(jobs, mocker):
+def test_process_line_partition_timelimit_not_set(
+    jobs: JobCollection,
+    mocker: MockerFixture,
+) -> None:
     """When partition limits is not set, forward to job."""
     jobs.jobs = {"24371655": Job("24371655", "24371655", "test_24371655")}
     mock_update = mocker.patch.object(Job, "update")
-    jobs.process_entry(
-        dict(
-            zip(
-                jobs.get_columns(),
-                "24371655|24371655|COMPLETED|1|"
-                "01:29:47|01:29:56|Partition_Limit|1Gn||1||mainqueue".split("|"),
-            )
-        )
+    process_entries(
+        jobs,
+        [
+            "24371655|24371655|COMPLETED|1|01:29:47|01:29:56|Partition_Limit|1Gn||1||mainqueue",
+        ],
     )
 
     assert mock_update.call_args_list == [
@@ -216,19 +224,19 @@ def test_process_line_partition_timelimit_not_set(jobs, mocker):
     ]
 
 
-def test_process_line_partition_timelimit(jobs, mocker):
+def test_process_line_partition_timelimit(
+    jobs: JobCollection,
+    mocker: MockerFixture,
+) -> None:
     """When partition limits is set, replace with limit."""
     jobs.jobs = {"24371655": Job("24371655", "24371655", "test_24371655")}
     mock_update = mocker.patch.object(Job, "update")
     jobs.set_partition_limits({"mainqueue": "01:02:03"})
-    jobs.process_entry(
-        dict(
-            zip(
-                jobs.get_columns(),
-                "24371655|24371655|COMPLETED|1|"
-                "01:29:47|01:29:56|Partition_Limit|1Gn||1||mainqueue".split("|"),
-            )
-        )
+    process_entries(
+        jobs,
+        [
+            "24371655|24371655|COMPLETED|1|01:29:47|01:29:56|Partition_Limit|1Gn||1||mainqueue",
+        ],
     )
 
     assert mock_update.call_args_list == [
@@ -251,19 +259,19 @@ def test_process_line_partition_timelimit(jobs, mocker):
     ]
 
 
-def test_process_line_partition_timelimit_no_match(jobs, mocker):
+def test_process_line_partition_timelimit_no_match(
+    jobs: JobCollection,
+    mocker: MockerFixture,
+) -> None:
     """When partition limits is set, but not matching, forward limit."""
     jobs.jobs = {"24371655": Job("24371655", "24371655", "test_24371655")}
     mock_update = mocker.patch.object(Job, "update")
     jobs.set_partition_limits({"mainqueue2": "01:02:03"})
-    jobs.process_entry(
-        dict(
-            zip(
-                jobs.get_columns(),
-                "24371655|24371655|COMPLETED|1|"
-                "01:29:47|01:29:56|Partition_Limit|1Gn||1||mainqueue".split("|"),
-            )
-        )
+    process_entries(
+        jobs,
+        [
+            "24371655|24371655|COMPLETED|1|01:29:47|01:29:56|Partition_Limit|1Gn||1||mainqueue",
+        ],
     )
 
     assert mock_update.call_args_list == [
@@ -286,7 +294,7 @@ def test_process_line_partition_timelimit_no_match(jobs, mocker):
     ]
 
 
-def test_set_out_dir(jobs, mocker):
+def test_set_out_dir(jobs: JobCollection, mocker: MockerFixture) -> None:
     """Can set directory with slurm out files."""
     mocker.patch(
         "reportseff.job_collection.Path.resolve",
@@ -327,7 +335,7 @@ def test_set_out_dir(jobs, mocker):
     }
 
 
-def test_set_custom_seff_format(jobs, mocker):
+def test_set_custom_seff_format(jobs: JobCollection, mocker: MockerFixture) -> None:
     """Can change the slurm output file matching."""
     mocker.patch("reportseff.job_collection.Path.exists", return_value=True)
     mocker.patch("reportseff.job_collection.Path.is_file", return_value=True)
@@ -344,7 +352,9 @@ def test_set_custom_seff_format(jobs, mocker):
         ],
     )
 
-    with pytest.raises(ValueError, match="Unable to determine jobid from %n.out."):
+    with pytest.raises(
+        ValueError, match=re.escape("Unable to determine jobid from %n.out.")
+    ):
         jobs.set_custom_seff_format("%n.out")
 
     jobs.set_custom_seff_format("%j.out")
@@ -375,7 +385,7 @@ def test_set_custom_seff_format(jobs, mocker):
     jobs.jobs = {}
 
 
-def test_process_seff_file(jobs):
+def test_process_seff_file(jobs: JobCollection) -> None:
     """Can parse job names from slurm output file names."""
     # no matches
     jobs.process_seff_file("")
@@ -434,7 +444,7 @@ def test_process_seff_file(jobs):
     }
 
 
-def test_add_job(jobs):
+def test_add_job(jobs: JobCollection) -> None:
     """Can add jobs to collection."""
     jobs.add_job("j1", "jid1")
     assert jobs.jobs == {"jid1": Job("j1", "jid1", None)}
@@ -451,7 +461,7 @@ def test_add_job(jobs):
     }
 
 
-def test_get_sorted_jobs(jobs, mocker):
+def test_get_sorted_jobs(jobs: JobCollection, mocker: MockerFixture) -> None:
     """Can get jobs in sorted order by name or time."""
     jobs.add_job("j3", "jid3")
     jobs.add_job("j1", "jid1")
@@ -479,7 +489,7 @@ def test_get_sorted_jobs(jobs, mocker):
     )
 
     # replace mtime with the length of the filename
-    def my_stat(file):
+    def my_stat(file: Path) -> MockerFixture.MagicMock:
         mock = mocker.MagicMock()
         mock.st_mtime = len(file.name)
         return mock
@@ -508,7 +518,7 @@ def test_get_sorted_jobs(jobs, mocker):
     ]
 
 
-def test_get_sorted_jobs_jobid(jobs):
+def test_get_sorted_jobs_jobid(jobs: JobCollection) -> None:
     """Can get jobs in sorted order by numeric job id."""
     jobs.add_job("3", "1_2")
     jobs.add_job("2", "1_1")
@@ -529,7 +539,7 @@ def test_get_sorted_jobs_jobid(jobs):
     ]
 
 
-def test_get_sorted_jobs_issue_75(jobs):
+def test_get_sorted_jobs_issue_75(jobs: JobCollection) -> None:
     """Test specific example from issue 75."""
     jobs.add_job("1", "5163879_8")
     jobs.add_job("2", "5163879_6")
@@ -600,7 +610,7 @@ def test_get_sorted_jobs_issue_75(jobs):
     ]
 
 
-def test_process_entry_array_user(jobs):
+def test_process_entry_array_user(jobs: JobCollection) -> None:
     """Providing a user shorts the checks for existing jobs."""
     jobs.process_entry(
         {
@@ -622,7 +632,7 @@ def test_process_entry_array_user(jobs):
     assert jobs.jobs == {"14729857_[737-999]": expected_job}
 
 
-def test_filter_by_array_size(jobs):
+def test_filter_by_array_size(jobs: JobCollection) -> None:
     """Can filter array jobs when requested, singletons always accepted."""
     jobs.jobs = {
         "1": Job("1", "1", None),  # singleton job
@@ -633,13 +643,13 @@ def test_filter_by_array_size(jobs):
         "3_3": Job("3", "3_3", None),  # three jobs
     }
 
-    assert jobs.get_jobs() == "1,2,3".split(",")
+    assert jobs.get_jobs() == ["1", "2", "3"]
 
     jobs.filter_by_array_size(0)
-    assert jobs.get_jobs() == "1,2,3".split(",")
+    assert jobs.get_jobs() == ["1", "2", "3"]
 
     jobs.filter_by_array_size(1)
-    assert jobs.get_jobs() == "1,2,3".split(",")
+    assert jobs.get_jobs() == ["1", "2", "3"]
 
     jobs.filter_by_array_size(3)
-    assert jobs.get_jobs() == "1,3".split(",")
+    assert jobs.get_jobs() == ["1", "3"]

@@ -1,20 +1,38 @@
 """Test operation of output renderer object."""
 
+from __future__ import annotations
+
 import re
+from typing import TYPE_CHECKING
 
 import click
 import pytest
-from reportseff import job as job_module
+
 from reportseff import output_renderer
+from reportseff.job import Job
 
-min_required = (
-    "JobID,State,Elapsed,JobIDRaw,State,TotalCPU,AllocCPUS,"
-    "ReqMem,NNodes,MaxRSS,Timelimit"
-).split(",")
+if TYPE_CHECKING:
+    from reportseff.output_renderer import OutputRenderer
+
+    from .typings import sacct_return
+
+min_required = [
+    "JobID",
+    "State",
+    "Elapsed",
+    "JobIDRaw",
+    "State",
+    "TotalCPU",
+    "AllocCPUS",
+    "ReqMem",
+    "NNodes",
+    "MaxRSS",
+    "Timelimit",
+]
 
 
-@pytest.fixture()
-def renderer():
+@pytest.fixture
+def renderer() -> OutputRenderer:
     """Default renderer with valid names for only default string."""
     return output_renderer.OutputRenderer(
         min_required,
@@ -22,11 +40,11 @@ def renderer():
     )
 
 
-@pytest.fixture()
-def some_jobs():
+@pytest.fixture
+def some_jobs() -> list[Job]:
     """A few test jobs for generating an output table."""
     jobs = []
-    job = job_module.Job("24371655", "24371655", None)
+    job = Job("24371655", "24371655", None)
     job.update(
         {
             "JobID": "24371655",
@@ -42,7 +60,7 @@ def some_jobs():
         }
     )
     jobs.append(job)
-    job = job_module.Job("24371656", "24371656", None)
+    job = Job("24371656", "24371656", None)
     job.update(
         {
             "JobID": "24371656",
@@ -58,7 +76,7 @@ def some_jobs():
         }
     )
     jobs.append(job)
-    job = job_module.Job("24371657", "24371657", None)
+    job = Job("24371657", "24371657", None)
     job.update(
         {
             "JobID": "24371657",
@@ -74,7 +92,7 @@ def some_jobs():
         }
     )
     jobs.append(job)
-    job = job_module.Job("24371658", "24371658", None)
+    job = Job("24371658", "24371658", None)
     job.update(
         {
             "JobID": "24371658",
@@ -90,7 +108,7 @@ def some_jobs():
         }
     )
     jobs.append(job)
-    job = job_module.Job("24371659", "24371659", None)
+    job = Job("24371659", "24371659", None)
     job.update(
         {
             "JobID": "24371659",
@@ -106,7 +124,7 @@ def some_jobs():
         }
     )
     jobs.append(job)
-    job = job_module.Job("24371660", "24371660", None)
+    job = Job("24371660", "24371660", None)
     job.update(
         {
             "JobID": "24371660",
@@ -125,22 +143,26 @@ def some_jobs():
     return jobs
 
 
-@pytest.fixture()
-def gpu_jobs(single_gpu, multi_gpu, multi_node_multi_gpu):
+@pytest.fixture
+def gpu_jobs(
+    single_gpu: sacct_return,
+    multi_gpu: sacct_return,
+    multi_node_multi_gpu: sacct_return,
+) -> list[Job]:
     """A collection of jobs with gpus."""
     jobs = []
 
-    job = job_module.Job("8189521", "8189521", None)
+    job = Job("8189521", "8189521", None)
     for line in multi_node_multi_gpu:
         job.update(line)
     jobs.append(job)
 
-    job = job_module.Job("8189521", "8189521", None)
+    job = Job("8189521", "8189521", None)
     for line in multi_gpu:
         job.update(line)
     jobs.append(job)
 
-    job = job_module.Job("8197399", "8197399", None)
+    job = Job("8197399", "8197399", None)
     for line in single_gpu:
         job.update(line)
     jobs.append(job)
@@ -148,22 +170,26 @@ def gpu_jobs(single_gpu, multi_gpu, multi_node_multi_gpu):
     return jobs
 
 
-@pytest.fixture()
-def cpu_jobs(single_core, multi_node, short_job):
+@pytest.fixture
+def cpu_jobs(
+    single_core: sacct_return,
+    multi_node: sacct_return,
+    short_job: sacct_return,
+) -> list[Job]:
     """A collection of cpu jobs."""
     jobs = []
 
-    job = job_module.Job("8205464", "8205464", None)
+    job = Job("8205464", "8205464", None)
     for line in short_job:
         job.update(line)
     jobs.append(job)
 
-    job = job_module.Job("8205048", "8205048", None)
+    job = Job("8205048", "8205048", None)
     for line in multi_node:
         job.update(line)
     jobs.append(job)
 
-    job = job_module.Job("39895850", "39889258_1426", None)
+    job = Job("39895850", "39889258_1426", None)
     for line in single_core:
         job.update(line)
     jobs.append(job)
@@ -171,8 +197,8 @@ def cpu_jobs(single_core, multi_node, short_job):
     return jobs
 
 
-@pytest.fixture()
-def some_multi_core_jobs(gpu_jobs, cpu_jobs):
+@pytest.fixture
+def some_multi_core_jobs(gpu_jobs: list[Job], cpu_jobs: list[Job]) -> list[Job]:
     """A collection of jobs with multiple cores/gpus."""
     result = []
     result.append(cpu_jobs[0])
@@ -181,7 +207,15 @@ def some_multi_core_jobs(gpu_jobs, cpu_jobs):
     return result
 
 
-def test_renderer_init(renderer):
+def assert_result_matches(result: str, expected: list[str]) -> None:
+    """Check the result of an output renderer matches the expected lines."""
+    ansi_escape = re.compile(r"\x1B[@-_][0-?]*[ -/]*[@-~]")
+    split_result = ansi_escape.sub("", result).split("\n")
+    for line, expected_line in zip(split_result, expected, strict=True):
+        assert line.split() == expected_line.split()
+
+
+def test_renderer_init(renderer: OutputRenderer) -> None:
     """Initialized renderer produces correct columns."""
     assert renderer.formatters == [
         output_renderer.ColumnFormatter("JobID%>"),
@@ -191,10 +225,19 @@ def test_renderer_init(renderer):
         output_renderer.ColumnFormatter("MemEff"),
     ]
     assert sorted(renderer.query_columns) == sorted(
-        (
-            "JobID JobIDRaw State Elapsed TotalCPU "
-            "AllocCPUS ReqMem NNodes NTasks MaxRSS AdminComment"
-        ).split()
+        [
+            "JobID",
+            "JobIDRaw",
+            "State",
+            "Elapsed",
+            "TotalCPU",
+            "AllocCPUS",
+            "ReqMem",
+            "NNodes",
+            "NTasks",
+            "MaxRSS",
+            "AdminComment",
+        ]
     )
 
     renderer = output_renderer.OutputRenderer(
@@ -204,7 +247,7 @@ def test_renderer_init(renderer):
     )
     assert renderer.formatters == []
     assert sorted(renderer.query_columns) == sorted(
-        ("JobID JobIDRaw State AdminComment").split()
+        ["JobID", "JobIDRaw", "State", "AdminComment"]
     )
 
     renderer = output_renderer.OutputRenderer(
@@ -214,11 +257,11 @@ def test_renderer_init(renderer):
     )
     assert renderer.formatters == [output_renderer.ColumnFormatter("TotalCPU%<5")]
     assert sorted(renderer.query_columns) == sorted(
-        ("JobID JobIDRaw State TotalCPU AdminComment").split()
+        ["JobID", "JobIDRaw", "State", "TotalCPU", "AdminComment"]
     )
 
 
-def test_renderer_build_formatters():
+def test_renderer_build_formatters() -> None:
     """Can parse formatters from format string."""
     assert output_renderer.build_formatters("Name,Name%>,Name%10,Name%<10") == [
         output_renderer.ColumnFormatter("Name"),
@@ -236,18 +279,18 @@ def test_renderer_build_formatters():
     assert output_renderer.build_formatters("") == []
 
 
-def test_renderer_validate_formatters(renderer):
+def test_renderer_validate_formatters(renderer: OutputRenderer) -> None:
     """Can validate formatters as members of a provided collection, normalizing name."""
     renderer.formatters = output_renderer.build_formatters("JobID,JOBid,jObId")
-    assert renderer.validate_formatters(["JobID"], []) == "JobID JobID JobID".split()
-    assert renderer.formatters == "JobID JobID JobID".split()
+    assert renderer.validate_formatters(["JobID"], []) == ["JobID", "JobID", "JobID"]
+    assert renderer.formatters == ["JobID", "JobID", "JobID"]
 
     renderer.formatters = output_renderer.build_formatters("JobID,GPU%>10")
-    assert (
-        renderer.validate_formatters(["JobID"], ["GPU", "GPUEff", "GPUMem"])
-        == "JobID GPU".split()
-    )
-    assert renderer.formatters == "JobID GPUEff GPUMem".split()
+    assert renderer.validate_formatters(["JobID"], ["GPU", "GPUEff", "GPUMem"]) == [
+        "JobID",
+        "GPU",
+    ]
+    assert renderer.formatters == ["JobID", "GPUEff", "GPUMem"]
     # other params are copied from GPU to GPUEff and GPUMem
     assert renderer.formatters[1].alignment == ">"
     assert renderer.formatters[2].alignment == ">"
@@ -255,7 +298,7 @@ def test_renderer_validate_formatters(renderer):
     assert renderer.formatters[2].width == 10
 
 
-def test_renderer_validate_formatters_with_node(renderer):
+def test_renderer_validate_formatters_with_node(renderer: OutputRenderer) -> None:
     """Validating formatters with GPUs can alter formatters."""
     min_gpu = (min_required, ["GPU", "GPUEff", "GPUMem"])
     # normal function
@@ -284,45 +327,62 @@ def test_renderer_validate_formatters_with_node(renderer):
     renderer.options.node = True
     renderer.options.gpu = True
     renderer.formatters = output_renderer.build_formatters("GPUMEM,State,JobID:>")
-    assert renderer.validate_formatters(*min_gpu) == "GPUMem State JobID".split()
+    assert renderer.validate_formatters(*min_gpu) == ["GPUMem", "State", "JobID"]
     assert renderer.formatters == ["GPUMem", "State", "JobID"]
     assert renderer.formatters[2].alignment == "<"  # switched by node reporting
 
 
-def test_renderer_correct_columns(renderer):
+def test_renderer_correct_columns(renderer: OutputRenderer) -> None:
     """Corrected columns include required entries and derived values."""
     renderer.query_columns = ["JobID"]
     renderer.correct_columns()
     assert sorted(renderer.query_columns) == sorted(
-        "JobID JobIDRaw State AdminComment".split()
+        ["JobID", "JobIDRaw", "State", "AdminComment"]
     )
 
-    renderer.query_columns = "JobID CPUEff MemEff TimeEff".split()
+    renderer.query_columns = ["JobID", "CPUEff", "MemEff", "TimeEff"]
     renderer.correct_columns()
     assert sorted(renderer.query_columns) == sorted(
-        (
-            "JobID TotalCPU Elapsed ReqMem"
-            " JobIDRaw State AdminComment"
-            " NNodes NTasks AllocCPUS MaxRSS Timelimit"
-        ).split()
+        [
+            "JobID",
+            "TotalCPU",
+            "Elapsed",
+            "ReqMem",
+            "JobIDRaw",
+            "State",
+            "AdminComment",
+            "NNodes",
+            "NTasks",
+            "AllocCPUS",
+            "MaxRSS",
+            "Timelimit",
+        ]
     )
 
-    renderer.query_columns = "JobID JobID JobID".split()
+    renderer.query_columns = ["JobID", "JobID", "JobID"]
     renderer.correct_columns()
     assert sorted(renderer.query_columns) == sorted(
-        "JobID JobIDRaw State AdminComment".split()
+        ["JobID", "JobIDRaw", "State", "AdminComment"]
     )
 
-    renderer.query_columns = "JobID ReqMem MemEff".split()
+    renderer.query_columns = ["JobID", "ReqMem", "MemEff"]
     renderer.correct_columns()
     assert sorted(renderer.query_columns) == sorted(
-        (
-            "JobID JobIDRaw State AdminComment AllocCPUS " "MaxRSS NNodes NTasks ReqMem"
-        ).split()
+        [
+            "JobID",
+            "JobIDRaw",
+            "State",
+            "AdminComment",
+            "AllocCPUS",
+            "MaxRSS",
+            "NNodes",
+            "NTasks",
+            "ReqMem",
+        ]
     )
 
 
-def test_renderer_format_jobs(some_jobs):
+def test_renderer_format_jobs(some_jobs: list[Job]) -> None:
     """Can render output as table with colored entries."""
     renderer = output_renderer.OutputRenderer(
         min_required,
@@ -348,18 +408,19 @@ def test_renderer_format_jobs(some_jobs):
     for i in (18,):
         assert codes[i] == "\x1b[36m"  # cyan
     # remove color codes
-    result = ansi_escape.sub("", result)
-    lines = result.split("\n")
-    assert lines[0].split() == "JobID State Elapsed CPUEff ReqMem TimeEff".split()
-    assert lines[1].split() == "24371655 COMPLETED 00:10:00 90.0% 1Gn 50.0%".split()
-    assert lines[2].split() == "24371656 PENDING --- --- --- ---".split()
-    assert lines[3].split() == "24371657 RUNNING 00:10:00 --- 1Gn 50.0%".split()
-    assert lines[4].split() == "24371658 CANCELLED 00:00:00 --- 1Gn 0.0%".split()
-    assert lines[5].split() == "24371659 TIMEOUT 00:21:00 19.0% 2Gn 105.0%".split()
-    assert lines[6].split() == "24371660 OTHER 00:12:05 74.5% 2Gn 60.4%".split()
+    expected = [
+        "JobID State Elapsed CPUEff ReqMem TimeEff",
+        "24371655 COMPLETED 00:10:00 90.0% 1Gn 50.0%",
+        "24371656 PENDING --- --- --- ---",
+        "24371657 RUNNING 00:10:00 --- 1Gn 50.0%",
+        "24371658 CANCELLED 00:00:00 --- 1Gn 0.0%",
+        "24371659 TIMEOUT 00:21:00 19.0% 2Gn 105.0%",
+        "24371660 OTHER 00:12:05 74.5% 2Gn 60.4%",
+    ]
+    assert_result_matches(result, expected)
 
 
-def test_renderer_format_jobs_multi_node(some_multi_core_jobs):
+def test_renderer_format_jobs_multi_node(some_multi_core_jobs: list[Job]) -> None:
     """Can render output as table with colored entries."""
     renderer = output_renderer.OutputRenderer(
         min_required,
@@ -367,21 +428,21 @@ def test_renderer_format_jobs_multi_node(some_multi_core_jobs):
         "JobID,State,CPUEff,TimeEff,MemEff,GPU",
     )
     result = renderer.format_jobs(some_multi_core_jobs)
-    ansi_escape = re.compile(r"\x1B[@-_][0-?]*[ -/]*[@-~]")
-    result = ansi_escape.sub("", result)
-    lines = result.split("\n")
-    assert lines[0].split() == "JobID State CPUEff TimeEff MemEff GPUEff GPUMem".split()
-    assert lines[1].split() == "8205464 FAILED 6.2% 0.0% 0.0% --- ---".split()
-    assert lines[2].split() == "8189521 CANCELLED 10.5% 83.0% 26.0% 5.5% 30.1%".split()
-    assert lines[3].split() == "8189521 CANCELLED 10.5% 83.0% 26.3% 3.5% 30.1%".split()
-    assert lines[4].split() == "8197399 COMPLETED 95.4% 21.1% 9.5% 29.4% 99.8%".split()
-    assert lines[5].split() == "8205048 COMPLETED 4.6% 4.1% 1.1% --- ---".split()
-    assert (
-        lines[6].split() == "39889258_1426 COMPLETED 99.7% 76.7% 3.6% --- ---".split()
-    )
+    expected = [
+        "JobID State CPUEff TimeEff MemEff GPUEff GPUMem",
+        "8205464 FAILED 6.2% 0.0% 0.0% --- ---",
+        "8189521 CANCELLED 10.5% 83.0% 26.0% 5.5% 30.1%",
+        "8189521 CANCELLED 10.5% 83.0% 26.3% 3.5% 30.1%",
+        "8197399 COMPLETED 95.4% 21.1% 9.5% 29.4% 99.8%",
+        "8205048 COMPLETED 4.6% 4.1% 1.1% --- ---",
+        "39889258_1426 COMPLETED 99.7% 76.7% 3.6% --- ---",
+    ]
+    assert_result_matches(result, expected)
 
 
-def test_renderer_format_jobs_multi_node_with_nodes(some_multi_core_jobs):
+def test_renderer_format_jobs_multi_node_with_nodes(
+    some_multi_core_jobs: list[Job],
+) -> None:
     """Can render output as table with colored entries."""
     renderer = output_renderer.OutputRenderer(
         min_required,
@@ -389,27 +450,27 @@ def test_renderer_format_jobs_multi_node_with_nodes(some_multi_core_jobs):
         "JobID,State,CPUEff,TimeEff,MemEff,GPU",
     )
     result = renderer.format_jobs(some_multi_core_jobs)
-    ansi_escape = re.compile(r"\x1B[@-_][0-?]*[ -/]*[@-~]")
-    result = ansi_escape.sub("", result)
-    lines = result.split("\n")
-    assert lines[0].split() == "JobID State CPUEff TimeEff MemEff GPUEff GPUMem".split()
-    assert lines[1].split() == "8205464 FAILED 6.2% 0.0% 0.0% --- ---".split()
-    assert lines[2].split() == "8189521 CANCELLED 10.5% 83.0% 26.0% 5.5% 30.1%".split()
-    assert lines[3].split() == "tiger-i19g10 10.5% 25.8% 7.5% 30.1%".split()
-    assert lines[4].split() == "tiger-i19g9 10.5% 26.3% 3.5% 30.1%".split()
-    assert lines[5].split() == "8189521 CANCELLED 10.5% 83.0% 26.3% 3.5% 30.1%".split()
-    assert lines[6].split() == "8197399 COMPLETED 95.4% 21.1% 9.5% 29.4% 99.8%".split()
-    assert lines[7].split() == "8205048 COMPLETED 4.6% 4.1% 1.1% --- ---".split()
-    assert lines[8].split() == "tiger-h19c1n15 18.6% 4.5%".split()
-    assert lines[9].split() == "tiger-h26c2n13 0.0% 0.0%".split()
-    assert lines[10].split() == "tiger-i26c2n11 0.0% 0.0%".split()
-    assert lines[11].split() == "tiger-i26c2n15 0.0% 0.0%".split()
-    assert (
-        lines[12].split() == "39889258_1426 COMPLETED 99.7% 76.7% 3.6% --- ---".split()
-    )
+    expected = [
+        "JobID State CPUEff TimeEff MemEff GPUEff GPUMem",
+        "8205464 FAILED 6.2% 0.0% 0.0% --- ---",
+        "8189521 CANCELLED 10.5% 83.0% 26.0% 5.5% 30.1%",
+        "tiger-i19g10 10.5% 25.8% 7.5% 30.1%",
+        "tiger-i19g9 10.5% 26.3% 3.5% 30.1%",
+        "8189521 CANCELLED 10.5% 83.0% 26.3% 3.5% 30.1%",
+        "8197399 COMPLETED 95.4% 21.1% 9.5% 29.4% 99.8%",
+        "8205048 COMPLETED 4.6% 4.1% 1.1% --- ---",
+        "tiger-h19c1n15 18.6% 4.5%",
+        "tiger-h26c2n13 0.0% 0.0%",
+        "tiger-i26c2n11 0.0% 0.0%",
+        "tiger-i26c2n15 0.0% 0.0%",
+        "39889258_1426 COMPLETED 99.7% 76.7% 3.6% --- ---",
+    ]
+    assert_result_matches(result, expected)
 
 
-def test_renderer_format_jobs_multi_node_with_nodes_and_gpu(some_multi_core_jobs):
+def test_renderer_format_jobs_multi_node_with_nodes_and_gpu(
+    some_multi_core_jobs: list[Job],
+) -> None:
     """Can render output as table with colored entries."""
     renderer = output_renderer.OutputRenderer(
         min_required,
@@ -417,42 +478,40 @@ def test_renderer_format_jobs_multi_node_with_nodes_and_gpu(some_multi_core_jobs
         "JobID,State,CPUEff,TimeEff,MemEff,GPU",
     )
     result = renderer.format_jobs(some_multi_core_jobs)
-    ansi_escape = re.compile(r"\x1B[@-_][0-?]*[ -/]*[@-~]")
-    result = ansi_escape.sub("", result)
-    lines = result.split("\n")
-    assert lines[0].split() == "JobID State CPUEff TimeEff MemEff GPUEff GPUMem".split()
-    assert lines[1].split() == "8205464 FAILED 6.2% 0.0% 0.0% --- ---".split()
-    assert lines[2].split() == "8189521 CANCELLED 10.5% 83.0% 26.0% 5.5% 30.1%".split()
-    assert lines[3].split() == "tiger-i19g10 10.5% 25.8% 7.5% 30.1%".split()
-    assert lines[4].split() == "0 7.5% 30.1%".split()
-    assert lines[5].split() == "1 7.5% 30.1%".split()
-    assert lines[6].split() == "2 7.2% 30.1%".split()
-    assert lines[7].split() == "3 7.8% 30.1%".split()
-    assert lines[8].split() == "tiger-i19g9 10.5% 26.3% 3.5% 30.1%".split()
-    assert lines[9].split() == "0 3.5% 30.1%".split()
-    assert lines[10].split() == "1 3.5% 30.1%".split()
-    assert lines[11].split() == "2 3.2% 30.1%".split()
-    assert lines[12].split() == "3 3.8% 30.1%".split()
-    assert lines[13].split() == "8189521 CANCELLED 10.5% 83.0% 26.3% 3.5% 30.1%".split()
-    assert lines[14].split() == "tiger-i19g9 10.5% 26.3% 3.5% 30.1%".split()
-    assert lines[15].split() == "0 3.5% 30.1%".split()
-    assert lines[16].split() == "1 3.5% 30.1%".split()
-    assert lines[17].split() == "2 3.2% 30.1%".split()
-    assert lines[18].split() == "3 3.8% 30.1%".split()
-    assert lines[19].split() == "8197399 COMPLETED 95.4% 21.1% 9.5% 29.4% 99.8%".split()
-    assert lines[20].split() == "tiger-i23g14 95.4% 9.5% 29.4% 99.8%".split()
-    assert lines[21].split() == "3 29.4% 99.8%".split()
-    assert lines[22].split() == "8205048 COMPLETED 4.6% 4.1% 1.1% --- ---".split()
-    assert lines[23].split() == "tiger-h19c1n15 18.6% 4.5%".split()
-    assert lines[24].split() == "tiger-h26c2n13 0.0% 0.0%".split()
-    assert lines[25].split() == "tiger-i26c2n11 0.0% 0.0%".split()
-    assert lines[26].split() == "tiger-i26c2n15 0.0% 0.0%".split()
-    assert (
-        lines[27].split() == "39889258_1426 COMPLETED 99.7% 76.7% 3.6% --- ---".split()
-    )
+    expected = [
+        "JobID State CPUEff TimeEff MemEff GPUEff GPUMem",
+        "8205464 FAILED 6.2% 0.0% 0.0% --- ---",
+        "8189521 CANCELLED 10.5% 83.0% 26.0% 5.5% 30.1%",
+        "tiger-i19g10 10.5% 25.8% 7.5% 30.1%",
+        "0 7.5% 30.1%",
+        "1 7.5% 30.1%",
+        "2 7.2% 30.1%",
+        "3 7.8% 30.1%",
+        "tiger-i19g9 10.5% 26.3% 3.5% 30.1%",
+        "0 3.5% 30.1%",
+        "1 3.5% 30.1%",
+        "2 3.2% 30.1%",
+        "3 3.8% 30.1%",
+        "8189521 CANCELLED 10.5% 83.0% 26.3% 3.5% 30.1%",
+        "tiger-i19g9 10.5% 26.3% 3.5% 30.1%",
+        "0 3.5% 30.1%",
+        "1 3.5% 30.1%",
+        "2 3.2% 30.1%",
+        "3 3.8% 30.1%",
+        "8197399 COMPLETED 95.4% 21.1% 9.5% 29.4% 99.8%",
+        "tiger-i23g14 95.4% 9.5% 29.4% 99.8%",
+        "3 29.4% 99.8%",
+        "8205048 COMPLETED 4.6% 4.1% 1.1% --- ---",
+        "tiger-h19c1n15 18.6% 4.5%",
+        "tiger-h26c2n13 0.0% 0.0%",
+        "tiger-i26c2n11 0.0% 0.0%",
+        "tiger-i26c2n15 0.0% 0.0%",
+        "39889258_1426 COMPLETED 99.7% 76.7% 3.6% --- ---",
+    ]
+    assert_result_matches(result, expected)
 
 
-def test_format_jobs_empty(some_jobs):
+def test_format_jobs_empty(some_jobs: list[Job]) -> None:
     """Empty format string produces empty outputs."""
     renderer = output_renderer.OutputRenderer(
         min_required,
@@ -463,7 +522,7 @@ def test_format_jobs_empty(some_jobs):
     assert result == ""
 
 
-def test_format_jobs_single_str(some_jobs):
+def test_format_jobs_single_str(some_jobs: list[Job]) -> None:
     """A single format string left aligns and suppresses title for piping."""
     renderer = output_renderer.OutputRenderer(
         min_required,
@@ -487,7 +546,7 @@ def test_format_jobs_single_str(some_jobs):
     ]
 
 
-def test_formatter_init():
+def test_formatter_init() -> None:
     """Column formatter parses format tokens correctly."""
     # simple name
     result = output_renderer.ColumnFormatter("test")
@@ -525,7 +584,7 @@ def test_formatter_init():
     # if unable to parse with %, recommend using ""
     with pytest.raises(
         ValueError,
-        match=(
+        match=re.escape(
             "Unable to parse format token 'test%a', "
             "did you forget to wrap in quotes?"
         ),
@@ -535,7 +594,9 @@ def test_formatter_init():
     # if unable to parse with %, recommend using "" even when matching
     with pytest.raises(
         ValueError,
-        match="Unable to parse format token 'test%', did you forget to wrap in quotes?",
+        match=re.escape(
+            "Unable to parse format token 'test%', " "did you forget to wrap in quotes?"
+        ),
     ):
         result = output_renderer.ColumnFormatter("test%")
 
@@ -558,7 +619,7 @@ def test_formatter_init():
     assert result.end is not None
 
 
-def test_formatter_eq():
+def test_formatter_eq() -> None:
     """Can test for equality and with a string."""
     fmt = output_renderer.ColumnFormatter("Name")
     fmt2 = output_renderer.ColumnFormatter("Name")
@@ -578,7 +639,7 @@ def test_formatter_eq():
     assert "NAME" not in formatters
 
 
-def test_formatter_validate_title():
+def test_formatter_validate_title() -> None:
     """Can validate titles against a column formatter."""
     fmt = output_renderer.ColumnFormatter("NaMe")
 
@@ -594,7 +655,7 @@ def test_formatter_validate_title():
     assert fmt.title == "ReqMem"
 
 
-def test_formatter_validate_title_totals():
+def test_formatter_validate_title_totals() -> None:
     """Can validate titles against a column formatter that start with Total."""
     # total cpu is from sacct and will short any total logic
     fmt = output_renderer.ColumnFormatter("TOTALCPU")
@@ -629,22 +690,22 @@ def test_formatter_validate_title_totals():
     )
 
 
-def test_formatter_compute_width():
+def test_formatter_compute_width() -> None:
     """Can determine width of table entries."""
     fmt = output_renderer.ColumnFormatter("JobID")
     # matches title
     jobs = [
-        job_module.Job("job", "tes", None),
-        job_module.Job("job", "tin", None),
-        job_module.Job("job", "g", None),
+        Job("job", "tes", None),
+        Job("job", "tin", None),
+        Job("job", "g", None),
     ]
     fmt.compute_width(jobs)
     assert fmt.width == 7
 
     # already set
     jobs = [
-        job_module.Job("job", "aLongEntry", None),
-        job_module.Job("job", "addAnother", None),
+        Job("job", "aLongEntry", None),
+        Job("job", "addAnother", None),
     ]
     fmt.compute_width(jobs)
     assert fmt.width == 7
@@ -654,7 +715,7 @@ def test_formatter_compute_width():
     assert fmt.width == 12
 
 
-def test_formatter_format_entry():
+def test_formatter_format_entry() -> None:
     """Can format entry with alignment, width, and color."""
     fmt = output_renderer.ColumnFormatter("Name")
     # no width causes just the name to be printed

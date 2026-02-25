@@ -5,14 +5,10 @@ from dataclasses import dataclass
 
 @dataclass
 class ReportseffParameters:
-    """Collection of parameters from the command line.
-
-    Basically a dataclass but I want to be python 3.6 compatible without the
-    pip package
-    """
+    """Collection of parameters from the command line."""
 
     color: bool
-    jobs: tuple
+    jobs: tuple[str, ...]
     debug: bool = False
     format_str: str = ""
     sorting: str = "jobid"

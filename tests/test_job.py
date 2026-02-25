@@ -1,16 +1,24 @@
 """Test job object."""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import pytest
+
 from reportseff import job as job_module
 
+if TYPE_CHECKING:
+    from .typings import get_jobstats_func, sacct_return
 
-@pytest.fixture()
-def job():
+
+@pytest.fixture
+def job() -> job_module.Job:
     """Default job ."""
     return job_module.Job("job", "jobid", "filename")
 
 
-def test_eq():
+def test_eq() -> None:
     """Jobs must have all matching values to equal."""
     job1 = job_module.Job("j1", "j1", "filename")
     job2 = job_module.Job("j1", "j1", "filename")
@@ -18,11 +26,11 @@ def test_eq():
 
     job2 = job_module.Job("j2", "j1", "filename")
     assert job1 != job2
-    job2 = {}
-    assert job1 != job2
+    job_dict: dict[str, str] = {}
+    assert job1 != job_dict
 
 
-def test_repr():
+def test_repr() -> None:
     """Representation builds constructor."""
     job1 = job_module.Job("j1", "jid1", "filename")
     assert repr(job1) == "Job(job=j1, jobid=jid1, filename=filename)"
@@ -31,7 +39,7 @@ def test_repr():
     assert repr(job2) == "Job(job=j2, jobid=jid2, filename=None)"
 
 
-def test_job_init(job):
+def test_job_init(job: job_module.Job) -> None:
     """Blank job has expected defaults."""
     assert job.job == "job"
     assert job.jobid == "jobid"
@@ -43,7 +51,7 @@ def test_job_init(job):
     assert job.state is None
 
 
-def test_update_main_job():
+def test_update_main_job() -> None:
     """Updating jobs changes expected properties."""
     job = job_module.Job("24371655", "24371655", None)
     job.update(
@@ -184,7 +192,7 @@ def test_update_main_job():
     assert job.totalmem == 1024**3
 
 
-def test_update_main_job_unlimited():
+def test_update_main_job_unlimited() -> None:
     """Updating jobs changes expected properties."""
     job = job_module.Job("11741520", "11741520", None)
     job.update(
@@ -209,7 +217,7 @@ def test_update_main_job_unlimited():
     assert job.totalmem == 4 * 7 * 1024**3
 
 
-def test_update_main_job_partition_limit():
+def test_update_main_job_partition_limit() -> None:
     """Updating jobs changes expected properties."""
     job = job_module.Job("341", "341", None)
     job.update(
@@ -236,7 +244,7 @@ def test_update_main_job_partition_limit():
     assert job.totalmem == 4 * 1000 * 1024**3
 
 
-def test_update_part_job():
+def test_update_part_job() -> None:
     """Can update job with batch to add to stepmem."""
     job = job_module.Job("24371655", "24371655", None)
     job.update(
@@ -259,7 +267,7 @@ def test_update_part_job():
     assert job.stepmem == 507539456
 
 
-def test_parse_bug():
+def test_parse_bug() -> None:
     """Can handle job id mismatches."""
     job = job_module.Job("24371655", "24371655", None)
     job.update(
@@ -279,14 +287,14 @@ def test_parse_bug():
     )
 
 
-def test_name(job):
+def test_name(job: job_module.Job) -> None:
     """Name is either filename or the jobid."""
     assert job.name() == "filename"
     job = job_module.Job("job", "jobid", None)
     assert job.name() == "jobid"
 
 
-def test_get_entry(job):
+def test_get_entry(job: job_module.Job) -> None:
     """State is read properly and updated by main job entry."""
     job.state = "TEST"
     assert job.get_entry("MemEff") == "---"
@@ -318,18 +326,18 @@ def test_get_entry(job):
     assert job.get_entry("Elapsed") == "00:00:00"
 
 
-def test_parse_slurm_timedelta():
+def test_parse_slurm_timedelta() -> None:
     """Can parse all types of time formats."""
     timestamps = ["01-03:04:02", "03:04:02", "04:02.123"]
     expected_seconds = [97442, 11042, 242]
-    for timestamp, seconds in zip(timestamps, expected_seconds):
+    for timestamp, seconds in zip(timestamps, expected_seconds, strict=True):
         assert job_module._parse_slurm_timedelta(timestamp) == seconds
 
     with pytest.raises(ValueError, match="Failed to parse time 'asdf'"):
         job_module._parse_slurm_timedelta("asdf")
 
 
-def test_parsemem_nodes():
+def test_parsemem_nodes() -> None:
     """Can parse memory entries with nodes provided."""
     for mem in (1, 2, 4):
         for exp, multiple in enumerate("KMGTE", start=1):
@@ -340,7 +348,7 @@ def test_parsemem_nodes():
                 ), f"{mem}{multiple}n"
 
 
-def test_parsemem_cpus():
+def test_parsemem_cpus() -> None:
     """Can parse memory entries with cpus provided."""
     for mem in (1, 2, 4):
         for exp, multiple in enumerate("KMGTE", start=1):
@@ -351,7 +359,7 @@ def test_parsemem_cpus():
                 ), f"{mem}{multiple}c"
 
 
-def test_parsememstep():
+def test_parsememstep() -> None:
     """Can parse memory for steps and handle odd formats."""
     for exp, multiple in enumerate("KMGTE", start=1):
         for mem in (2, 4, 6):
@@ -366,7 +374,7 @@ def test_parsememstep():
     assert job_module.parsemem("1084.50M") == 1084.5 * 1024**2
 
 
-def test_render_num():
+def test_render_num() -> None:
     """Can render numbers in human readable format."""
     assert job_module.render_num("string") == "string"
     assert job_module.render_num(1) == "1"
@@ -385,7 +393,7 @@ def test_render_num():
     assert job_module.render_num(-20 * 1024) == "-20K"
 
 
-def test_unknown_admin_comment(job):
+def test_unknown_admin_comment(job: job_module.Job) -> None:
     """Unknown comment types raise informative errors."""
     with pytest.raises(ValueError, match="Unknown comment type 'JS0'"):
         job._parse_admin_comment("JS0:asdfasdf")
@@ -402,7 +410,7 @@ def test_unknown_admin_comment(job):
     job._parse_admin_comment('\'{"arrayTaskId":4294967294...')
 
 
-def test_single_core(single_core):
+def test_single_core(single_core: sacct_return) -> None:
     """Job with single node is updated properly."""
     job = job_module.Job("39895850", "39889258_1426", None)
     for line in single_core:
@@ -417,7 +425,7 @@ def test_single_core(single_core):
     assert list(job.get_node_entries("CPUEff")) == [99.7]
 
 
-def test_multi_node(multi_node):
+def test_multi_node(multi_node: sacct_return) -> None:
     """Job with multiple nodes is updated properly."""
     job = job_module.Job("8205048", "8205048", None)
     for line in multi_node:
@@ -461,7 +469,7 @@ def test_multi_node(multi_node):
     ]
 
 
-def test_single_gpu(single_gpu):
+def test_single_gpu(single_gpu: sacct_return) -> None:
     """Jobs with GPUs are reported properly."""
     job = job_module.Job("8197399", "8197399", None)
     for line in single_gpu:
@@ -511,7 +519,7 @@ def test_single_gpu(single_gpu):
     ]
 
 
-def test_multi_gpu(multi_gpu):
+def test_multi_gpu(multi_gpu: sacct_return) -> None:
     """Single core, multi gpu jobs are updated properly."""
     job = job_module.Job("8189521", "8189521", None)
     for line in multi_gpu:
@@ -576,7 +584,7 @@ def test_multi_gpu(multi_gpu):
     ]
 
 
-def test_multi_node_multi_gpu(multi_node_multi_gpu):
+def test_multi_node_multi_gpu(multi_node_multi_gpu: sacct_return) -> None:
     """Multiple nodes with multiple gpus are updated properly."""
     job = job_module.Job("8189521", "8189521", None)
     for line in multi_node_multi_gpu:
@@ -688,7 +696,7 @@ def test_multi_node_multi_gpu(multi_node_multi_gpu):
     ]
 
 
-def test_short_job(short_job):
+def test_short_job(short_job: sacct_return) -> None:
     """Jobs with JS1:Short are handled with sacct info instead."""
     job = job_module.Job("8205464", "8205464", None)
     for line in short_job:
@@ -705,7 +713,7 @@ def test_short_job(short_job):
     assert list(job.get_node_entries("State")) == ["FAILED"]
 
 
-def test_bad_gpu(bad_gpu):
+def test_bad_gpu(bad_gpu: sacct_return) -> None:
     """Jobs failing due to gpu are parsed properly."""
     job = job_module.Job("45352405", "45352405", None)
     for line in bad_gpu:
@@ -721,7 +729,7 @@ def test_bad_gpu(bad_gpu):
     assert list(job.get_node_entries("State")) == ["CANCELLED"]
 
 
-def test_bad_gpu_utilization(bad_gpu_used):
+def test_bad_gpu_utilization(bad_gpu_used: sacct_return) -> None:
     """Jobs with no gpu utilization are parsed properly."""
     job = job_module.Job("46044267", "46044267", None)
     for line in bad_gpu_used:
@@ -737,7 +745,7 @@ def test_bad_gpu_utilization(bad_gpu_used):
     assert list(job.get_node_entries("State")) == ["TIMEOUT"]
 
 
-def test_issue_26(get_jobstats):
+def test_issue_26(get_jobstats: get_jobstats_func) -> None:
     """Jobs with 0 total_time are parsed."""
     admin_comment = {
         "gpus": True,
@@ -774,7 +782,7 @@ def test_issue_26(get_jobstats):
     assert job.mem_eff == 0
 
 
-def test_multinode_job(multinode_job):
+def test_multinode_job(multinode_job: sacct_return) -> None:
     """Testing issue37 which is not actually a bug efficiency is truly 5%."""
     job = job_module.Job("6196869", "6196869", None)
     for line in multinode_job:
@@ -783,7 +791,7 @@ def test_multinode_job(multinode_job):
     assert job.cpu == 5.0
 
 
-def test_multinode_job_issue_41(issue_41):
+def test_multinode_job_issue_41(issue_41: sacct_return) -> None:
     """Testing issue 41 where multiple tasks are used.
 
     Previously reported incorrect memory efficiency.

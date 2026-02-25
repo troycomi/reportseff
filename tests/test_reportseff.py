@@ -1,27 +1,46 @@
 """Test cli usage."""
 
+from __future__ import annotations
+
 import shlex
 import subprocess
+from typing import TYPE_CHECKING, Any
 
 import pytest
 from click.testing import CliRunner
+
 from reportseff import console
 from reportseff.db_inquirer import SacctInquirer
 from reportseff.job_collection import JobCollection
 from reportseff.output_renderer import OutputRenderer
 
+if TYPE_CHECKING:
+    from pytest_mock import MockerFixture
 
-@pytest.fixture()
-def _mock_inquirer(mocker):
+    from .typings import strip_js_func
+
+
+@pytest.fixture
+def _mock_inquirer(mocker: MockerFixture) -> None:
     """Override valid formats to prevent calls to shell."""
 
-    def mock_valid(_self):
-        return (
-            "JobID,State,Elapsed,JobIDRaw,State,TotalCPU,AllocCPUS,"
-            "ReqMem,NNodes,MaxRSS,Timelimit,MaxDiskReadNode"
-        ).split(",")
+    def mock_valid(_self: SacctInquirer) -> list[str]:
+        return [
+            "JobID",
+            "State",
+            "Elapsed",
+            "JobIDRaw",
+            "State",
+            "TotalCPU",
+            "AllocCPUS",
+            "ReqMem",
+            "NNodes",
+            "MaxRSS",
+            "Timelimit",
+            "MaxDiskReadNode",
+        ]
 
-    def mock_partition_timelimits(_self):
+    def mock_partition_timelimits(_self: SacctInquirer) -> dict[str, str]:
         return {}
 
     mocker.patch.object(SacctInquirer, "get_valid_formats", new=mock_valid)
@@ -31,7 +50,7 @@ def _mock_inquirer(mocker):
 
 
 @pytest.mark.usefixtures("_mock_inquirer")
-def test_directory_input(mocker, console_jobs):
+def test_directory_input(mocker: MockerFixture, console_jobs: dict[str, str]) -> None:
     """Able to get jobs from directory calls."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -40,7 +59,7 @@ def test_directory_input(mocker, console_jobs):
     sub_result.stdout = console_jobs["24418435"]
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
 
-    def set_jobs(self, _directory):
+    def set_jobs(self: JobCollection, _directory: Any) -> None:
         self.set_jobs(("24418435",))
 
     mocker.patch.object(JobCollection, "set_out_dir", new=set_jobs)
@@ -63,7 +82,10 @@ def test_directory_input(mocker, console_jobs):
 
 
 @pytest.mark.usefixtures("_mock_inquirer")
-def test_directory_input_exception(mocker, console_jobs):
+def test_directory_input_exception(
+    mocker: MockerFixture,
+    console_jobs: dict[str, str],
+) -> None:
     """Catch exceptions in setting jobs from directory."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -72,7 +94,7 @@ def test_directory_input_exception(mocker, console_jobs):
     sub_result.stdout = console_jobs["24418435"]
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
 
-    def set_jobs(_self, _directory):
+    def set_jobs(_self: JobCollection, _directory: Any) -> None:
         msg = "Testing EXCEPTION"
         raise ValueError(msg)
 
@@ -84,7 +106,7 @@ def test_directory_input_exception(mocker, console_jobs):
 
 
 @pytest.mark.usefixtures("_mock_inquirer")
-def test_debug_option(mocker, console_jobs):
+def test_debug_option(mocker: MockerFixture, console_jobs: dict[str, str]) -> None:
     """Setting debug prints subprocess result."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -94,7 +116,7 @@ def test_debug_option(mocker, console_jobs):
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
     result = runner.invoke(
         console.main,
-        "--no-color --debug 23000233".split(),
+        ["--no-color", "--debug", "23000233"],
     )
 
     assert result.exit_code == 0
@@ -112,7 +134,7 @@ def test_debug_option(mocker, console_jobs):
 
 
 @pytest.mark.usefixtures("_mock_inquirer")
-def test_process_failure(mocker, console_jobs):
+def test_process_failure(mocker: MockerFixture, console_jobs: dict[str, str]) -> None:
     """Catch exceptions in process_entry by printing the offending entry."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -125,11 +147,10 @@ def test_process_failure(mocker, console_jobs):
     )
     result = runner.invoke(
         console.main,
-        "--no-color 23000233 --format JobID%>,State,Elapsed%>,CPUEff,MemEff".split(),
+        ["--no-color", "23000233"],
     )
 
     assert result.exit_code != 0
-    # remove header
     output = result.output.split("\n")
     assert output[0] == (
         "Error processing entry: "
@@ -137,12 +158,12 @@ def test_process_failure(mocker, console_jobs):
         "'Elapsed': '00:00:00', 'JobID': '23000233', "
         "'JobIDRaw': '23000233', 'MaxRSS': '', 'NNodes': '1', "
         "'NTasks': '1', 'ReqMem': '4000Mc', 'State': 'CANCELLED by 129319', "
-        "'TotalCPU': '6-00:00:00'}"
+        "'Timelimit': '6-00:00:00', 'TotalCPU': '00:00:00'}"
     )
 
 
 @pytest.mark.usefixtures("_mock_inquirer")
-def test_short_output(mocker, console_jobs):
+def test_short_output(mocker: MockerFixture, console_jobs: dict[str, str]) -> None:
     """Outputs with 20 or fewer entries are directly printed."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -154,14 +175,14 @@ def test_short_output(mocker, console_jobs):
     mocker.patch.object(OutputRenderer, "format_jobs", return_value="output")
 
     mock_click = mocker.patch("reportseff.console.click.echo")
-    result = runner.invoke(console.main, " 23000233".split())
+    result = runner.invoke(console.main, ["23000233"])
 
     assert result.exit_code == 0
     mock_click.assert_called_once_with("output", color=None)
 
 
 @pytest.mark.usefixtures("_mock_inquirer")
-def test_long_output(mocker, console_jobs):
+def test_long_output(mocker: MockerFixture, console_jobs: dict[str, str]) -> None:
     """Outputs with more than 20 entries are echoed via pager."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -172,14 +193,14 @@ def test_long_output(mocker, console_jobs):
     mocker.patch("reportseff.console.len", return_value=21)
     mocker.patch.object(OutputRenderer, "format_jobs", return_value="output")
     mock_click = mocker.patch("reportseff.console.click.echo_via_pager")
-    result = runner.invoke(console.main, " 23000233".split())
+    result = runner.invoke(console.main, ["23000233"])
 
     assert result.exit_code == 0
     mock_click.assert_called_once_with("output", color=None)
 
 
 @pytest.mark.usefixtures("_mock_inquirer")
-def test_simple_job(mocker, console_jobs):
+def test_simple_job(mocker: MockerFixture, console_jobs: dict[str, str]) -> None:
     """Can get efficiency from a single job."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -189,7 +210,7 @@ def test_simple_job(mocker, console_jobs):
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
     result = runner.invoke(
         console.main,
-        "--no-color 24418435 --format JobID%>,State,Elapsed%>,CPUEff,MemEff".split(),
+        ["--no-color", "24418435", "--format", "JobID%>,State,Elapsed%>,CPUEff,MemEff"],
     )
 
     assert result.exit_code == 0
@@ -199,7 +220,7 @@ def test_simple_job(mocker, console_jobs):
 
 
 @pytest.mark.usefixtures("_mock_inquirer")
-def test_simple_user(mocker, console_jobs):
+def test_simple_user(mocker: MockerFixture, console_jobs: dict[str, str]) -> None:
     """Can limit outputs by user."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -211,7 +232,13 @@ def test_simple_user(mocker, console_jobs):
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
     result = runner.invoke(
         console.main,
-        "--no-color --user test --format JobID%>,State,Elapsed%>,CPUEff,MemEff".split(),
+        [
+            "--no-color",
+            "--user",
+            "test",
+            "--format",
+            "JobID%>,State,Elapsed%>,CPUEff,MemEff",
+        ],
     )
 
     assert result.exit_code == 0
@@ -222,7 +249,7 @@ def test_simple_user(mocker, console_jobs):
 
 
 @pytest.mark.usefixtures("_mock_inquirer")
-def test_simple_partition(mocker, console_jobs):
+def test_simple_partition(mocker: MockerFixture, console_jobs: dict[str, str]) -> None:
     """Can limit outputs by partition and cluster."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -234,8 +261,17 @@ def test_simple_partition(mocker, console_jobs):
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
     result = runner.invoke(
         console.main,
-        "--no-color --partition partition --cluster cluster 24418435 25569410 "
-        "--format JobID%>,State,Elapsed%>,CPUEff,MemEff".split(),
+        [
+            "--no-color",
+            "--partition",
+            "partition",
+            "--cluster",
+            "cluster",
+            "24418435",
+            "25569410",
+            "--format",
+            "JobID%>,State,Elapsed%>,CPUEff,MemEff",
+        ],
     )
 
     assert result.exit_code == 0
@@ -246,18 +282,18 @@ def test_simple_partition(mocker, console_jobs):
 
 
 @pytest.mark.usefixtures("_mock_inquirer")
-def test_format_add(mocker):
+def test_format_add(mocker: MockerFixture) -> None:
     """Can add to format specifier."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
     mock_jobs = mocker.patch("reportseff.console.get_jobs", return_value=("Testing", 1))
-    result = runner.invoke(console.main, "--no-color --format=test".split())
+    result = runner.invoke(console.main, ["--no-color", "--format=test"])
 
     assert result.exit_code == 0
     assert mock_jobs.call_args[0][0].format_str == "test"
 
     # test adding onto end
-    result = runner.invoke(console.main, "--no-color --format=+test".split())
+    result = runner.invoke(console.main, ["--no-color", "--format=+test"])
 
     assert result.exit_code == 0
     assert (
@@ -267,7 +303,7 @@ def test_format_add(mocker):
 
 
 @pytest.mark.usefixtures("_mock_inquirer")
-def test_since(mocker, console_jobs):
+def test_since(mocker: MockerFixture, console_jobs: dict[str, str]) -> None:
     """Can limit outputs by time since argument."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -279,10 +315,15 @@ def test_since(mocker, console_jobs):
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
     result = runner.invoke(
         console.main,
-        (
-            "--no-color --since 200406 24418435 25569410 "
-            "--format JobID%>,State,Elapsed%>,CPUEff,MemEff"
-        ).split(),
+        [
+            "--no-color",
+            "--since",
+            "200406",
+            "24418435",
+            "25569410",
+            "--format",
+            "JobID%>,State,Elapsed%>,CPUEff,MemEff",
+        ],
     )
 
     assert result.exit_code == 0
@@ -293,7 +334,7 @@ def test_since(mocker, console_jobs):
 
 
 @pytest.mark.usefixtures("_mock_inquirer")
-def test_since_all_users(mocker, console_jobs):
+def test_since_all_users(mocker: MockerFixture, console_jobs: dict[str, str]) -> None:
     """Can limit outputs by time since argument."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -307,10 +348,13 @@ def test_since_all_users(mocker, console_jobs):
     )
     result = runner.invoke(
         console.main,
-        (
-            "--no-color --since 200406 "
-            "--format JobID%>,State,Elapsed%>,CPUEff,MemEff"
-        ).split(),
+        [
+            "--no-color",
+            "--since",
+            "200406",
+            "--format",
+            "JobID%>,State,Elapsed%>,CPUEff,MemEff",
+        ],
     )
 
     assert result.exit_code == 0
@@ -320,13 +364,18 @@ def test_since_all_users(mocker, console_jobs):
     assert output[1].split() == ["25569410", "COMPLETED", "21:14:48", "91.7%", "1.5%"]
 
     mock_sub.assert_called_once_with(
-        args=(
-            "sacct --parsable -n --delimiter=^|^ "
-            "--format=AdminComment,AllocCPUS,Elapsed,JobID,JobIDRaw,"
-            "MaxRSS,NNodes,NTasks,ReqMem,State,TotalCPU "
-            "--allusers "  # all users is added since no jobs/files were specified
-            "--starttime=200406"
-        ).split(),
+        args=[
+            "sacct",
+            "--parsable",
+            "-n",
+            "--delimiter=^|^",
+            (
+                "--format=AdminComment,AllocCPUS,Elapsed,JobID,JobIDRaw,"
+                "MaxRSS,NNodes,NTasks,ReqMem,State,TotalCPU"
+            ),
+            "--allusers",  # all users is added since no jobs/files were specified
+            "--starttime=200406",
+        ],
         stdout=mocker.ANY,
         encoding=mocker.ANY,
         check=mocker.ANY,
@@ -336,7 +385,10 @@ def test_since_all_users(mocker, console_jobs):
 
 
 @pytest.mark.usefixtures("_mock_inquirer")
-def test_since_all_users_partition(mocker, console_jobs):
+def test_since_all_users_partition(
+    mocker: MockerFixture,
+    console_jobs: dict[str, str],
+) -> None:
     """Can limit outputs by time since and partition argument."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -350,10 +402,14 @@ def test_since_all_users_partition(mocker, console_jobs):
     )
     result = runner.invoke(
         console.main,
-        (
-            "--no-color --since 200406 --partition=partition "
-            "--format JobID%>,State,Elapsed%>,CPUEff,MemEff"
-        ).split(),
+        [
+            "--no-color",
+            "--since",
+            "200406",
+            "--partition=partition",
+            "--format",
+            "JobID%>,State,Elapsed%>,CPUEff,MemEff",
+        ],
     )
 
     assert result.exit_code == 0
@@ -363,14 +419,19 @@ def test_since_all_users_partition(mocker, console_jobs):
     assert output[1].split() == ["25569410", "COMPLETED", "21:14:48", "91.7%", "1.5%"]
 
     mock_sub.assert_called_once_with(
-        args=(
-            "sacct --parsable -n --delimiter=^|^ "
-            "--format=AdminComment,AllocCPUS,Elapsed,JobID,JobIDRaw,"
-            "MaxRSS,NNodes,NTasks,ReqMem,State,TotalCPU "
-            "--allusers "  # all users is added since no jobs/files were specified
-            "--starttime=200406 "
-            "--partition=partition "
-        ).split(),
+        args=[
+            "sacct",
+            "--parsable",
+            "-n",
+            "--delimiter=^|^",
+            (
+                "--format=AdminComment,AllocCPUS,Elapsed,JobID,"
+                "JobIDRaw,MaxRSS,NNodes,NTasks,ReqMem,State,TotalCPU"
+            ),
+            "--allusers",  # all users is added since no jobs/files were specified
+            "--starttime=200406",
+            "--partition=partition",
+        ],
         stdout=mocker.ANY,
         encoding=mocker.ANY,
         check=mocker.ANY,
@@ -380,7 +441,7 @@ def test_since_all_users_partition(mocker, console_jobs):
 
 
 @pytest.mark.usefixtures("_mock_inquirer")
-def test_parsable(mocker, console_jobs):
+def test_parsable(mocker: MockerFixture, console_jobs: dict[str, str]) -> None:
     """Can display output as parsable format."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -392,10 +453,13 @@ def test_parsable(mocker, console_jobs):
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
     result = runner.invoke(
         console.main,
-        (
-            "--parsable "
-            "25569410 24418435 --format JobID%>,State,Elapsed%>,CPUEff%^10,MemEff"
-        ).split(),
+        [
+            "--parsable",
+            "25569410",
+            "24418435",
+            "--format",
+            "JobID%>,State,Elapsed%>,CPUEff%^10,MemEff",
+        ],
     )
 
     assert result.exit_code == 0
@@ -407,7 +471,7 @@ def test_parsable(mocker, console_jobs):
 
 
 @pytest.mark.usefixtures("_mock_inquirer")
-def test_simple_state(mocker, console_jobs):
+def test_simple_state(mocker: MockerFixture, console_jobs: dict[str, str]) -> None:
     """Can limit outputs by filtering state."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -419,10 +483,15 @@ def test_simple_state(mocker, console_jobs):
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
     result = runner.invoke(
         console.main,
-        (
-            "--no-color --state completed "
-            "25569410 24418435 --format JobID%>,State,Elapsed%>,CPUEff,MemEff"
-        ).split(),
+        [
+            "--no-color",
+            "--state",
+            "completed",
+            "25569410",
+            "24418435",
+            "--format",
+            "JobID%>,State,Elapsed%>,CPUEff,MemEff",
+        ],
     )
 
     assert result.exit_code == 0
@@ -434,7 +503,7 @@ def test_simple_state(mocker, console_jobs):
 
 
 @pytest.mark.usefixtures("_mock_inquirer")
-def test_simple_not_state(mocker, console_jobs):
+def test_simple_not_state(mocker: MockerFixture, console_jobs: dict[str, str]) -> None:
     """Can limit outputs by removing state."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -446,10 +515,15 @@ def test_simple_not_state(mocker, console_jobs):
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
     result = runner.invoke(
         console.main,
-        (
-            "--no-color --not-state Running "
-            "25569410 24418435 --format JobID%>,State,Elapsed%>,CPUEff,MemEff"
-        ).split(),
+        [
+            "--no-color",
+            "--not-state",
+            "Running",
+            "25569410",
+            "24418435",
+            "--format",
+            "JobID%>,State,Elapsed%>,CPUEff,MemEff",
+        ],
     )
 
     assert result.exit_code == 0
@@ -461,7 +535,7 @@ def test_simple_not_state(mocker, console_jobs):
 
 
 @pytest.mark.usefixtures("_mock_inquirer")
-def test_invalid_not_state(mocker, console_jobs):
+def test_invalid_not_state(mocker: MockerFixture, console_jobs: dict[str, str]) -> None:
     """When not state isn't found, return all jobs."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -473,17 +547,22 @@ def test_invalid_not_state(mocker, console_jobs):
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
     result = runner.invoke(
         console.main,
-        (
-            "--no-color --not-state cunning "
-            "25569410 24418435 --format JobID%>,State,Elapsed%>,CPUEff,MemEff"
-        ).split(),
+        [
+            "--no-color",
+            "--not-state",
+            "cunning",
+            "25569410",
+            "24418435",
+            "--format",
+            "JobID%>,State,Elapsed%>,CPUEff,MemEff",
+        ],
     )
 
     assert result.exit_code == 0
     # remove header
     output = result.output.split("\n")
     assert output[0] == "Unknown state CUNNING"
-    assert output[1] == "No valid states provided to exclude"
+    assert output[1] == "No valid states provided"
     # output 2 is header
     assert output[3].split() == ["24418435", "COMPLETED", "01:27:42", "99.8%", "47.6%"]
     assert output[4].split() == ["25569410", "RUNNING", "21:14:48", "---", "---"]
@@ -491,25 +570,21 @@ def test_invalid_not_state(mocker, console_jobs):
 
 
 @pytest.mark.usefixtures("_mock_inquirer")
-def test_no_state(mocker, console_jobs):
+def test_no_state(mocker: MockerFixture, console_jobs: dict[str, str]) -> None:
     """Unknown states produce empty output."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
     sub_result = mocker.MagicMock()
     sub_result.returncode = 0
-    sub_result.stdout = console_jobs["24418435_notime"] + console_jobs[
-        "25569410_notime"
-    ].replace("COMPLETED", "RUNNING")
+    sub_result.stdout = console_jobs["23000381"]
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
-    result = runner.invoke(
-        console.main, "--no-color --state ZZ 25569410 24418435".split()
-    )
+    result = runner.invoke(console.main, ["--no-color", "--state", "ZZ", "23000381"])
 
     assert result.exit_code == 0
     # remove header
     output = result.output.split("\n")
     assert output[0] == "Unknown state ZZ"
-    assert output[1] == "No valid states provided to include"
+    assert output[1] == "No valid states provided"
     assert output[2].split() == [
         "JobID",
         "State",
@@ -522,7 +597,7 @@ def test_no_state(mocker, console_jobs):
 
 
 @pytest.mark.usefixtures("_mock_inquirer")
-def test_array_job_raw_id(mocker, console_jobs):
+def test_array_job_raw_id(mocker: MockerFixture, console_jobs: dict[str, str]) -> None:
     """Can find job array by base id."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -532,7 +607,7 @@ def test_array_job_raw_id(mocker, console_jobs):
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
     result = runner.invoke(
         console.main,
-        "--no-color 24221219 --format JobID%>,State,Elapsed%>,CPUEff,MemEff".split(),
+        ["--no-color", "24221219", "--format", "JobID%>,State,Elapsed%>,CPUEff,MemEff"],
     )
 
     assert result.exit_code == 0
@@ -549,7 +624,7 @@ def test_array_job_raw_id(mocker, console_jobs):
 
 
 @pytest.mark.usefixtures("_mock_inquirer")
-def test_array_job_single(mocker, console_jobs):
+def test_array_job_single(mocker: MockerFixture, console_jobs: dict[str, str]) -> None:
     """Can get single array job element."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -559,9 +634,12 @@ def test_array_job_single(mocker, console_jobs):
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
     result = runner.invoke(
         console.main,
-        (
-            "--no-color 24220929_421 --format JobID%>,State,Elapsed%>,CPUEff,MemEff"
-        ).split(),
+        [
+            "--no-color",
+            "24220929_421",
+            "--format",
+            "JobID%>,State,Elapsed%>,CPUEff,MemEff",
+        ],
     )
 
     assert result.exit_code == 0
@@ -578,7 +656,7 @@ def test_array_job_single(mocker, console_jobs):
 
 
 @pytest.mark.usefixtures("_mock_inquirer")
-def test_array_job_base(mocker, console_jobs):
+def test_array_job_base(mocker: MockerFixture, console_jobs: dict[str, str]) -> None:
     """Base array job id gets all elements."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -588,7 +666,7 @@ def test_array_job_base(mocker, console_jobs):
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
     result = runner.invoke(
         console.main,
-        "--no-color 24220929 --format JobID%>,State,Elapsed%>,CPUEff,MemEff".split(),
+        ["--no-color", "24220929", "--format", "JobID%>,State,Elapsed%>,CPUEff,MemEff"],
     )
 
     assert result.exit_code == 0
@@ -606,7 +684,7 @@ def test_array_job_base(mocker, console_jobs):
 
 
 @pytest.mark.usefixtures("_mock_inquirer")
-def test_sacct_error(mocker):
+def test_sacct_error(mocker: MockerFixture) -> None:
     """Subprocess errors in sacct are reported."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -614,14 +692,14 @@ def test_sacct_error(mocker):
         "reportseff.db_inquirer.subprocess.run",
         side_effect=subprocess.CalledProcessError(1, "test"),
     )
-    result = runner.invoke(console.main, "--no-color 9999999".split())
+    result = runner.invoke(console.main, ["--no-color", "9999999"])
 
     assert result.exit_code == 1
     assert "Error running sacct!" in result.output
 
 
 @pytest.mark.usefixtures("_mock_inquirer")
-def test_empty_sacct(mocker):
+def test_empty_sacct(mocker: MockerFixture) -> None:
     """Empty sacct results produce just the header line."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -629,7 +707,7 @@ def test_empty_sacct(mocker):
     sub_result.returncode = 0
     sub_result.stdout = ""
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
-    result = runner.invoke(console.main, "--no-color 9999999".split())
+    result = runner.invoke(console.main, ["--no-color", "9999999"])
 
     assert result.exit_code == 0
     output = result.output.split("\n")[:-1]
@@ -645,7 +723,7 @@ def test_empty_sacct(mocker):
 
 
 @pytest.mark.usefixtures("_mock_inquirer")
-def test_failed_no_mem(mocker, console_jobs):
+def test_failed_no_mem(mocker: MockerFixture, console_jobs: dict[str, str]) -> None:
     """Empty memory entries produce valid output."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -653,7 +731,7 @@ def test_failed_no_mem(mocker, console_jobs):
     sub_result.returncode = 0
     sub_result.stdout = console_jobs["23000381"]
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
-    result = runner.invoke(console.main, "--no-color 23000381".split())
+    result = runner.invoke(console.main, ["--no-color", "23000381"])
 
     assert result.exit_code == 0
     # remove header
@@ -663,7 +741,7 @@ def test_failed_no_mem(mocker, console_jobs):
 
 
 @pytest.mark.usefixtures("_mock_inquirer")
-def test_canceled_by_other(mocker, console_jobs):
+def test_canceled_by_other(mocker: MockerFixture, console_jobs: dict[str, str]) -> None:
     """Canceled states are correctly handled."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -671,7 +749,7 @@ def test_canceled_by_other(mocker, console_jobs):
     sub_result.returncode = 0
     sub_result.stdout = console_jobs["23000233"]
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
-    result = runner.invoke(console.main, "--no-color 23000233 --state CA".split())
+    result = runner.invoke(console.main, ["--no-color", "23000233", "--state", "CA"])
 
     assert result.exit_code == 0
     # remove header
@@ -688,7 +766,7 @@ def test_canceled_by_other(mocker, console_jobs):
 
 
 @pytest.mark.usefixtures("_mock_inquirer")
-def test_zero_runtime(mocker, console_jobs):
+def test_zero_runtime(mocker: MockerFixture, console_jobs: dict[str, str]) -> None:
     """Entries with zero runtime produce reasonable timeeff."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -696,7 +774,7 @@ def test_zero_runtime(mocker, console_jobs):
     sub_result.returncode = 0
     sub_result.stdout = console_jobs["23000210"]
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
-    result = runner.invoke(console.main, "--no-color 23000210".split())
+    result = runner.invoke(console.main, ["--no-color", "23000210"])
 
     assert result.exit_code == 0
     # remove header
@@ -706,11 +784,11 @@ def test_zero_runtime(mocker, console_jobs):
 
 
 @pytest.mark.usefixtures("_mock_inquirer")
-def test_no_systems(mocker):
+def test_no_systems(mocker: MockerFixture) -> None:
     """When no scheduling system is found, raise error."""
     mocker.patch("reportseff.console.which", return_value=None)
     runner = CliRunner()
-    result = runner.invoke(console.main, "--no-color 23000210".split())
+    result = runner.invoke(console.main, ["--no-color", "23000210"])
 
     assert result.exit_code == 1
     # remove header
@@ -719,7 +797,7 @@ def test_no_systems(mocker):
 
 
 @pytest.mark.usefixtures("_mock_inquirer")
-def test_issue_16(mocker):
+def test_issue_16(mocker: MockerFixture) -> None:
     """Incorrect memory usage for multi-node jobs."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -780,7 +858,7 @@ def test_issue_16(mocker):
 """
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
     result = runner.invoke(
-        console.main, "--format +totalcpu --no-color 65638294".split()
+        console.main, ["--format", "+totalcpu", "--no-color", "65638294"]
     )
 
     assert result.exit_code == 0
@@ -799,7 +877,7 @@ def test_issue_16(mocker):
 
 
 @pytest.mark.usefixtures("_mock_inquirer")
-def test_energy_reporting(mocker):
+def test_energy_reporting(mocker: MockerFixture) -> None:
     """Include energy reporting with the `energy` format code."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -832,7 +910,7 @@ def test_energy_reporting(mocker):
         "COMPLETED^|^energy=27,fs/disk=0^|^^|^00:00.001^|^\n"
     )
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
-    result = runner.invoke(console.main, "--no-color --format=+energy 37403870".split())
+    result = runner.invoke(console.main, ["--no-color", "--format=+energy", "37403870"])
     assert result.exit_code == 0
     # remove header
     output = result.output.split("\n")[:-1]
@@ -884,7 +962,7 @@ def test_energy_reporting(mocker):
     assert len(output) == 5
 
 
-def test_extra_args(mocker):
+def test_extra_args(mocker: MockerFixture) -> None:
     """Can add extra arguments for sacct."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -898,7 +976,7 @@ def test_extra_args(mocker):
 
 
 @pytest.mark.usefixtures("_mock_inquirer")
-def test_filter_by_array_size(mocker):
+def test_filter_by_array_size(mocker: MockerFixture) -> None:
     """Include energy reporting with the `energy` format code."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -932,7 +1010,14 @@ def test_filter_by_array_size(mocker):
     )
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
     result = runner.invoke(
-        console.main, "--no-color --array-min-size 10 --format=+energy 37403870".split()
+        console.main,
+        [
+            "--no-color",
+            "--array-min-size",
+            "10",
+            "--format=+energy",
+            "37403870",
+        ],
     )
     assert result.exit_code == 0
     output = result.output.split("\n")[:-1]
@@ -949,7 +1034,7 @@ def test_filter_by_array_size(mocker):
 
 
 @pytest.mark.usefixtures("_mock_inquirer")
-def test_issue_58(mocker):
+def test_issue_58(mocker: MockerFixture) -> None:
     """Incorrect memory usage when filtering by state."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -960,7 +1045,7 @@ def test_issue_58(mocker):
 ^|^2^|^01:00:33^|^1234.batch^|^1234.batch^|^19855760K^|^1^|^1^|^^|^CANCELLED^|^^|^01:01:06^|^
 """
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
-    result = runner.invoke(console.main, "--no-color 1234".split())
+    result = runner.invoke(console.main, ["--no-color", "1234"])
 
     assert result.exit_code == 0
     # remove header
@@ -975,7 +1060,7 @@ def test_issue_58(mocker):
     ]
     assert len(output) == 1
 
-    result = runner.invoke(console.main, "--state TIMEOUT --no-color 1234".split())
+    result = runner.invoke(console.main, ["--state", "TIMEOUT", "--no-color", "1234"])
 
     assert result.exit_code == 0
     # remove header
@@ -992,7 +1077,7 @@ def test_issue_58(mocker):
 
 
 @pytest.mark.usefixtures("_mock_inquirer")
-def test_issue_73_maxrss(mocker):
+def test_issue_73_maxrss(mocker: MockerFixture) -> None:
     """Incorrect maxrss with multi-step jobs."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -1013,7 +1098,7 @@ def test_issue_73_maxrss(mocker):
 """
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
     result = runner.invoke(
-        console.main, "--format JobID,ReqMem,MaxRSS,MemEff --no-color 1234".split()
+        console.main, ["--format", "JobID,ReqMem,MaxRSS,MemEff", "--no-color", "1234"]
     )
 
     assert result.exit_code == 0
@@ -1029,7 +1114,7 @@ def test_issue_73_maxrss(mocker):
 
 
 @pytest.mark.usefixtures("_mock_inquirer")
-def test_issue_73_maxdiskreadnode(mocker):
+def test_issue_73_maxdiskreadnode(mocker: MockerFixture) -> None:
     """Incorrect maxrss with multi-step jobs."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -1044,7 +1129,12 @@ def test_issue_73_maxdiskreadnode(mocker):
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
     result = runner.invoke(
         console.main,
-        "--format JobID,ReqMem,MaxRSS,MemEff,MaxDiskReadNode --no-color 1234".split(),
+        [
+            "--format",
+            "JobID,ReqMem,MaxRSS,MemEff,MaxDiskReadNode",
+            "--no-color",
+            "1234",
+        ],
     )
 
     assert result.exit_code == 0
@@ -1061,7 +1151,7 @@ def test_issue_73_maxdiskreadnode(mocker):
 
 
 @pytest.mark.usefixtures("_mock_inquirer")
-def test_issue_73_totals(mocker):
+def test_issue_73_totals(mocker: MockerFixture) -> None:
     """Incorrect maxrss with multi-step jobs."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -1099,7 +1189,7 @@ def test_issue_73_totals(mocker):
 
 
 @pytest.mark.usefixtures("_mock_inquirer")
-def test_issue_84_empty_used_memory(mocker):
+def test_issue_84_empty_used_memory(mocker: MockerFixture) -> None:
     """Crash when the used memory in JS entry is empty."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
@@ -1141,7 +1231,7 @@ def test_issue_84_empty_used_memory(mocker):
 
 
 @pytest.mark.usefixtures("_mock_inquirer")
-def test_nonempty_used_memory(mocker, strip_js):
+def test_nonempty_used_memory(mocker: MockerFixture, strip_js: strip_js_func) -> None:
     """Check admin comment is used when available."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()

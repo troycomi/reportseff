@@ -1,12 +1,8 @@
 """Tabular efficiency with reportseff."""
 
-try:
-    from importlib.metadata import PackageNotFoundError, version  # type: ignore[import]
-except ImportError:  # pragma: no cover
-    from importlib.metadata import PackageNotFoundError, version  # type: ignore[import]
-
+from importlib.metadata import PackageNotFoundError, version
 
 try:
-    __version__ = version(__name__)
+    __version__ = version("reportseff")
 except PackageNotFoundError:  # pragma: no cover
-    __version__ = "unknown"
+    __version__ = "0.0.0"

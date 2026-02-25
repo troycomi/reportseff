@@ -9,7 +9,7 @@ import json
 import math
 import re
 from datetime import timedelta
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -53,6 +53,8 @@ ADMIN_COMMENT_MIN_LENGTH = 10
 class Job:
     """Representation of scheduler job."""
 
+    __hash__: None = None  # type: ignore[assignment]
+
     def __init__(self, job: str, jobid: str, filename: str | None) -> None:
         """Initialize new job.
 
@@ -78,7 +80,7 @@ class Job:
         self.other_entries: dict[str, Any] = {}
         # safe to cache now
         self.other_entries["JobID"] = self.name()
-        self.comment_data: dict = {}
+        self.comment_data: dict[str, Any] = {}
 
     def __eq__(self, other: Any) -> bool:
         """Test for equality.
@@ -102,7 +104,7 @@ class Job:
         """
         return f"Job(job={self.job}, jobid={self.jobid}, filename={self.filename})"
 
-    def update(self, entry: dict) -> None:
+    def update(self, entry: dict[str, str]) -> None:
         """Update the job properties based on the db_inquirer entry.
 
         Args:
@@ -136,7 +138,7 @@ class Job:
                             self.other_entries[k] = value
 
                 # record totals
-                total_val = value
+                total_val: Any = value
                 with contextlib.suppress(ValueError):
                     total_val = parsemem(value)
 
@@ -158,7 +160,7 @@ class Job:
                     _parse_energy(entry["TRESUsageOutAve"]),
                 )
 
-    def _update_main_job(self, entry: dict) -> None:
+    def _update_main_job(self, entry: dict[str, str]) -> None:
         """Update properties for the main job.
 
         Args:
@@ -234,7 +236,7 @@ class Job:
     def _cache_entries(self) -> None:
         self.other_entries["State"] = self.state
         self.other_entries["TimeEff"] = self.time_eff
-        self.other_entries["CPUEff"] = self.cpu if self.cpu else "---"
+        self.other_entries["CPUEff"] = self.cpu or "---"
         self.other_entries["GPUEff"] = self.gpu if self.gpu is not None else "---"
         if self.gpu_mem is not None:
             self.other_entries["GPUMem"] = self.gpu_mem
@@ -422,7 +424,7 @@ def render_num(value: Any) -> str:
         A human readable value.
         Values less than 1024 are left as is, above is scaled by K, M, etc
     """
-    if not isinstance(value, (int, float)):
+    if not isinstance(value, int | float):
         return str(value)
 
     if value == 0:
@@ -452,7 +454,7 @@ def _parse_energy(tres: str) -> int:
     return 0
 
 
-def _parse_admin_comment_to_dict(comment: str) -> dict | None:
+def _parse_admin_comment_to_dict(comment: str) -> dict[str, Any] | None:
     """Attempt to parse AdminComment.
 
     Args:
@@ -472,17 +474,23 @@ def _parse_admin_comment_to_dict(comment: str) -> dict | None:
         # ignore comments that aren't from jobstats (JS)
         return None
 
-    if comment_type not in ("JS1",):
+    if comment_type != "JS1":
         msg = f"Unknown comment type {comment_type!r}"
         raise ValueError(msg)
     try:
-        return json.loads(gzip.decompress(base64.b64decode(comment[4:])))
+        return cast(
+            "dict[str, Any]",
+            json.loads(gzip.decompress(base64.b64decode(comment[4:]))),
+        )
     except Exception as exception:
         msg = f"Cannot decode comment {comment!r}"
         raise ValueError(msg) from exception
 
 
-def _get_node_data(comment_data: dict, node_data: dict) -> dict:
+def _get_node_data(
+    comment_data: dict[str, Any],
+    node_data: dict[str, Any],
+) -> dict[str, Any]:
     """Parse node level data from admin comment values.
 
     Args:
@@ -493,9 +501,13 @@ def _get_node_data(comment_data: dict, node_data: dict) -> dict:
         the dict with efficiency information for this node
     """
 
-    def get_gpu_value(comment_data: dict, key: str, gpu_number: str) -> float:
+    def get_gpu_value(
+        comment_data: dict[str, Any],
+        key: str,
+        gpu_number: str,
+    ) -> float:
         if key in comment_data and gpu_number in comment_data[key]:
-            return comment_data[key][gpu_number]
+            return float(comment_data[key][gpu_number])
         return 0
 
     result = {}
@@ -526,7 +538,10 @@ def _get_node_data(comment_data: dict, node_data: dict) -> dict:
     return result
 
 
-def _average_nested_dict(nested_key: str, data: dict) -> float | None:
+def _average_nested_dict(
+    nested_key: str,
+    data: dict[str, dict[str, Any]],
+) -> float | None:
     """Average nested values in data dictionary.
 
     Args:
@@ -539,4 +554,4 @@ def _average_nested_dict(nested_key: str, data: dict) -> float | None:
     values = [value[nested_key] for value in data.values() if nested_key in value]
     if values == []:
         return None
-    return round(sum(values) / len(values), 1)
+    return float(round(sum(values) / len(values), 1))

@@ -6,11 +6,14 @@ import copy
 import itertools
 import re
 from dataclasses import dataclass
-from typing import Any, Callable, Generator
+from typing import TYPE_CHECKING, Any, cast
 
 import click
 
 from .job import Job, state_colors
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Generator
 
 #: Regex for format tokens, NAME[%[ALIGNMENT][WIDTH[e?]]]
 FORMAT_RE = re.compile(
@@ -56,7 +59,7 @@ class OutputRenderer:
 
     def __init__(
         self,
-        valid_titles: list,
+        valid_titles: list[str],
         options: RenderOptions,
         format_str: str = "JobID%>,State,Elapsed%>,CPUEff,MemEff",
     ) -> None:
@@ -71,7 +74,7 @@ class OutputRenderer:
         # values required for proper parsing, need not be included in output
         self.required = ["JobID", "JobIDRaw", "State", "AdminComment"]
         # values derived from other values, list includes all dependent values
-        self.derived: dict[str, list] = {
+        self.derived: dict[str, list[str]] = {
             "CPUEff": ["TotalCPU", "AllocCPUS", "Elapsed"],
             "MemEff": ["ReqMem", "NNodes", "AllocCPUS", "MaxRSS", "NTasks"],
             "TimeEff": ["Elapsed", "Timelimit"],
@@ -92,7 +95,11 @@ class OutputRenderer:
         # build columns for sacct call
         self.correct_columns()
 
-    def validate_formatters(self, valid_titles: list, derived_titles: list) -> list:
+    def validate_formatters(
+        self,
+        valid_titles: list[str],
+        derived_titles: list[str],
+    ) -> list[str]:
         """Validate titles of formatters attribute.
 
         Expands GPU to GPUEff and GPUMem in formatters
@@ -113,10 +120,10 @@ class OutputRenderer:
             if "JobID" not in self.formatters:
                 self.formatters.insert(0, ColumnFormatter("JobID"))
             # ensure alignment is <, regardless of inputs
-            self.formatters[self.formatters.index("JobID")].alignment = "<"
+            self.formatters[self.formatters.index(cast("Any", "JobID"))].alignment = "<"
 
         if "GPU" in self.formatters:
-            ind = self.formatters.index("GPU")
+            ind = self.formatters.index(cast("Any", "GPU"))
             self.formatters[ind].title = "GPUEff"
             gpu_mem = copy.copy(self.formatters[ind])
             gpu_mem.title = "GPUMem"
@@ -138,7 +145,7 @@ class OutputRenderer:
 
     def correct_columns(self) -> None:
         """Expand derived values of query columns and remove duplicates."""
-        result: list[list] = [self.derived.get(c, [c]) for c in self.query_columns]
+        result: list[list[str]] = [self.derived.get(c, [c]) for c in self.query_columns]
         # flatten
         flat_result = [item for sublist in result for item in sublist]
 
@@ -197,6 +204,7 @@ class OutputRenderer:
                         fmt.format_node_job(job, gpu=self.options.gpu)
                         for fmt in self.formatters
                     ),
+                    strict=True,
                 )
             )
 
@@ -211,6 +219,8 @@ class OutputRenderer:
 
 class ColumnFormatter:
     """A single column formatting object."""
+
+    __hash__: None = None  # type: ignore[assignment]
 
     def __init__(self, token: str) -> None:
         """Build column entry.
@@ -503,7 +513,7 @@ def color_high(value: float) -> str | None:
     return None
 
 
-def build_formatters(format_str: str) -> list:
+def build_formatters(format_str: str) -> list[ColumnFormatter]:
     """Generate list of formatters from comma separated list in format string.
 
     Args:

@@ -8,7 +8,7 @@ authors = [
 license = "MIT"
 readme = "README.md"
 keywords= ["slurm","seff"]
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dependencies = [
     "click>=6.7",
 ]
@@ -27,7 +27,6 @@ repository= "https://github.com/troycomi/reportseff"
 [dependency-groups]
 dev = [
     "mypy>=1.19.1",
-    "pip-audit>=2.9.0",
     "poethepoet>=0.37.0",
     "pytest>=8.4.2",
     "pytest-cov>=7.0.0",
@@ -42,7 +41,7 @@ format = "ruff format"
 
 checks = ["lint", "audit", "mypy", "pytype"]
 lint = "ruff check"
-audit = "pip-audit"
+audit = "uv run --with pip-audit pip-audit"
 mypy = "mypy ."
 pytype = "pytype ."
 
@@ -55,10 +54,6 @@ old-click-tests = "uv run --with 'click==6.7' pytest"
 coverage-xml = "uv run --with coverage[toml] coverage xml --fail-under 0"
 coverage-upload = "uv run --with codecov codecov"
 coverage = ["coverage-xml", "coverage-upload"]
-
-[tool.poetry.dev-dependencies]
-types-click = "^7.1.8"
-darglint = ">=1.8.1"
 
 [tool.coverage.paths]
 source = ["src", "*/site-packages"]
@@ -115,7 +110,7 @@ select = [
 ]
 
 ignore = [
-  "ANN101",  # missing self
+  "ANN101",  # allow Any
   "ANN401",  # allow Any
   "COM812",  # allow missing commas on last element
   "ISC001",  # recommended by format
@@ -134,11 +129,11 @@ ignore = [
 convention = "google"
 
 [tool.mypy]
-python_version = "3.9"
+python_version = "3.10"
 strict = true
 warn_unused_configs = true
 show_error_codes = true
 
 [tool.pyright]
-pythonVersion = "3.9"
+pythonVersion = "3.10"
 typeCheckingMode = "basic"

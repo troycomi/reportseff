@@ -5,29 +5,33 @@ from __future__ import annotations
 import base64
 import gzip
 import json
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
+if TYPE_CHECKING:
+    from .typings import get_jobstats_func, sacct_return, strip_js_func
 
-def to_comment(info: dict) -> str:
+
+def to_comment(info: dict[str, Any]) -> str:
     """Convert jobstats dict to compressed base64 to match AdminComment."""
     return "JS1:" + base64.b64encode(
         gzip.compress(json.dumps(info, sort_keys=True, indent=4).encode("ascii"))
     ).decode("ascii")
 
 
-@pytest.fixture()
-def get_jobstats():
+@pytest.fixture
+def get_jobstats() -> get_jobstats_func:
     """Fixture to produce jobstats-like encoding."""
     return to_comment
 
 
-@pytest.fixture()
-def strip_js():
+@pytest.fixture
+def strip_js() -> strip_js_func:
     """Removes entries from jobstats string, converting to dict internally."""
 
     # wrap to make a fixture
-    def strip_js_inner(js_string: str, to_remove: list[str]):
+    def strip_js_inner(js_string: str, to_remove: list[str]) -> str:
         info = json.loads(gzip.decompress(base64.b64decode(js_string[4:])))
         for token in to_remove:
             if token in info:
@@ -40,7 +44,7 @@ def strip_js():
     return strip_js_inner
 
 
-def to_sacct_dict(sacct_line: str) -> dict:
+def to_sacct_dict(sacct_line: str) -> dict[str, str]:
     """Convert debug print statement to dictionary like from sacct."""
     columns = (
         "AdminComment",
@@ -56,11 +60,11 @@ def to_sacct_dict(sacct_line: str) -> dict:
         "TotalCPU",
         "NTasks",
     )
-    return dict(zip(columns, sacct_line.split("|")))
+    return dict(zip(columns, sacct_line.split("|"), strict=False))
 
 
-@pytest.fixture()
-def single_core():
+@pytest.fixture
+def single_core() -> sacct_return:
     """Single core 8206163."""
     comment = to_comment(
         {
@@ -94,8 +98,8 @@ def single_core():
     ]
 
 
-@pytest.fixture()
-def multi_node():
+@pytest.fixture
+def multi_node() -> sacct_return:
     """Multiple nodes with 20 cpus, 80 GB, 9 minutes 8205048."""
     comment = to_comment(
         {
@@ -143,8 +147,8 @@ def multi_node():
     ]
 
 
-@pytest.fixture()
-def single_gpu():
+@pytest.fixture
+def single_gpu() -> sacct_return:
     """One gpu, used all 16 GB, 30% eff 8197399."""
     comment = to_comment(
         {
@@ -177,8 +181,8 @@ def single_gpu():
     ]
 
 
-@pytest.fixture()
-def multi_gpu():
+@pytest.fixture
+def multi_gpu() -> sacct_return:
     """4 gpus, 30% mem eff, 3% util 8189521."""
     comment = to_comment(
         {
@@ -221,8 +225,8 @@ def multi_gpu():
     ]
 
 
-@pytest.fixture()
-def multi_node_multi_gpu():
+@pytest.fixture
+def multi_node_multi_gpu() -> sacct_return:
     """Made up job with multiple nodes and gpus."""
     comment = to_comment(
         {
@@ -284,8 +288,8 @@ def multi_node_multi_gpu():
     ]
 
 
-@pytest.fixture()
-def short_job():
+@pytest.fixture
+def short_job() -> sacct_return:
     """Used for jobs which don't last long enough 8205464."""
     comment = "JS1:Short"
     return [
@@ -300,8 +304,8 @@ def short_job():
     ]
 
 
-@pytest.fixture()
-def bad_gpu():
+@pytest.fixture
+def bad_gpu() -> sacct_return:
     """Job with a failure due to bad gpu."""
     return [
         to_sacct_dict(
@@ -320,8 +324,8 @@ def bad_gpu():
     ]
 
 
-@pytest.fixture()
-def bad_gpu_used():
+@pytest.fixture
+def bad_gpu_used() -> sacct_return:
     """Job with a failure due to gpu with no utilization."""
     return [
         to_sacct_dict(
@@ -336,8 +340,8 @@ def bad_gpu_used():
     ]
 
 
-@pytest.fixture()
-def multinode_job():
+@pytest.fixture
+def multinode_job() -> sacct_return:
     """Job run on multiple nodes."""
     return [
         to_sacct_dict(
@@ -349,8 +353,8 @@ def multinode_job():
     ]
 
 
-@pytest.fixture()
-def issue_41():
+@pytest.fixture
+def issue_41() -> sacct_return:
     """Job run on multiple nodes, with multiple tasks."""
     return [
         to_sacct_dict(
@@ -368,8 +372,8 @@ def issue_41():
     ]
 
 
-@pytest.fixture()
-def console_jobs():
+@pytest.fixture
+def console_jobs() -> dict[str, str]:
     """Collection of sacct outputs for test_reportseff."""
     # indexed on job id
     return {
@@ -418,18 +422,19 @@ def console_jobs():
             "^|^1400K^|^1^|^1^|^16000Mn^|^PENDING^|^00:00:00^|^\n"
         ),
         "23000381": (
-            "^|^8^|^00:00:12^|^23000381^|^23000381^|^^|^1^|^1^|^4000Mc^|^FAILED^|^00:00:00^|^\n"
-            "^|^8^|^00:00:12^|^23000381.batch^|^23000381.batch^|^^|^1^|^1^|^4000Mc^|^"
-            "FAILED^|^00:00:00^|^\n"
-            "^|^8^|^00:00:12^|^23000381.extern^|^23000381.extern^|^1592K^|^1^|^1^|^4000Mc^|^"
-            "COMPLETED^|^00:00:00^|^\n"
+            "^|^8^|^00:00:12^|^23000381^|^23000381^|^^|^1^|^1^|^4000Mc^|^FAILED"
+            "^|^00:00:00^|^00:00:00^|^\n"
+            "^|^8^|^00:00:12^|^23000381.batch^|^23000381.batch^|^^|^1^|^1^|^"
+            "4000Mc^|^FAILED^|^00:00:00^|^00:00:00^|^\n"
+            "^|^8^|^00:00:12^|^23000381.extern^|^23000381.extern^|^1592K"
+            "^|^1^|^1^|^4000Mc^|^COMPLETED^|^00:00:00^|^00:00:00^|^\n"
         ),
         "23000210": (
             "^|^8^|^00:00:00^|^23000210^|^23000210^|^^|^1^|^1^|^20000Mn^|^"
-            "FAILED^|^00:00.007^|^\n"
+            "FAILED^|^00:00.007^|^00:00:00^|^\n"
             "^|^8^|^00:00:00^|^23000210.batch^|^23000210.batch^|^1988K^|^1^|^1^|^20000Mn^|^"
-            "FAILED^|^00:00.006^|^\n"
+            "FAILED^|^00:00.006^|^00:00:00^|^\n"
             "^|^8^|^00:00:00^|^23000210.extern^|^23000210.extern^|^1556K^|^1^|^1^|^20000Mn^|^"
-            "COMPLETED^|^00:00:00^|^\n"
+            "COMPLETED^|^00:00:00^|^00:00:00^|^\n"
         ),
     }

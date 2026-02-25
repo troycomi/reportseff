@@ -40,7 +40,7 @@ class JobCollection:
         self.jobs: dict[str, Job] = {}
         self.renderer: OutputRenderer | None = None
         self.dir_name: Path | None = None
-        self.partition_timelimits: dict = {}
+        self.partition_timelimits: dict[str, str] = {}
 
     def get_columns(self) -> list[str]:
         """The list of columns requested from inquirer.
@@ -96,7 +96,7 @@ class JobCollection:
             raise ValueError(msg)
         self.dir_name = working_directory
 
-    def set_jobs(self, jobs: tuple) -> None:
+    def set_jobs(self, jobs: tuple[str, ...]) -> None:
         """Set the collection jobs to the provided job ids.
 
         if jobs is empty, use the current working directory
@@ -226,7 +226,7 @@ class JobCollection:
 
         self.jobs = jobs_to_keep
 
-    def process_entry(self, entry: dict, *, add_job: bool = False) -> None:
+    def process_entry(self, entry: dict[str, str], *, add_job: bool = False) -> None:
         """Update the jobs collection with information from the provided entry.
 
         Args:
@@ -303,7 +303,7 @@ class JobCollection:
 
         return sorted(self.jobs.values(), key=get_job_name)
 
-    def set_partition_limits(self, limits: dict) -> None:
+    def set_partition_limits(self, limits: dict[str, str]) -> None:
         """Set partition limits from db inquirer.
 
         Args:
