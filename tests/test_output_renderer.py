@@ -116,7 +116,7 @@ def some_jobs() -> list[Job]:
             "AllocCPUS": "1",
             "ReqMem": "2Gn",
             "TotalCPU": "00:04:00",
-            "Elapsed": "00:21:00",
+            "Elapsed": "00:22:00",
             "Timelimit": "00:20:00",
             "MaxRSS": "",
             "NNodes": "1",
@@ -397,7 +397,7 @@ def test_renderer_format_jobs(some_jobs: list[Job]) -> None:
         assert code == "\x1b[0m"
     for code in codes[0:10:20]:
         assert code == "\x1b[1m"  # bold
-    for i in (22, 24, 26, 28):
+    for i in (22, 24, 26):
         assert codes[i] == "\x1b[31m"  # red
     for i in (12, 14, 30):
         assert codes[i] == "\x1b[32m"  # green
@@ -407,6 +407,8 @@ def test_renderer_format_jobs(some_jobs: list[Job]) -> None:
         assert codes[i] == "\x1b[34m"  # blue
     for i in (18,):
         assert codes[i] == "\x1b[36m"  # cyan
+    for i in (28,):
+        assert codes[i] == "\x1b[35m"  # magenta
     # remove color codes
     expected = [
         "JobID State Elapsed CPUEff ReqMem TimeEff",
@@ -414,7 +416,7 @@ def test_renderer_format_jobs(some_jobs: list[Job]) -> None:
         "24371656 PENDING --- --- --- ---",
         "24371657 RUNNING 00:10:00 --- 1Gn 50.0%",
         "24371658 CANCELLED 00:00:00 --- 1Gn 0.0%",
-        "24371659 TIMEOUT 00:21:00 19.0% 2Gn 105.0%",
+        "24371659 TIMEOUT 00:22:00 18.2% 2Gn 110.0%",
         "24371660 OTHER 00:12:05 74.5% 2Gn 60.4%",
     ]
     assert_result_matches(result, expected)
