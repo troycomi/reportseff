@@ -28,6 +28,7 @@ FORMAT_RE = re.compile(
 MID_LIMIT_LOW = 20
 MID_LIMIT_HIGH = 90
 MID_LIMIT_GOOD = 60
+MID_LIMIT_TOO_HIGH = 105
 HIGH_LIMIT_LOW = 20
 HIGH_LIMIT_GOOD = 80
 
@@ -490,6 +491,8 @@ def color_mid(value: float) -> str | None:
     Returns:
         The color string for click or None if color should be unchanged
     """
+    if value > MID_LIMIT_TOO_HIGH:
+        return "magenta"
     if value < MID_LIMIT_LOW or value > MID_LIMIT_HIGH:
         return "red"
     if value > MID_LIMIT_GOOD:

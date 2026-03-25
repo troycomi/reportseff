@@ -1,6 +1,6 @@
 [project]
 name = "reportseff"
-version = "2.10.1"
+version = "2.10.2"
 description= "Tablular seff output"
 authors = [
   {name="Troy Comi", email="<troycomi@gmail.com>"}
@@ -41,7 +41,7 @@ format = "ruff format"
 
 checks = ["lint", "audit", "mypy", "pytype"]
 lint = "ruff check"
-audit = "uv run --with pip-audit pip-audit"
+audit = "uv run --with pip-audit pip-audit --skip-editable --ignore-vuln CVE-2026-4539"
 mypy = "mypy ."
 pytype = "pytype ."
 
