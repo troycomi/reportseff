@@ -1,6 +1,6 @@
 [project]
 name = "reportseff"
-version = "2.10.1"
+version = "2.10.2"
 description= "Tablular seff output"
 authors = [
   {name="Troy Comi", email="<troycomi@gmail.com>"}
