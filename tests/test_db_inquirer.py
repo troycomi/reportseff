@@ -6,7 +6,12 @@ import subprocess
 import pytest
 from pytest_mock import MockerFixture
 
-from reportseff.db_inquirer import SacctInquirer
+import reportseff.db_inquirer as _dbi_mod
+from reportseff.db_inquirer import (
+    SacctInquirer,
+    _check_jobstats_available,
+    augment_with_jobstats,
+)
 
 STANDARD_ARGS = ["sacct", "--parsable", "-n", "--delimiter=^|^"]
 
@@ -894,3 +899,197 @@ def test_sacct_newline_jobs_issue_63(
     debug: list[str] = []
     sacct.get_db_output(["c1", "c2"], ["j1", "j2", "j3"], debug.append)
     assert debug[0] == ("c1 \\n j1^|^c2j1^|^\nc1j2^|^c2j2^|^\nc1j3^|^c2j3^|^\n")
+
+
+# ---------------------------------------------------------------------------
+# Tests for _check_jobstats_available
+# ---------------------------------------------------------------------------
+
+@pytest.fixture(autouse=False)
+def reset_jobstats_cache():
+    """Reset the module-level availability cache before and after each test."""
+    _dbi_mod._JOBSTATS_AVAILABLE = None
+    yield
+    _dbi_mod._JOBSTATS_AVAILABLE = None
+
+
+def test_check_jobstats_not_on_path(mocker: MockerFixture, reset_jobstats_cache) -> None:
+    """Return False when jobstats is not found on PATH."""
+    mocker.patch("reportseff.db_inquirer.shutil.which", return_value=None)
+    assert _check_jobstats_available() is False
+
+
+def test_check_jobstats_found_with_base64_flag(
+    mocker: MockerFixture, reset_jobstats_cache
+) -> None:
+    """Return True when jobstats help text includes -b / --base64."""
+    mocker.patch("reportseff.db_inquirer.shutil.which", return_value="/usr/bin/jobstats")
+    mock_result = mocker.MagicMock()
+    mock_result.stdout = "usage: jobstats [-h] [-j] [-b] [--base64] jobid\n"
+    mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=mock_result)
+    assert _check_jobstats_available() is True
+
+
+def test_check_jobstats_found_without_base64_flag(
+    mocker: MockerFixture, reset_jobstats_cache
+) -> None:
+    """Return False when jobstats exists but help text lacks -b / --base64."""
+    mocker.patch("reportseff.db_inquirer.shutil.which", return_value="/usr/bin/jobstats")
+    mock_result = mocker.MagicMock()
+    mock_result.stdout = "usage: jobstats [-h] [-j] jobid\n"
+    mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=mock_result)
+    assert _check_jobstats_available() is False
+
+
+def test_check_jobstats_subprocess_exception(
+    mocker: MockerFixture, reset_jobstats_cache
+) -> None:
+    """Return False when the jobstats subprocess itself raises."""
+    mocker.patch("reportseff.db_inquirer.shutil.which", return_value="/usr/bin/jobstats")
+    mocker.patch(
+        "reportseff.db_inquirer.subprocess.run", side_effect=OSError("exec failed")
+    )
+    assert _check_jobstats_available() is False
+
+
+def test_check_jobstats_result_is_cached(
+    mocker: MockerFixture, reset_jobstats_cache
+) -> None:
+    """Availability check is cached; subprocess is only called once."""
+    mocker.patch("reportseff.db_inquirer.shutil.which", return_value="/usr/bin/jobstats")
+    mock_result = mocker.MagicMock()
+    mock_result.stdout = "usage: jobstats [-b] jobid\n"
+    mock_sub = mocker.patch(
+        "reportseff.db_inquirer.subprocess.run", return_value=mock_result
+    )
+    _check_jobstats_available()
+    _check_jobstats_available()
+    # subprocess.run should only have been called once (for the -h check)
+    assert mock_sub.call_count == 1
+
+
+# ---------------------------------------------------------------------------
+# Tests for augment_with_jobstats
+# ---------------------------------------------------------------------------
+
+def _make_row(
+    jobid: str,
+    jobidraw: str,
+    admin_comment: str = "",
+) -> dict:
+    return {"JobID": jobid, "JobIDRaw": jobidraw, "AdminComment": admin_comment}
+
+
+def test_augment_no_missing_rows(mocker: MockerFixture) -> None:
+    """Rows that already have AdminComment are not passed to jobstats."""
+    mock_sub = mocker.patch("reportseff.db_inquirer.subprocess.run")
+    rows = [_make_row("123", "123", "JS1:abc123def456ghi7")]
+    result = augment_with_jobstats(rows)
+    assert result[0]["AdminComment"] == "JS1:abc123def456ghi7"
+    mock_sub.assert_not_called()
+
+
+def test_augment_injects_valid_payload(mocker: MockerFixture) -> None:
+    """Valid base64 lines are prefixed with JS1: and injected."""
+    fake_b64 = "YWJjZGVmZ2hpamtsbW5vcA=="  # arbitrary valid base64
+    mock_result = mocker.MagicMock()
+    mock_result.stdout = fake_b64 + "\n"
+    mock_result.returncode = 0
+    mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=mock_result)
+
+    rows = [_make_row("456", "456")]
+    result = augment_with_jobstats(rows)
+    assert result[0]["AdminComment"] == f"JS1:{fake_b64}"
+
+
+def test_augment_skips_none_sentinel(mocker: MockerFixture) -> None:
+    """Lines equal to 'None' (no Prometheus data) are silently skipped."""
+    mock_result = mocker.MagicMock()
+    mock_result.stdout = "None\n"
+    mock_result.returncode = 0
+    mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=mock_result)
+
+    rows = [_make_row("789", "789")]
+    result = augment_with_jobstats(rows)
+    assert result[0]["AdminComment"] == ""
+
+
+def test_augment_skips_short_sentinel(mocker: MockerFixture) -> None:
+    """Lines equal to 'Short' (job too brief) are silently skipped."""
+    mock_result = mocker.MagicMock()
+    mock_result.stdout = "Short\n"
+    mock_result.returncode = 0
+    mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=mock_result)
+
+    rows = [_make_row("321", "321")]
+    result = augment_with_jobstats(rows)
+    assert result[0]["AdminComment"] == ""
+
+
+def test_augment_partial_failure(mocker: MockerFixture) -> None:
+    """On partial failure only the rows matching stdout lines are updated."""
+    fake_b64 = "dGVzdHBheWxvYWQ="
+    mock_result = mocker.MagicMock()
+    # jobstats processed only the first ID before failing
+    mock_result.stdout = fake_b64 + "\n"
+    mock_result.returncode = 1
+    mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=mock_result)
+
+    rows = [_make_row("1", "1"), _make_row("2", "2")]
+    result = augment_with_jobstats(rows)
+    assert result[0]["AdminComment"] == f"JS1:{fake_b64}"
+    assert result[1]["AdminComment"] == ""  # not reached
+
+
+def test_augment_skips_substep_rows(mocker: MockerFixture) -> None:
+    """Rows with a '.' in JobID (.batch, .extern) are never sent to jobstats."""
+    mock_sub = mocker.patch("reportseff.db_inquirer.subprocess.run")
+    rows = [_make_row("123.batch", "123", "")]
+    augment_with_jobstats(rows)
+    mock_sub.assert_not_called()
+
+
+def test_augment_subprocess_exception(mocker: MockerFixture) -> None:
+    """If the subprocess itself raises, rows are returned unchanged."""
+    mocker.patch(
+        "reportseff.db_inquirer.subprocess.run", side_effect=OSError("exec failed")
+    )
+    rows = [_make_row("555", "555")]
+    result = augment_with_jobstats(rows)
+    assert result[0]["AdminComment"] == ""
+
+
+def test_augment_batch_array_job(mocker: MockerFixture) -> None:
+    """All array task rows are batched into a single subprocess call."""
+    b64_1 = "cGF5bG9hZDE="
+    b64_2 = "cGF5bG9hZDI="
+    mock_result = mocker.MagicMock()
+    mock_result.stdout = f"{b64_1}\n{b64_2}\n"
+    mock_result.returncode = 0
+    mock_sub = mocker.patch(
+        "reportseff.db_inquirer.subprocess.run", return_value=mock_result
+    )
+
+    rows = [_make_row("100_1", "9001"), _make_row("100_2", "9002")]
+    result = augment_with_jobstats(rows)
+
+    assert result[0]["AdminComment"] == f"JS1:{b64_1}"
+    assert result[1]["AdminComment"] == f"JS1:{b64_2}"
+    # only one subprocess call with both raw IDs
+    assert mock_sub.call_count == 1
+    call_args = mock_sub.call_args[0][0]
+    assert "9001" in call_args
+    assert "9002" in call_args
+
+
+def test_augment_debug_message(mocker: MockerFixture) -> None:
+    """debug_cmd is called with an informational message when rows are missing."""
+    mock_result = mocker.MagicMock()
+    mock_result.stdout = "None\n"
+    mock_result.returncode = 0
+    mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=mock_result)
+
+    debug_messages: list[str] = []
+    rows = [_make_row("42", "42")]
+    augment_with_jobstats(rows, debug_cmd=debug_messages.append)
+    assert any("jobstats fallback" in m for m in debug_messages)

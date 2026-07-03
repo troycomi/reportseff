@@ -5,6 +5,7 @@ from __future__ import annotations
 import datetime
 import re
 import shlex
+import shutil
 import subprocess
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any
@@ -13,6 +14,131 @@ import click
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+
+# Fallback mechanism for GPU metrics recovery.
+# Jobstats is migrating GPU metrics storage from Slurm AdminComment to Prometheus.
+# See: https://github.com/PrincetonUniversity/jobstats/pull/55
+# When the optional mirror_to_admin_comment config flag is not enabled,
+# reportseff can recover GPU metrics from jobstats via the -b flag.
+# This allows continued GPU efficiency reporting even if AdminComment is unavailable.
+
+# Minimum length for a valid AdminComment payload (mirrors job.ADMIN_COMMENT_MIN_LENGTH)
+_ADMIN_COMMENT_MIN_LENGTH = 10
+
+# Module-level cache so the availability check runs at most once per process.
+_JOBSTATS_AVAILABLE: bool | None = None
+
+
+def _check_jobstats_available() -> bool:
+    """Return True if `jobstats -b` is usable on the current PATH.
+
+    The result is cached after the first call so subsequent invocations are
+    free.
+
+    Returns:
+        True when `jobstats` is found on PATH **and** its help text confirms
+        the ``-b`` / ``--base64`` flag is present.
+    """
+    global _JOBSTATS_AVAILABLE  # noqa: PLW0603
+    if _JOBSTATS_AVAILABLE is not None:
+        return _JOBSTATS_AVAILABLE
+
+    if shutil.which("jobstats") is None:
+        _JOBSTATS_AVAILABLE = False
+        return False
+
+    try:
+        result = subprocess.run(
+            ["jobstats", "-h"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            encoding="utf8",
+            timeout=10,
+        )
+        help_text = result.stdout
+    except Exception:  # noqa: BLE001
+        _JOBSTATS_AVAILABLE = False
+        return False
+
+    _JOBSTATS_AVAILABLE = "--base64" in help_text or "-b" in help_text
+    return _JOBSTATS_AVAILABLE
+
+
+def augment_with_jobstats(
+    rows: list[dict[str, str]],
+    *,
+    debug_cmd: "Callable[[str], Any] | None" = None,
+) -> list[dict[str, str]]:
+    """Fill missing AdminComment values using `jobstats -b`.
+
+    For rows whose ``AdminComment`` is absent or shorter than the minimum
+    threshold, this function calls ``jobstats <id1> <id2> … -b`` in a single
+    subprocess and injects the returned base64 payloads back as
+    ``JS1:<payload>``, which is the format expected by
+    :func:`~reportseff.job._parse_admin_comment_to_dict`.
+
+    The subprocess call is batched (one fork for all missing rows) to avoid
+    spawning one process per array-job task.  jobstats processes IDs in order
+    and prints each result before moving to the next, so on a partial failure
+    the output lines map positionally to the *first K* input IDs.
+
+    Args:
+        rows: sacct rows as returned by :meth:`SacctInquirer.get_db_output`.
+        debug_cmd: optional callable to receive a debug message.
+
+    Returns:
+        The same list with ``AdminComment`` updated in-place for matched rows.
+    """
+    # Collect rows that need augmentation.  Skip .batch/.extern sub-steps
+    # (JobIDRaw is empty or equals the parent) and rows already having data.
+    missing_idx: list[int] = []
+    missing_rawids: list[str] = []
+
+    for i, row in enumerate(rows):
+        admin = row.get("AdminComment", "")
+        rawid = row.get("JobIDRaw", "")
+        if (
+            len(admin) <= _ADMIN_COMMENT_MIN_LENGTH
+            and rawid
+            and "." not in row.get("JobID", "")
+        ):
+            missing_idx.append(i)
+            missing_rawids.append(rawid)
+
+    if not missing_rawids:
+        return rows
+
+    if debug_cmd is not None:
+        debug_cmd(
+            f"jobstats fallback: fetching GPU metrics for "
+            f"{len(missing_rawids)} job(s) via `jobstats -b`"
+        )
+
+    try:
+        proc = subprocess.run(
+            ["jobstats", *missing_rawids, "-b"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            encoding="utf8",
+        )
+    except Exception:  # noqa: BLE001
+        # jobstats unavailable or crashed entirely — leave rows unchanged.
+        return rows
+
+    output_lines = [line for line in proc.stdout.splitlines() if line]
+
+    # Map lines back to input IDs positionally.  jobstats exits on the first
+    # failure so stdout may contain fewer lines than requested.
+    for list_pos, row_idx in enumerate(missing_idx):
+        if list_pos >= len(output_lines):
+            break
+        payload = output_lines[list_pos]
+        # Skip jobstats sentinel values.
+        if payload in ("None", "Short"):
+            continue
+        rows[row_idx]["AdminComment"] = "JS1:" + payload
+
+    return rows
 
 
 class BaseInquirer(ABC):

@@ -9,7 +9,7 @@ from typing import Any
 import click
 
 from . import __version__
-from .db_inquirer import BaseInquirer, SacctInquirer
+from .db_inquirer import BaseInquirer, SacctInquirer, _check_jobstats_available, augment_with_jobstats
 from .job_collection import JobCollection
 from .output_renderer import OutputRenderer, RenderOptions
 from .parameters import ReportseffParameters
@@ -148,6 +148,16 @@ MAX_ENTRIES_TO_ECHO = 20
     help="Only include array jobs with at least this many tasks. "
     "Non-array jobs are always included. Set to 0 to include all jobs (default).",
 )
+@click.option(
+    "--no-jobstats-fallback",
+    "no_jobstats_fallback",
+    is_flag=True,
+    default=False,
+    help="Disable the jobstats fallback for GPU metrics. "
+    "By default, when AdminComment is absent reportseff will attempt to "
+    "recover GPU efficiency data by calling `jobstats -b`. "
+    "Pass this flag to suppress that behaviour.",
+)
 @click.version_option(version=__version__)
 @click.argument("jobs", nargs=-1)
 def main(**kwargs: Any) -> None:
@@ -219,6 +229,11 @@ def get_jobs(args: ReportseffParameters) -> tuple[str, int]:
         job_collection,
         debug=args.debug,
     )
+
+    if not args.no_jobstats_fallback and _check_jobstats_available():
+        debug_cmd = (lambda msg: click.echo(msg, err=True)) if args.debug else None
+        db_output = augment_with_jobstats(db_output, debug_cmd=debug_cmd)
+
     entry = None
     try:
         for entry in db_output:
