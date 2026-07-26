@@ -228,20 +228,6 @@ directory to check for slurm outputs.
   requires additional sacct fields from jobstats.
 - `--parsable/-p`: Ignore formatting and output as a `|` delimited table.  Useful
   for piping into more complex analyses.
-- `--array-summary`: Append a summary block after each job array, reporting
-  min/mean/max for the displayed efficiency columns, per-state task counters,
-  completion progress, total accumulated task-time, and compacted metadata
-  (shared values shown once, differing values listed; node lists collapsed into
-  Slurm-style ranges).  Efficiency statistics are computed over completed tasks.
-  Opt-in; has no effect when not set and is suppressed in `--parsable` mode.
-- `--array-summary-hist`: With `--array-summary`, add a task runtime histogram
-  (minutes) for arrays larger than `--array-summary-hist-min-tasks`.  Bars use
-  Unicode block characters, falling back to ASCII when the output encoding is
-  not UTF-based.
-- `--array-summary-hist-min-tasks`: Minimum number of array tasks before a
-  runtime histogram is drawn (default 50).
-- `--array-summary-sparkline`: Render the runtime distribution as a compact
-  one-line sparkline instead of a multi-line histogram.
 
 ## Status, Contributions, and Support
 

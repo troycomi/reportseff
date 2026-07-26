@@ -12,16 +12,6 @@ from typing import TYPE_CHECKING, Any, cast
 
 import click
 
-from .array_summary import (
-    ArraySummary,
-    MetricStat,
-    build_array_summary,
-    format_duration,
-    group_jobs_by_array,
-    is_array_group,
-    render_histogram,
-    render_sparkline,
-)
 from .job import Job, state_colors
 
 if TYPE_CHECKING:
@@ -55,22 +45,8 @@ def _supports_unicode() -> bool:
     return "utf" in encoding.lower()
 
 
-#: Whether the terminal can render the Unicode block/bullet glyphs.
+#: Whether the terminal can render Unicode glyphs (used by `summarize`).
 SUPPORTS_UNICODE = _supports_unicode()
-#: Separator and marker glyphs, with ASCII fallbacks.
-_BULLET = "•" if SUPPORTS_UNICODE else "|"
-_MIDDOT = "·" if SUPPORTS_UNICODE else "-"
-_WARN = "⚠ low" if SUPPORTS_UNICODE else "(low)"
-
-
-def _summary_target_type(title: str) -> str | None:
-    """Map a column title to its efficiency color type ("high"/"mid"/None)."""
-    fold = title.casefold()
-    if fold in ("cpueff", "gpueff", "gpu"):
-        return "high"
-    if fold in ("timeeff", "memeff", "gpumem"):
-        return "mid"
-    return None
 
 
 @dataclass
@@ -82,20 +58,12 @@ class RenderOptions:
         gpu: in addition to node, should each GPU be reported
         parsable: should output be rendered in a parsable format
         delimiter: string to use for separating columns when parsable is set
-        array_summary: append a summary block after each array group
-        array_summary_hist: add a runtime histogram for large arrays
-        array_summary_hist_min_tasks: min tasks before drawing a histogram
-        array_summary_sparkline: use a compact one-line sparkline
     """
 
     node: bool = False
     gpu: bool = False
     parsable: bool = False
     delimiter: str = "|"
-    array_summary: bool = False
-    array_summary_hist: bool = False
-    array_summary_hist_min_tasks: int = 50
-    array_summary_sparkline: bool = False
 
     def __post_init__(self) -> None:
         """Post init method to handle delimiter and parsable."""
@@ -240,15 +208,7 @@ class OutputRenderer:
             if len(jobs) != 0:
                 result += "\n"
 
-        summaries_enabled = (
-            self.options.array_summary
-            and not self.options.parsable
-            and len(self.formatters) > 1
-        )
-        if summaries_enabled:
-            result += self._format_with_summaries(jobs)
-        else:
-            result += "\n".join(self._format_single_job(job) for job in jobs)
+        result += "\n".join(self._format_single_job(job) for job in jobs)
 
         return result
 
@@ -269,143 +229,6 @@ class OutputRenderer:
                 )
             )
         return delimiter.join(fmt.format_job(job) for fmt in self.formatters).rstrip()
-
-    def _format_with_summaries(self, jobs: list[Job]) -> str:
-        """Render jobs grouped by array, appending a summary after each array."""
-        titles = [fmt.title for fmt in self.formatters]
-        lines: list[str] = []
-        for base, tasks in group_jobs_by_array(jobs):
-            lines.extend(self._format_single_job(job) for job in tasks)
-            if is_array_group(tasks):
-                lines.extend(self._format_summary_block(base, tasks, titles))
-        return "\n".join(lines)
-
-    def _format_summary_block(
-        self,
-        base: str,
-        tasks: list[Job],
-        titles: list[str],
-    ) -> list[str]:
-        """Build the colored, human-readable summary lines for one array."""
-        summary = build_array_summary(base, tasks, titles)
-        indent = "  "
-        lines: list[str] = []
-
-        # header: id, completion progress, state counters
-        pct = (
-            round(summary.completed_tasks / summary.total_tasks * 100)
-            if summary.total_tasks
-            else 0
-        )
-        header = click.style(f"Array {base}", bold=True)
-        header += (
-            f"  {_BULLET}  {summary.completed_tasks}/{summary.total_tasks}"
-            f" completed ({pct}%)"
-        )
-        counters = f"  {_BULLET}  ".join(
-            click.style(f"{state} {count}", fg=state_colors.get(state))
-            for state, count in sorted(summary.state_counts.items())
-        )
-        if counters:
-            header += f"  {_BULLET}  {counters}"
-        lines.append(header)
-
-        # per-metric min/mean/max
-        lines.extend(
-            indent + self._format_metric_line(metric) for metric in summary.metrics
-        )
-
-        # total accumulated runtime
-        if summary.total_task_seconds > 0:
-            hours = summary.total_task_seconds / 3600
-            lines.append(
-                f"{indent}Total task-time: {hours:.1f}h"
-                f" across {summary.total_tasks} tasks"
-            )
-
-        # per-state mean runtime
-        if summary.per_state_mean_seconds:
-            parts = f"  {_BULLET}  ".join(
-                f"{click.style(state, fg=state_colors.get(state))}"
-                f" {format_duration(seconds)}"
-                for state, seconds in sorted(summary.per_state_mean_seconds.items())
-            )
-            lines.append(f"{indent}Mean runtime: {parts}")
-
-        # shared metadata (constant across all tasks)
-        if summary.shared_values:
-            shared = ", ".join(
-                f"{title}={value}" for title, value in summary.shared_values
-            )
-            lines.append(f"{indent}Shared: {shared}")
-
-        # heterogeneous metadata
-        lines.extend(
-            f"{indent}{title}: {', '.join(values)}"
-            for title, values in summary.unique_values
-        )
-
-        # collapsed node hostlist
-        if summary.node_hostlist:
-            lines.append(f"{indent}Nodes: {summary.node_hostlist}")
-
-        # runtime histogram or sparkline for large arrays
-        lines.extend(self._format_runtime_distribution(summary, indent))
-
-        return lines
-
-    def _format_metric_line(self, metric: MetricStat) -> str:
-        """Format a single min/mean/max metric line with coloring."""
-        target = _summary_target_type(metric.title)
-
-        def render_value(value: float) -> str:
-            if target in ("high", "mid"):
-                text, color = render_eff(round(value, 1), target)
-                return click.style(text, fg=color) if color else text
-            return f"{round(value, 1)}"
-
-        line = (
-            f"{metric.title}: min {render_value(metric.minimum)}"
-            f" {_MIDDOT} mean {render_value(metric.mean)}"
-            f" {_MIDDOT} max {render_value(metric.maximum)}"
-        )
-        low = None
-        if target == "high":
-            low = HIGH_LIMIT_LOW
-        elif target == "mid":
-            low = MID_LIMIT_LOW
-        if low is not None and metric.mean < low:
-            line += "  " + click.style(_WARN, fg="red")
-        return line
-
-    def _format_runtime_distribution(
-        self,
-        summary: ArraySummary,
-        indent: str,
-    ) -> list[str]:
-        """Render histogram or sparkline lines if enabled and above threshold."""
-        if not (
-            self.options.array_summary_hist
-            and summary.total_tasks > self.options.array_summary_hist_min_tasks
-            and summary.elapsed_minutes
-        ):
-            return []
-
-        if self.options.array_summary_sparkline:
-            spark = render_sparkline(summary.elapsed_minutes)
-            low = round(min(summary.elapsed_minutes))
-            high = round(max(summary.elapsed_minutes))
-            return [
-                f"{indent}Runtime dist: {spark}"
-                f" (n={len(summary.elapsed_minutes)}, {low}-{high} min)"
-            ]
-
-        return [
-            indent + line
-            for line in render_histogram(
-                summary.elapsed_minutes, ascii_only=not SUPPORTS_UNICODE
-            )
-        ]
 
 
 class ColumnFormatter:

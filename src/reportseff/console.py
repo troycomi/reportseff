@@ -15,9 +15,69 @@ from .output_renderer import OutputRenderer, RenderOptions
 from .parameters import ReportseffParameters
 
 MAX_ENTRIES_TO_ECHO = 20
+#: Name of the subcommand `reportseff <args>` dispatches to when the first
+#: token isn't a registered subcommand name. Keeps the pre-subcommand CLI
+#: surface working unchanged.
+DEFAULT_COMMAND_NAME = "report"
 
 
-@click.command()
+class DefaultGroup(click.Group):
+    """A click.Group that falls back to a default subcommand.
+
+    Lets ``reportseff <args>`` keep behaving exactly as it did before this
+    project gained subcommands: any invocation whose first token isn't a
+    registered subcommand name (and isn't ``--help``/``--version``, which
+    stay at the group level so they list/identify the tool as a whole) is
+    treated as arguments to the default command instead.
+
+    Note: this means a bare positional argument that happens to exactly
+    match a subcommand name (e.g. a job file literally named ``report``)
+    would be interpreted as that subcommand. This mirrors the trade-off any
+    default-subcommand CLI makes and is not expected to matter in practice
+    for job ids or slurm output filenames.
+    """
+
+    def __init__(self, *args: Any, default_cmd_name: str, **kwargs: Any) -> None:
+        """Store the name of the subcommand to dispatch to by default.
+
+        Args:
+            args: forwarded to click.Group
+            default_cmd_name: name of the registered subcommand to use when
+                the first CLI token isn't itself a subcommand name
+            kwargs: forwarded to click.Group
+        """
+        self.default_cmd_name = default_cmd_name
+        super().__init__(*args, **kwargs)
+
+    def parse_args(self, ctx: click.Context, args: list[str]) -> list[str]:
+        """Prepend the default command name unless a real subcommand is named.
+
+        This has to happen before the group's own option parsing runs:
+        options that only exist on the default command (like ``--format``)
+        would otherwise make click fail with "no such option" before
+        dispatch ever got a chance to run.
+
+        Args:
+            ctx: the click context for the top-level group
+            args: the raw CLI arguments
+
+        Returns:
+            The (possibly unmodified) list of leftover args, per click.Group.
+        """
+        if not args or (
+            args[0] not in self.commands and args[0] not in ("--help", "--version")
+        ):
+            args = [self.default_cmd_name, *args]
+        return super().parse_args(ctx, args)
+
+
+@click.group(cls=DefaultGroup, default_cmd_name=DEFAULT_COMMAND_NAME)
+@click.version_option(version=__version__)
+def cli() -> None:
+    """reportseff - Tabular seff output."""
+
+
+@cli.command(DEFAULT_COMMAND_NAME)
 @click.option(
     "--sorting",
     default="jobid",
@@ -148,39 +208,13 @@ MAX_ENTRIES_TO_ECHO = 20
     help="Only include array jobs with at least this many tasks. "
     "Non-array jobs are always included. Set to 0 to include all jobs (default).",
 )
-@click.option(
-    "--array-summary",
-    is_flag=True,
-    default=False,
-    help="Append a summary block (min/mean/max, state counters, completion "
-    "progress, total task-time) after each job array. Opt-in; no effect when "
-    "not set. Suppressed in parsable mode.",
-)
-@click.option(
-    "--array-summary-hist",
-    is_flag=True,
-    default=False,
-    help="With --array-summary, add a task runtime histogram (minutes) for "
-    "arrays larger than --array-summary-hist-min-tasks.",
-)
-@click.option(
-    "--array-summary-hist-min-tasks",
-    default=50,
-    type=int,
-    help="Minimum number of array tasks before a runtime histogram is drawn "
-    "(default 50).",
-)
-@click.option(
-    "--array-summary-sparkline",
-    is_flag=True,
-    default=False,
-    help="Render the runtime distribution as a compact one-line sparkline "
-    "instead of a multi-line histogram.",
-)
-@click.version_option(version=__version__)
 @click.argument("jobs", nargs=-1)
 def main(**kwargs: Any) -> None:
-    """Main entry point for reportseff."""
+    """Report on jobs in a tabular format.
+
+    This is reportseff's default command: `reportseff <jobs>` is shorthand
+    for `reportseff report <jobs>`.
+    """
     args = ReportseffParameters(**kwargs)
 
     output, entries = get_jobs(args)
@@ -191,12 +225,25 @@ def main(**kwargs: Any) -> None:
         click.echo(output, color=args.color)
 
 
-def get_jobs(args: ReportseffParameters) -> tuple[str, int]:
-    """Helper method to get jobs from db_inquirer.
+def fetch_job_collection(
+    args: ReportseffParameters,
+    inquirer: BaseInquirer,
+    renderer: OutputRenderer,
+) -> JobCollection:
+    """Query the scheduler and build a populated, sorted JobCollection.
+
+    This is the "querying slurm, building the datatable" pipeline shared by
+    both the default `report` command and `summarize`: everything up to and
+    including sorting, before either command renders its own output shape.
+
+    Args:
+        args: parsed command-line parameters (job selection/filtering options)
+        inquirer: the db inquirer to configure and query with
+        renderer: the output renderer; used only for its `query_columns`
 
     Returns:
-        The string to display, tabulated and colored
-        The number of jobs found to use paging properly
+        The populated JobCollection, with array-size filtering already
+        applied and jobs sorted per `args.sorting`.
 
     Raises:
         Exception: if there is an error processing entries
@@ -205,20 +252,6 @@ def get_jobs(args: ReportseffParameters) -> tuple[str, int]:
 
     if args.slurm_format:
         job_collection.set_custom_seff_format(args.slurm_format)
-
-    inquirer, renderer = get_implementation(
-        args.format_str,
-        RenderOptions(
-            node=args.node or args.node_and_gpu,
-            gpu=args.node_and_gpu,
-            parsable=args.parsable,
-            delimiter=args.delimiter,
-            array_summary=args.array_summary,
-            array_summary_hist=args.array_summary_hist,
-            array_summary_hist_min_tasks=args.array_summary_hist_min_tasks,
-            array_summary_sparkline=args.array_summary_sparkline,
-        ),
-    )
 
     inquirer.set_state(args.state)
     inquirer.set_not_state(args.not_state)
@@ -265,6 +298,28 @@ def get_jobs(args: ReportseffParameters) -> tuple[str, int]:
     # Apply array size filtering if specified
     if args.array_min_size > 0:
         job_collection.filter_by_array_size(args.array_min_size)
+
+    return job_collection
+
+
+def get_jobs(args: ReportseffParameters) -> tuple[str, int]:
+    """Helper method to get jobs from db_inquirer and render the report table.
+
+    Returns:
+        The string to display, tabulated and colored
+        The number of jobs found to use paging properly
+    """
+    inquirer, renderer = get_implementation(
+        args.format_str,
+        RenderOptions(
+            node=args.node or args.node_and_gpu,
+            gpu=args.node_and_gpu,
+            parsable=args.parsable,
+            delimiter=args.delimiter,
+        ),
+    )
+
+    job_collection = fetch_job_collection(args, inquirer, renderer)
 
     found_jobs = job_collection.get_sorted_jobs(sorting=args.sorting)
     found_jobs = [j for j in found_jobs if j.state]

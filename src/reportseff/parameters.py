@@ -26,10 +26,6 @@ class ReportseffParameters:
     cluster: str = ""
     extra_args: str = ""
     array_min_size: int = 0  # Minimum size for job arrays to be reported
-    array_summary: bool = False  # Append a summary block after each array
-    array_summary_hist: bool = False  # Add a runtime histogram for large arrays
-    array_summary_hist_min_tasks: int = 50  # Min tasks before drawing a histogram
-    array_summary_sparkline: bool = False  # Use a compact one-line sparkline
 
     def __post_init__(self) -> None:
         """Post init method to handle prepending format string with +."""

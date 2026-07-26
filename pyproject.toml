@@ -15,7 +15,7 @@ dependencies = [
 ]
 
 [project.scripts]
-reportseff = "reportseff.console:main"
+reportseff = "reportseff.console:cli"
 
 [build-system]
 requires = ["uv_build>=0.9.25,<0.10.0"]

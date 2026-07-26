@@ -684,38 +684,32 @@ def test_array_job_base(mocker: MockerFixture, console_jobs: dict[str, str]) -> 
 
 
 @pytest.mark.usefixtures("_mock_inquirer")
-def test_array_summary_option(
+def test_array_summary_flags_removed(
     mocker: MockerFixture, console_jobs: dict[str, str]
 ) -> None:
-    """--array-summary appends a summary block after the array tasks."""
+    """The legacy --array-summary* prototype flags no longer exist (hard cutover)."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
     sub_result = mocker.MagicMock()
     sub_result.returncode = 0
     sub_result.stdout = console_jobs["24221219"] + console_jobs["24221220"]
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
-    result = runner.invoke(
-        console.main,
-        [
-            "--no-color",
-            "--array-summary",
-            "24220929",
-            "--format",
-            "JobID%>,State,Elapsed%>,CPUEff,MemEff",
-        ],
-    )
-
-    assert result.exit_code == 0
-    assert "Array 24220929" in result.output
-    # one COMPLETED and one PENDING task
-    assert "1/2 completed (50%)" in result.output
+    for flag in (
+        "--array-summary",
+        "--array-summary-hist",
+        "--array-summary-hist-min-tasks=5",
+        "--array-summary-sparkline",
+    ):
+        result = runner.invoke(console.main, ["--no-color", flag, "24220929"])
+        assert result.exit_code != 0
+        assert "no such option" in result.output.lower()
 
 
 @pytest.mark.usefixtures("_mock_inquirer")
-def test_array_summary_option_default_off(
+def test_report_never_includes_array_summary_formatting(
     mocker: MockerFixture, console_jobs: dict[str, str]
 ) -> None:
-    """Without the flag, no summary block is produced."""
+    """The default report output has no array-summary block (feature moved)."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
     sub_result = mocker.MagicMock()
@@ -1392,3 +1386,86 @@ def test_nonempty_used_memory(mocker: MockerFixture, strip_js: strip_js_func) ->
         "100.0%",
     ]
     assert len(output) == 1
+
+
+# ---------------------------------------------------------------------------
+# top-level click.Group dispatch (Phase 0: click.group() migration)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.usefixtures("_mock_inquirer")
+def test_default_group_bare_job_id_matches_report(
+    mocker: MockerFixture, console_jobs: dict[str, str]
+) -> None:
+    """`reportseff <jobid>` (no subcommand) behaves exactly like `report`."""
+    mocker.patch("reportseff.console.which", return_value=True)
+    runner = CliRunner()
+    sub_result = mocker.MagicMock()
+    sub_result.returncode = 0
+    sub_result.stdout = console_jobs["24418435"]
+    mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
+
+    direct = runner.invoke(console.main, ["--no-color", "24418435"])
+    via_group = runner.invoke(console.cli, ["--no-color", "24418435"])
+
+    assert direct.exit_code == 0
+    assert via_group.exit_code == 0
+    assert via_group.output == direct.output
+
+
+@pytest.mark.usefixtures("_mock_inquirer")
+def test_default_group_option_first_still_dispatches(
+    mocker: MockerFixture, console_jobs: dict[str, str]
+) -> None:
+    """An option with its own value as the first token must not break dispatch."""
+    mocker.patch("reportseff.console.which", return_value=True)
+    runner = CliRunner()
+    sub_result = mocker.MagicMock()
+    sub_result.returncode = 0
+    sub_result.stdout = console_jobs["24418435"]
+    mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
+
+    result = runner.invoke(
+        console.cli, ["--sorting", "mtime", "--no-color", "24418435"]
+    )
+
+    assert result.exit_code == 0
+    assert "24418435" in result.output
+
+
+@pytest.mark.usefixtures("_mock_inquirer")
+def test_default_group_explicit_report_subcommand(
+    mocker: MockerFixture, console_jobs: dict[str, str]
+) -> None:
+    """`reportseff report <jobid>` still works when the subcommand is named."""
+    mocker.patch("reportseff.console.which", return_value=True)
+    runner = CliRunner()
+    sub_result = mocker.MagicMock()
+    sub_result.returncode = 0
+    sub_result.stdout = console_jobs["24418435"]
+    mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
+
+    result = runner.invoke(console.cli, ["report", "--no-color", "24418435"])
+
+    assert result.exit_code == 0
+    assert "24418435" in result.output
+
+
+def test_default_group_version() -> None:
+    """--version stays a group-level option and reports reportseff's version."""
+    from reportseff import __version__
+
+    runner = CliRunner()
+    result = runner.invoke(console.cli, ["--version"])
+
+    assert result.exit_code == 0
+    assert __version__ in result.output
+
+
+def test_default_group_help_lists_report_command() -> None:
+    """--help at the top level lists the `report` subcommand."""
+    runner = CliRunner()
+    result = runner.invoke(console.cli, ["--help"])
+
+    assert result.exit_code == 0
+    assert "report" in result.output
