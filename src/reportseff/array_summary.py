@@ -16,6 +16,8 @@ from typing import TYPE_CHECKING
 from .job import _parse_slurm_timedelta
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from .job import Job
 
 #: Titles that are handled specially and never treated as generic metrics.
@@ -26,6 +28,43 @@ _NODELIST_TITLE = "nodelist"
 COMPLETED_STATE = "COMPLETED"
 #: Minimum number of tasks for a group to be treated as an array.
 _MIN_ARRAY_TASKS = 2
+
+#: Recognized ``--graph-format`` metric names (case-insensitive).
+#: `runtime` is the elapsed-time distribution; the rest are real, already
+#: -implemented column titles. Note: only `runtime` currently has a raw
+#: per-task series retained for graphing -- graphing the others requires the
+#: generalization tracked separately (see the implementation plan, Phase 3).
+GRAPH_FORMAT_VOCABULARY = ("runtime", "cpueff", "memeff", "energy", "gpueff", "gpumem")
+
+
+def parse_graph_format(value: str) -> tuple[str, ...]:
+    """Parse and validate a comma-separated ``--graph-format`` value.
+
+    Args:
+        value: the raw, comma-separated, case-insensitive metric list
+
+    Returns:
+        A de-duplicated, order-preserving tuple of lowercased metric names.
+
+    Raises:
+        ValueError: if any token isn't a recognized metric name.
+    """
+    tokens = [tok.strip().casefold() for tok in value.split(",") if tok.strip()]
+    unknown = sorted({tok for tok in tokens if tok not in GRAPH_FORMAT_VOCABULARY})
+    if unknown:
+        msg = (
+            f"Unknown --graph-format metric(s): {', '.join(unknown)}. "
+            f"Recognized: {', '.join(GRAPH_FORMAT_VOCABULARY)}."
+        )
+        raise ValueError(msg)
+
+    seen: set[str] = set()
+    result: list[str] = []
+    for token in tokens:
+        if token not in seen:
+            seen.add(token)
+            result.append(token)
+    return tuple(result)
 
 #: Horizontal block characters at 1/8 resolution, index 0 (empty) .. 8 (full).
 _EIGHTHS_H = " ▏▎▍▌▋▊▉█"
@@ -65,11 +104,35 @@ class ArraySummary:
     elapsed_minutes: list[float] = field(default_factory=list)
 
 
-def group_jobs_by_array(jobs: list[Job]) -> list[tuple[str, list[Job]]]:
-    """Group jobs by their base id, preserving first-appearance order.
+def _group_jobs_by_key(
+    jobs: list[Job],
+    key_fn: Callable[[Job], str],
+) -> list[tuple[str, list[Job]]]:
+    """Group jobs by a caller-supplied key, preserving first-appearance order.
 
-    Works regardless of sort order (jobid, mtime, filename): tasks that share a
-    base id are collected together at the position of the first task seen.
+    Works regardless of sort order (jobid, mtime, filename): tasks sharing a
+    key are collected together at the position of the first task seen.
+
+    Args:
+        jobs: the ordered list of jobs to group
+        key_fn: function computing the grouping key for a single job
+
+    Returns:
+        A list of ``(key, [tasks])`` tuples in first-appearance order.
+    """
+    order: list[str] = []
+    groups: dict[str, list[Job]] = {}
+    for job in jobs:
+        key = key_fn(job)
+        if key not in groups:
+            groups[key] = []
+            order.append(key)
+        groups[key].append(job)
+    return [(key, groups[key]) for key in order]
+
+
+def group_jobs_by_array(jobs: list[Job]) -> list[tuple[str, list[Job]]]:
+    """Group jobs by their base id (``--group-by=array``, the default).
 
     Args:
         jobs: the ordered list of jobs to group
@@ -77,19 +140,41 @@ def group_jobs_by_array(jobs: list[Job]) -> list[tuple[str, list[Job]]]:
     Returns:
         A list of ``(base_id, [tasks])`` tuples in first-appearance order.
     """
-    order: list[str] = []
-    groups: dict[str, list[Job]] = {}
-    for job in jobs:
-        base = job.job
-        if base not in groups:
-            groups[base] = []
-            order.append(base)
-        groups[base].append(job)
-    return [(base, groups[base]) for base in order]
+    return _group_jobs_by_key(jobs, lambda job: job.job)
+
+
+def group_jobs_by_name(jobs: list[Job]) -> list[tuple[str, list[Job]]]:
+    """Group jobs by their sacct ``JobName`` (``--group-by=name``).
+
+    Falls back to the job's base id for tasks where ``JobName`` wasn't
+    queried/available (rendered as the placeholder ``"---"``), so grouping
+    degrades to per-job buckets rather than silently merging unrelated jobs
+    under one empty key.
+
+    Args:
+        jobs: the ordered list of jobs to group
+
+    Returns:
+        A list of ``(name, [tasks])`` tuples in first-appearance order.
+    """
+
+    def key_fn(job: Job) -> str:
+        raw = job.get_entry("JobName")
+        if not isinstance(raw, str) or raw.strip() in ("", "---"):
+            return job.job
+        return raw.strip()
+
+    return _group_jobs_by_key(jobs, key_fn)
 
 
 def is_array_group(tasks: list[Job]) -> bool:
-    """Return True if the group represents an array with at least two tasks."""
+    """Return True if the group is large enough to warrant a summary block.
+
+    Used for both ``--group-by=array`` and ``--group-by=name``: a group
+    qualifies either by having more than one task, or -- for the array case
+    specifically -- by a single task's jobid already showing array syntax
+    (e.g. a lone ``123_1``).
+    """
     return len(tasks) >= _MIN_ARRAY_TASKS or any("_" in job.jobid for job in tasks)
 
 

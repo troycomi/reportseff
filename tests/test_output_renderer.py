@@ -737,3 +737,262 @@ def test_formatter_format_entry() -> None:
     fmt.end = "e"
     assert fmt.format_entry("A Long Entry") == "ng Entry"
 
+
+
+# ---------------------------------------------------------------------------
+# summarize: grouped summary rendering (Phase 1)
+# ---------------------------------------------------------------------------
+
+
+def _summary_renderer(
+    *, node: bool = False, parsable: bool = False
+) -> OutputRenderer:
+    """Renderer with a format string exercising the summary metrics."""
+    return output_renderer.OutputRenderer(
+        min_required,
+        output_renderer.RenderOptions(node=node, parsable=parsable),
+        format_str="JobID,State,Elapsed,CPUEff,TimeEff",
+    )
+
+
+def _summary_job(
+    jobid: str,
+    state: str,
+    elapsed: str = "00:10:00",
+    *,
+    job_name: str = "",
+) -> Job:
+    """Build a task job for grouped-summary renderer tests."""
+    job = Job(jobid.split("_", 1)[0], jobid, None)
+    entry = {
+        "JobID": jobid,
+        "State": state,
+        "AllocCPUS": "1",
+        "ReqMem": "1Gn",
+        "TotalCPU": "00:09:00",
+        "Elapsed": elapsed,
+        "Timelimit": "00:20:00",
+        "MaxRSS": "",
+        "NNodes": "1",
+        "NTasks": "",
+    }
+    if job_name:
+        entry["JobName"] = job_name
+    job.update(entry)
+    return job
+
+
+def test_format_grouped_summary_array_grouping() -> None:
+    """--group-by=array groups by base id and labels the block 'Array'."""
+    jobs = [
+        _summary_job("100_1", "COMPLETED"),
+        _summary_job("100_2", "FAILED", elapsed="00:00:30"),
+        _summary_job("200", "COMPLETED"),
+    ]
+    renderer = _summary_renderer()
+    output = renderer.format_grouped_summary(
+        jobs,
+        group_by="array",
+        min_tasks=50,
+        graph_style="sparkline",
+        graph_format="runtime",
+        ascii_fallback=False,
+    )
+    assert "Array 100" in output
+    # singleton 200 gets no summary block
+    assert output.count("Array ") == 1
+    assert "1/2 completed (50%)" in output
+
+
+def test_format_grouped_summary_name_grouping() -> None:
+    """--group-by=name groups by JobName and labels the block 'Group'."""
+    jobs = [
+        _summary_job("100_1", "COMPLETED", job_name="myrule"),
+        _summary_job("300_1", "COMPLETED", job_name="myrule"),
+    ]
+    renderer = _summary_renderer()
+    output = renderer.format_grouped_summary(
+        jobs,
+        group_by="name",
+        min_tasks=50,
+        graph_style="sparkline",
+        graph_format="runtime",
+        ascii_fallback=False,
+    )
+    assert "Group myrule" in output
+    assert "Array" not in output
+    assert "2/2 completed (100%)" in output
+
+
+def test_format_grouped_summary_name_grouping_falls_back_without_jobname() -> None:
+    """Tasks without a usable JobName fall back to their own base id."""
+    jobs = [_summary_job("100_1", "COMPLETED"), _summary_job("200_1", "COMPLETED")]
+    renderer = _summary_renderer()
+    output = renderer.format_grouped_summary(
+        jobs,
+        group_by="name",
+        min_tasks=50,
+        graph_style="sparkline",
+        graph_format="runtime",
+        ascii_fallback=False,
+    )
+    # each falls back to its own base id rather than being merged together
+    assert "Group 100" in output
+    assert "Group 200" in output
+
+
+def test_format_grouped_summary_suppressed_in_parsable() -> None:
+    """Parsable mode never emits summary blocks, but keeps per-task rows."""
+    jobs = [_summary_job("100_1", "COMPLETED"), _summary_job("100_2", "COMPLETED")]
+    renderer = _summary_renderer(parsable=True)
+    output = renderer.format_grouped_summary(
+        jobs,
+        group_by="array",
+        min_tasks=50,
+        graph_style="sparkline",
+        graph_format="runtime",
+        ascii_fallback=False,
+    )
+    assert "Array 100" not in output
+    assert "100_1" in output
+    assert "100_2" in output
+    assert renderer.options.parsable is True
+
+
+def test_format_grouped_summary_graph_min_tasks_threshold() -> None:
+    """A graph appears only once the group's task count exceeds min_tasks."""
+    jobs = [
+        _summary_job(f"100_{i}", "COMPLETED", elapsed=f"00:{i % 60:02d}:00")
+        for i in range(1, 11)
+    ]
+    renderer = _summary_renderer()
+
+    below = renderer.format_grouped_summary(
+        jobs,
+        group_by="array",
+        min_tasks=50,
+        graph_style="histogram",
+        graph_format="runtime",
+        ascii_fallback=False,
+    )
+    assert "Runtime (" not in below
+
+    above = renderer.format_grouped_summary(
+        jobs,
+        group_by="array",
+        min_tasks=5,
+        graph_style="histogram",
+        graph_format="runtime",
+        ascii_fallback=False,
+    )
+    assert "Runtime (min)" in above
+
+
+def test_format_grouped_summary_graph_style_sparkline_vs_histogram() -> None:
+    """graph_style selects between a one-line sparkline and a histogram."""
+    jobs = [
+        _summary_job(f"100_{i}", "COMPLETED", elapsed=f"00:{i % 60:02d}:00")
+        for i in range(1, 11)
+    ]
+    renderer = _summary_renderer()
+
+    sparkline = renderer.format_grouped_summary(
+        jobs,
+        group_by="array",
+        min_tasks=5,
+        graph_style="sparkline",
+        graph_format="runtime",
+        ascii_fallback=False,
+    )
+    assert "Runtime dist:" in sparkline
+    assert "Runtime (min)" not in sparkline
+
+    histogram = renderer.format_grouped_summary(
+        jobs,
+        group_by="array",
+        min_tasks=5,
+        graph_style="histogram",
+        graph_format="runtime",
+        ascii_fallback=False,
+    )
+    assert "Runtime (min)" in histogram
+    assert "Runtime dist:" not in histogram
+
+
+def test_format_grouped_summary_graph_style_none_suppresses_graph() -> None:
+    """graph_style=none never draws a graph, regardless of min_tasks."""
+    jobs = [
+        _summary_job(f"100_{i}", "COMPLETED", elapsed=f"00:{i % 60:02d}:00")
+        for i in range(1, 11)
+    ]
+    renderer = _summary_renderer()
+    output = renderer.format_grouped_summary(
+        jobs,
+        group_by="array",
+        min_tasks=0,
+        graph_style="none",
+        graph_format="runtime",
+        ascii_fallback=False,
+    )
+    assert "Runtime dist:" not in output
+    assert "Runtime (min)" not in output
+
+
+def test_format_grouped_summary_graph_format_without_runtime_draws_nothing() -> None:
+    """Only `runtime` currently draws a graph; other names are summarized-only."""
+    jobs = [
+        _summary_job(f"100_{i}", "COMPLETED", elapsed=f"00:{i % 60:02d}:00")
+        for i in range(1, 11)
+    ]
+    renderer = _summary_renderer()
+    output = renderer.format_grouped_summary(
+        jobs,
+        group_by="array",
+        min_tasks=0,
+        graph_style="sparkline",
+        graph_format="cpueff",
+        ascii_fallback=False,
+    )
+    assert "Runtime dist:" not in output
+    # the metric itself is still summarized, just not graphed
+    assert "CPUEff:" in output
+
+
+def test_format_grouped_summary_ascii_fallback() -> None:
+    """--ascii-fallback avoids unicode glyphs in both prose and graphs."""
+    jobs = [
+        _summary_job(f"100_{i}", "COMPLETED", elapsed=f"00:{i % 60:02d}:00")
+        for i in range(1, 11)
+    ]
+    renderer = _summary_renderer()
+    output = renderer.format_grouped_summary(
+        jobs,
+        group_by="array",
+        min_tasks=5,
+        graph_style="histogram",
+        graph_format="runtime",
+        ascii_fallback=True,
+    )
+    assert "•" not in output
+    assert "·" not in output
+    assert "█" not in output
+
+
+def test_add_required_column_is_idempotent() -> None:
+    """add_required_column adds a column once and recomputes query_columns."""
+    renderer = _summary_renderer()
+    before = set(renderer.query_columns)
+    assert "JobName" not in before
+
+    renderer.add_required_column("JobName")
+    assert "JobName" in renderer.query_columns
+
+    # calling again doesn't duplicate it
+    renderer.add_required_column("JobName")
+    assert renderer.query_columns.count("JobName") == 1
+
+
+def test_add_required_column_does_not_affect_report() -> None:
+    """report's renderer never calls add_required_column, so JobName is absent."""
+    renderer = _summary_renderer()
+    assert "JobName" not in renderer.query_columns

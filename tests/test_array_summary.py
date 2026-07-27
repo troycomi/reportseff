@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from reportseff import array_summary as summ
 from reportseff.job import Job
 
@@ -14,26 +16,28 @@ def _make_job(  # noqa: PLR0913
     *,
     partition: str = "CPU",
     nodelist: str = "somacpu001",
+    job_name: str = "",
 ) -> Job:
     """Build a Job via the normal update path for testing."""
     base = jobid.split("_", 1)[0]
     job = Job(base, jobid, None)
-    job.update(
-        {
-            "JobID": jobid,
-            "State": state,
-            "AllocCPUS": "1",
-            "ReqMem": "1Gn",
-            "TotalCPU": total_cpu,
-            "Elapsed": elapsed,
-            "Timelimit": "00:20:00",
-            "MaxRSS": "",
-            "NNodes": "1",
-            "NTasks": "",
-            "Partition": partition,
-            "NodeList": nodelist,
-        }
-    )
+    entry = {
+        "JobID": jobid,
+        "State": state,
+        "AllocCPUS": "1",
+        "ReqMem": "1Gn",
+        "TotalCPU": total_cpu,
+        "Elapsed": elapsed,
+        "Timelimit": "00:20:00",
+        "MaxRSS": "",
+        "NNodes": "1",
+        "NTasks": "",
+        "Partition": partition,
+        "NodeList": nodelist,
+    }
+    if job_name:
+        entry["JobName"] = job_name
+    job.update(entry)
     return job
 
 
@@ -63,6 +67,92 @@ def test_is_array_group() -> None:
         [_make_job("1_1", "COMPLETED"), _make_job("1_2", "COMPLETED")]
     )
     assert not summ.is_array_group([_make_job("5", "COMPLETED")])
+
+
+def test_group_jobs_by_name_preserves_order() -> None:
+    """Grouping bundles tasks by JobName in first-appearance order."""
+    jobs = [
+        _make_job("100_1", "COMPLETED", job_name="alpha"),
+        _make_job("200_1", "COMPLETED", job_name="beta"),
+        _make_job("100_2", "COMPLETED", job_name="alpha"),
+    ]
+    grouped = summ.group_jobs_by_name(jobs)
+    assert [name for name, _ in grouped] == ["alpha", "beta"]
+    assert [j.jobid for j in grouped[0][1]] == ["100_1", "100_2"]
+    assert [j.jobid for j in grouped[1][1]] == ["200_1"]
+
+
+def test_group_jobs_by_name_falls_back_to_base_id() -> None:
+    """Tasks without a usable JobName fall back to their own base id.
+
+    This protects against silently merging unrelated jobs under one empty
+    key when JobName wasn't queried/available for a given task (e.g. a
+    PENDING job, whose fields largely aren't cached -- see Job.update()).
+    """
+    jobs = [
+        _make_job("100_1", "COMPLETED", job_name=""),
+        _make_job("200_1", "COMPLETED", job_name=""),
+    ]
+    grouped = summ.group_jobs_by_name(jobs)
+    assert [name for name, _ in grouped] == ["100", "200"]
+
+
+def test_group_jobs_by_name_mixed_availability() -> None:
+    """A named task groups by name; an unnamed one falls back separately."""
+    jobs = [
+        _make_job("100_1", "COMPLETED", job_name="myrule"),
+        _make_job("300_1", "COMPLETED", job_name=""),
+    ]
+    grouped = summ.group_jobs_by_name(jobs)
+    assert [name for name, _ in grouped] == ["myrule", "300"]
+
+
+# ---------------------------------------------------------------------------
+# --graph-format parsing
+# ---------------------------------------------------------------------------
+
+
+def test_graph_format_vocabulary_contents() -> None:
+    """Vocabulary matches the agreed design: energy (not power), gpu metrics."""
+    assert summ.GRAPH_FORMAT_VOCABULARY == (
+        "runtime",
+        "cpueff",
+        "memeff",
+        "energy",
+        "gpueff",
+        "gpumem",
+    )
+
+
+def test_parse_graph_format_basic() -> None:
+    """Values are comma-split, case-folded, deduped, and order-preserving."""
+    assert summ.parse_graph_format("Runtime, CPUEff,runtime") == (
+        "runtime",
+        "cpueff",
+    )
+
+
+def test_parse_graph_format_empty_tokens_ignored() -> None:
+    """Blank tokens (e.g. a trailing comma) are dropped rather than erroring."""
+    assert summ.parse_graph_format("runtime,,cpueff,") == ("runtime", "cpueff")
+
+
+def test_parse_graph_format_full_vocabulary_accepted() -> None:
+    """Every recognized metric name parses without error."""
+    value = ",".join(summ.GRAPH_FORMAT_VOCABULARY)
+    assert summ.parse_graph_format(value) == summ.GRAPH_FORMAT_VOCABULARY
+
+
+def test_parse_graph_format_unknown_metric_raises() -> None:
+    """An unrecognized metric name raises with a helpful message."""
+    with pytest.raises(ValueError, match="bogus"):
+        summ.parse_graph_format("runtime,bogus")
+
+
+def test_parse_graph_format_power_is_not_a_valid_name() -> None:
+    """`power` was superseded by `energy`; it is not a recognized alias."""
+    with pytest.raises(ValueError, match="power"):
+        summ.parse_graph_format("power")
 
 
 # ---------------------------------------------------------------------------

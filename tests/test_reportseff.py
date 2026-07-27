@@ -1469,3 +1469,318 @@ def test_default_group_help_lists_report_command() -> None:
 
     assert result.exit_code == 0
     assert "report" in result.output
+
+
+# ---------------------------------------------------------------------------
+# summarize subcommand (Phase 1)
+# ---------------------------------------------------------------------------
+
+#: --format matching console_jobs["24221219"]/["24221220"]'s field count
+#: (11 columns: no TimeEff/Timelimit).
+_SUMMARIZE_FORMAT = "JobID%>,State,Elapsed%>,CPUEff,MemEff"
+
+#: A raw sacct-style blob for a two-task array where both tasks share a
+#: JobName, built to match the exact 12-column query add_required_column("
+#: JobName") produces for _SUMMARIZE_FORMAT (AdminComment, AllocCPUS,
+#: Elapsed, JobID, JobIDRaw, JobName, MaxRSS, NNodes, NTasks, ReqMem, State,
+#: TotalCPU -- alphabetical).
+_NAMED_ARRAY_JOBS = (
+    "^|^1^|^00:09:34^|^24220929_421^|^24221219^|^myjob^|^^|^1^|^1^|^16000Mn^|^"
+    "COMPLETED^|^09:28.052^|^\n"
+    "^|^1^|^00:09:34^|^24220929_421.batch^|^24221219.batch^|^myjob"
+    "^|^5664932K^|^1^|^1^|^16000Mn^|^COMPLETED^|^09:28.051^|^\n"
+    "^|^1^|^00:09:33^|^24220929_431^|^24221220^|^myjob^|^^|^1^|^1^|^16000Mn^|^"
+    "COMPLETED^|^09:27.460^|^\n"
+    "^|^1^|^00:09:33^|^24220929_431.batch^|^24221220.batch^|^myjob"
+    "^|^5518572K^|^1^|^1^|^16000Mn^|^COMPLETED^|^09:27.459^|^\n"
+)
+
+
+@pytest.mark.usefixtures("_mock_inquirer")
+def test_summarize_group_by_array(
+    mocker: MockerFixture, console_jobs: dict[str, str]
+) -> None:
+    """summarize --group-by=array groups tasks by base id, default strategy."""
+    mocker.patch("reportseff.console.which", return_value=True)
+    runner = CliRunner()
+    sub_result = mocker.MagicMock()
+    sub_result.returncode = 0
+    sub_result.stdout = console_jobs["24221219"] + console_jobs["24221220"]
+    mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
+
+    result = runner.invoke(
+        console.cli,
+        ["summarize", "--format", _SUMMARIZE_FORMAT, "--no-color", "24220929"],
+    )
+
+    assert result.exit_code == 0
+    assert "Array 24220929" in result.output
+    assert "1/2 completed (50%)" in result.output
+
+
+@pytest.mark.usefixtures("_mock_inquirer")
+def test_summarize_group_by_is_array_by_default(
+    mocker: MockerFixture, console_jobs: dict[str, str]
+) -> None:
+    """--group-by defaults to array, not name, without being passed explicitly."""
+    mocker.patch("reportseff.console.which", return_value=True)
+    runner = CliRunner()
+    sub_result = mocker.MagicMock()
+    sub_result.returncode = 0
+    sub_result.stdout = console_jobs["24221219"] + console_jobs["24221220"]
+    mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
+
+    result = runner.invoke(
+        console.cli,
+        ["summarize", "--format", _SUMMARIZE_FORMAT, "--no-color", "24220929"],
+    )
+
+    assert result.exit_code == 0
+    assert "Array 24220929" in result.output
+    assert "Group 24220929" not in result.output
+
+
+@pytest.mark.usefixtures("_mock_inquirer")
+def test_summarize_group_by_name(mocker: MockerFixture) -> None:
+    """summarize --group-by=name groups by JobName and labels blocks 'Group'."""
+    mocker.patch("reportseff.console.which", return_value=True)
+    runner = CliRunner()
+    sub_result = mocker.MagicMock()
+    sub_result.returncode = 0
+    sub_result.stdout = _NAMED_ARRAY_JOBS
+    mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
+
+    result = runner.invoke(
+        console.cli,
+        [
+            "summarize",
+            "--format",
+            _SUMMARIZE_FORMAT,
+            "--no-color",
+            "--group-by",
+            "name",
+            "24220929",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert "Group myjob" in result.output
+    assert "2/2 completed (100%)" in result.output
+    assert "Array" not in result.output
+
+
+@pytest.mark.usefixtures("_mock_inquirer")
+def test_summarize_graph_format_runtime_draws_sparkline(
+    mocker: MockerFixture, console_jobs: dict[str, str]
+) -> None:
+    """--graph-format runtime, with --min-tasks below the group size, graphs."""
+    mocker.patch("reportseff.console.which", return_value=True)
+    runner = CliRunner()
+    sub_result = mocker.MagicMock()
+    sub_result.returncode = 0
+    sub_result.stdout = console_jobs["24221219"] + console_jobs["24221220"]
+    mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
+
+    result = runner.invoke(
+        console.cli,
+        [
+            "summarize",
+            "--format",
+            _SUMMARIZE_FORMAT,
+            "--no-color",
+            "--graph-format",
+            "runtime",
+            "--min-tasks",
+            "0",
+            "24220929",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert "Runtime dist:" in result.output
+
+
+@pytest.mark.usefixtures("_mock_inquirer")
+def test_summarize_graph_format_without_runtime_draws_nothing(
+    mocker: MockerFixture, console_jobs: dict[str, str]
+) -> None:
+    """Other --graph-format metrics are summarized but not yet graphed (Phase 3)."""
+    mocker.patch("reportseff.console.which", return_value=True)
+    runner = CliRunner()
+    sub_result = mocker.MagicMock()
+    sub_result.returncode = 0
+    sub_result.stdout = console_jobs["24221219"] + console_jobs["24221220"]
+    mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
+
+    result = runner.invoke(
+        console.cli,
+        [
+            "summarize",
+            "--format",
+            _SUMMARIZE_FORMAT,
+            "--no-color",
+            "--graph-format",
+            "cpueff,memeff",
+            "--min-tasks",
+            "0",
+            "24220929",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert "Runtime dist:" not in result.output
+    assert "CPUEff:" in result.output
+
+
+@pytest.mark.usefixtures("_mock_inquirer")
+def test_summarize_graph_style_none_suppresses_graph(
+    mocker: MockerFixture, console_jobs: dict[str, str]
+) -> None:
+    """--graph-style=none never draws a graph, regardless of --min-tasks."""
+    mocker.patch("reportseff.console.which", return_value=True)
+    runner = CliRunner()
+    sub_result = mocker.MagicMock()
+    sub_result.returncode = 0
+    sub_result.stdout = console_jobs["24221219"] + console_jobs["24221220"]
+    mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
+
+    result = runner.invoke(
+        console.cli,
+        [
+            "summarize",
+            "--format",
+            _SUMMARIZE_FORMAT,
+            "--no-color",
+            "--graph-style",
+            "none",
+            "--min-tasks",
+            "0",
+            "24220929",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert "Runtime dist:" not in result.output
+
+
+@pytest.mark.usefixtures("_mock_inquirer")
+def test_summarize_min_tasks_gates_graph(
+    mocker: MockerFixture, console_jobs: dict[str, str]
+) -> None:
+    """The default --min-tasks=50 suppresses a graph for a 2-task array."""
+    mocker.patch("reportseff.console.which", return_value=True)
+    runner = CliRunner()
+    sub_result = mocker.MagicMock()
+    sub_result.returncode = 0
+    sub_result.stdout = console_jobs["24221219"] + console_jobs["24221220"]
+    mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
+
+    result = runner.invoke(
+        console.cli,
+        [
+            "summarize",
+            "--format",
+            _SUMMARIZE_FORMAT,
+            "--no-color",
+            "--graph-format",
+            "runtime",
+            "24220929",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert "Runtime dist:" not in result.output
+
+
+@pytest.mark.usefixtures("_mock_inquirer")
+def test_summarize_ascii_fallback(
+    mocker: MockerFixture, console_jobs: dict[str, str]
+) -> None:
+    """--ascii-fallback avoids unicode glyphs in prose and graphs alike."""
+    mocker.patch("reportseff.console.which", return_value=True)
+    runner = CliRunner()
+    sub_result = mocker.MagicMock()
+    sub_result.returncode = 0
+    sub_result.stdout = console_jobs["24221219"] + console_jobs["24221220"]
+    mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
+
+    result = runner.invoke(
+        console.cli,
+        [
+            "summarize",
+            "--format",
+            _SUMMARIZE_FORMAT,
+            "--no-color",
+            "--ascii-fallback",
+            "--graph-format",
+            "runtime",
+            "--min-tasks",
+            "0",
+            "24220929",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert "•" not in result.output
+    assert "·" not in result.output
+
+
+@pytest.mark.usefixtures("_mock_inquirer")
+def test_summarize_parsable_suppresses_summary_block(
+    mocker: MockerFixture, console_jobs: dict[str, str]
+) -> None:
+    """--parsable keeps per-task rows but drops the decorative summary block."""
+    mocker.patch("reportseff.console.which", return_value=True)
+    runner = CliRunner()
+    sub_result = mocker.MagicMock()
+    sub_result.returncode = 0
+    sub_result.stdout = console_jobs["24221219"] + console_jobs["24221220"]
+    mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
+
+    result = runner.invoke(
+        console.cli,
+        ["summarize", "--format", _SUMMARIZE_FORMAT, "--parsable", "24220929"],
+    )
+
+    assert result.exit_code == 0
+    assert "Array 24220929" not in result.output
+    assert "24220929_421" in result.output
+
+
+@pytest.mark.usefixtures("_mock_inquirer")
+def test_summarize_bad_graph_format_rejected(mocker: MockerFixture) -> None:
+    """An unrecognized --graph-format metric exits non-zero with a clear error."""
+    mocker.patch("reportseff.console.which", return_value=True)
+    runner = CliRunner()
+
+    result = runner.invoke(
+        console.cli,
+        ["summarize", "--graph-format", "bogus", "24220929"],
+    )
+
+    assert result.exit_code == 1
+    assert "unknown" in result.output.lower()
+    assert "bogus" in result.output.lower()
+
+
+@pytest.mark.usefixtures("_mock_inquirer")
+def test_summarize_singleton_job_gets_no_summary_block(
+    mocker: MockerFixture, console_jobs: dict[str, str]
+) -> None:
+    """A non-array job with no siblings gets a row but no summary block."""
+    mocker.patch("reportseff.console.which", return_value=True)
+    runner = CliRunner()
+    sub_result = mocker.MagicMock()
+    sub_result.returncode = 0
+    sub_result.stdout = console_jobs["24418435"]
+    mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
+
+    result = runner.invoke(
+        console.cli,
+        ["summarize", "--no-color", "24418435"],
+    )
+
+    assert result.exit_code == 0
+    assert "24418435" in result.output
+    assert "Array" not in result.output
+    assert "Group" not in result.output
