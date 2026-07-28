@@ -362,13 +362,8 @@ class OutputRenderer:
             header += f"  {bullet}  {counters}"
         lines.append(header)
 
-        # per-metric min/mean/max
-        # TODO(Phase 2): render as an aligned table via ColumnFormatter
-        # instead of one bullet-separated line per metric.
-        lines.extend(
-            indent + self._format_metric_line(metric, use_unicode=use_unicode)
-            for metric in summary.metrics
-        )
+        # per-metric min/mean/max, as an aligned table
+        lines.extend(self._format_metrics_table(summary.metrics, indent=indent))
 
         # total accumulated wall-clock runtime across all tasks
         if summary.total_task_seconds > 0:
@@ -433,31 +428,71 @@ class OutputRenderer:
 
         return lines
 
-    def _format_metric_line(self, metric: MetricStat, *, use_unicode: bool) -> str:
-        """Format a single min/mean/max metric line with coloring."""
-        target = _summary_target_type(metric.title)
-        middot = "·" if use_unicode else "-"
+    def _format_metrics_table(
+        self, metrics: list[MetricStat], *, indent: str
+    ) -> list[str]:
+        """Render the per-metric min/mean/max stats as an aligned table.
 
-        def render_value(value: float) -> str:
+        Reuses ColumnFormatter for width, alignment, and coloring instead of
+        the original prototype's hand-rolled, bullet-separated line per
+        metric. Out-of-range values are still flagged, but only via the
+        same per-cell coloring the main report table already uses (each of
+        min/mean/max is colored independently) -- there's no extra "low"
+        marker glyph alongside it, since the color alone already
+        communicates it without adding unicode/ASCII-dependent text.
+
+        Args:
+            metrics: the per-metric min/mean/max stats to render
+            indent: leading whitespace applied to every line
+
+        Returns:
+            The table as a list of lines (header + one row per metric), or
+            an empty list if there are no metrics to show.
+        """
+        if not metrics:
+            return []
+
+        def render_value(metric: MetricStat, value: float) -> tuple[str, str | None]:
+            target = _summary_target_type(metric.title)
             if target in ("high", "mid"):
-                text, color = render_eff(round(value, 1), target)
-                return click.style(text, fg=color) if color else text
-            return f"{round(value, 1)}"
+                return render_eff(round(value, 1), target)
+            return f"{round(value, 1)}", None
 
-        line = (
-            f"{metric.title}: min {render_value(metric.minimum)}"
-            f" {middot} mean {render_value(metric.mean)}"
-            f" {middot} max {render_value(metric.maximum)}"
+        rows = [
+            (
+                metric.title,
+                render_value(metric, metric.minimum),
+                render_value(metric, metric.mean),
+                render_value(metric, metric.maximum),
+            )
+            for metric in metrics
+        ]
+
+        metric_col = ColumnFormatter("Metric%<")
+        min_col = ColumnFormatter("Min%>")
+        mean_col = ColumnFormatter("Mean%>")
+        max_col = ColumnFormatter("Max%>")
+        metric_col.width = max(len(metric_col.title), *(len(r[0]) for r in rows)) + 2
+        min_col.width = max(len(min_col.title), *(len(r[1][0]) for r in rows)) + 2
+        mean_col.width = max(len(mean_col.title), *(len(r[2][0]) for r in rows)) + 2
+        max_col.width = max(len(max_col.title), *(len(r[3][0]) for r in rows)) + 2
+
+        header = (
+            metric_col.format_title()
+            + min_col.format_title()
+            + mean_col.format_title()
+            + max_col.format_title()
         )
-        low = None
-        if target == "high":
-            low = HIGH_LIMIT_LOW
-        elif target == "mid":
-            low = MID_LIMIT_LOW
-        if low is not None and metric.mean < low:
-            warn = "⚠ low" if use_unicode else "(low)"
-            line += "  " + click.style(warn, fg="red")
-        return line
+        lines = [indent + header]
+        for title, (min_t, min_c), (mean_t, mean_c), (max_t, max_c) in rows:
+            lines.append(
+                indent
+                + metric_col.format_entry(title)
+                + min_col.format_entry(min_t, min_c)
+                + mean_col.format_entry(mean_t, mean_c)
+                + max_col.format_entry(max_t, max_c)
+            )
+        return lines
 
 
 class ColumnFormatter:

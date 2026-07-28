@@ -954,8 +954,10 @@ def test_format_grouped_summary_graph_format_without_runtime_draws_nothing() -> 
         ascii_fallback=False,
     )
     assert "Runtime dist:" not in output
-    # the metric itself is still summarized, just not graphed
-    assert "CPUEff:" in output
+    # the metric itself is still summarized (in the metrics table), just
+    # not graphed
+    assert "CPUEff" in output
+    assert "Metric" in output  # table header
 
 
 def test_format_grouped_summary_ascii_fallback() -> None:
@@ -996,3 +998,93 @@ def test_add_required_column_does_not_affect_report() -> None:
     """report's renderer never calls add_required_column, so JobName is absent."""
     renderer = _summary_renderer()
     assert "JobName" not in renderer.query_columns
+
+
+# ---------------------------------------------------------------------------
+# summarize: metrics table rendering (Phase 2)
+# ---------------------------------------------------------------------------
+
+
+def test_format_metrics_table_header_and_alignment() -> None:
+    """The metrics table has a Metric/Min/Mean/Max header and aligned cells."""
+    jobs = [
+        _summary_job("100_1", "COMPLETED", elapsed="00:10:00"),
+        _summary_job("100_2", "COMPLETED", elapsed="00:12:00"),
+    ]
+    renderer = _summary_renderer()
+    output = renderer.format_grouped_summary(
+        jobs,
+        group_by="array",
+        min_tasks=50,
+        graph_style="sparkline",
+        graph_format="runtime",
+        ascii_fallback=False,
+    )
+    lines = output.splitlines()
+    header_line = next(line for line in lines if "Metric" in line)
+    assert "Min" in header_line
+    assert "Mean" in header_line
+    assert "Max" in header_line
+
+    # every metric row is the same visible width as the header (padded/
+    # aligned) -- strip ANSI color codes first, since a colored cell adds
+    # invisible escape bytes that would otherwise skew a raw len() compare
+    ansi = re.compile(r"\x1b\[[0-9;]*m")
+    visible_header = ansi.sub("", header_line)
+    metric_lines = [
+        line
+        for line in lines
+        if line.strip().startswith(("CPUEff", "TimeEff", "MemEff"))
+    ]
+    assert metric_lines
+    for line in metric_lines:
+        assert len(ansi.sub("", line)) == len(visible_header)
+
+
+def test_format_metrics_table_no_bullet_separators() -> None:
+    """The table replaces the old bullet/middot-separated metric line."""
+    jobs = [_summary_job("100_1", "COMPLETED"), _summary_job("100_2", "COMPLETED")]
+    renderer = _summary_renderer()
+    output = renderer.format_grouped_summary(
+        jobs,
+        group_by="array",
+        min_tasks=50,
+        graph_style="sparkline",
+        graph_format="runtime",
+        ascii_fallback=False,
+    )
+    # the old prototype rendered lines like "CPUEff: min 90.0 · mean 90.0
+    # · max 90.0" -- none of that per-metric inline format survives
+    assert ": min " not in output
+    assert "· mean" not in output
+    assert "· max" not in output
+
+
+def test_format_metrics_table_low_efficiency_uses_color_not_extra_text() -> None:
+    """Out-of-range values are colored (via render_eff); no extra "low" marker.
+
+    Per feedback in the original design discussion, the color coding alone
+    (already used throughout the report table) communicates a value is out
+    of range; a redundant textual marker isn't added on top of it.
+    """
+    jobs = [
+        _summary_job("100_1", "COMPLETED", elapsed="00:10:00", total_cpu="00:00:30"),
+        _summary_job("100_2", "COMPLETED", elapsed="00:10:00", total_cpu="00:00:20"),
+    ]
+    renderer = _summary_renderer()
+    output = renderer.format_grouped_summary(
+        jobs,
+        group_by="array",
+        min_tasks=50,
+        graph_style="sparkline",
+        graph_format="runtime",
+        ascii_fallback=False,
+    )
+    assert "low" not in output.lower()
+    assert "\N{WARNING SIGN}" not in output
+
+
+def test_format_metrics_table_empty_when_no_numeric_metrics() -> None:
+    """A group with no numeric metrics (e.g. all values non-coercible) is fine."""
+    renderer = _summary_renderer()
+    assert renderer._format_metrics_table([], indent="  ") == []

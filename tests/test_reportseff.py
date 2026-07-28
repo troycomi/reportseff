@@ -1629,7 +1629,8 @@ def test_summarize_graph_format_without_runtime_draws_nothing(
 
     assert result.exit_code == 0
     assert "Runtime dist:" not in result.output
-    assert "CPUEff:" in result.output
+    assert "CPUEff" in result.output
+    assert "Metric" in result.output
 
 
 @pytest.mark.usefixtures("_mock_inquirer")
