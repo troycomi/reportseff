@@ -759,6 +759,7 @@ def _summary_job(
     jobid: str,
     state: str,
     elapsed: str = "00:10:00",
+    total_cpu: str = "00:09:00",
     *,
     job_name: str = "",
 ) -> Job:
@@ -769,7 +770,7 @@ def _summary_job(
         "State": state,
         "AllocCPUS": "1",
         "ReqMem": "1Gn",
-        "TotalCPU": "00:09:00",
+        "TotalCPU": total_cpu,
         "Elapsed": elapsed,
         "Timelimit": "00:20:00",
         "MaxRSS": "",
