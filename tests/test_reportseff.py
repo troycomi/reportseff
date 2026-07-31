@@ -1601,10 +1601,10 @@ def test_summarize_graph_format_runtime_draws_sparkline(
 
 
 @pytest.mark.usefixtures("_mock_inquirer")
-def test_summarize_graph_format_without_runtime_draws_nothing(
+def test_summarize_graph_format_selects_which_metric_graphs(
     mocker: MockerFixture, console_jobs: dict[str, str]
 ) -> None:
-    """Other --graph-format metrics are summarized but not yet graphed (Phase 3)."""
+    """--graph-format cpueff,memeff graphs those, but not runtime (unrequested)."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
     sub_result = mocker.MagicMock()
@@ -1629,7 +1629,8 @@ def test_summarize_graph_format_without_runtime_draws_nothing(
 
     assert result.exit_code == 0
     assert "Runtime dist:" not in result.output
-    assert "CPUEff" in result.output
+    assert "CPUEff dist:" in result.output
+    assert "MemEff dist:" in result.output
     assert "Metric" in result.output
 
 

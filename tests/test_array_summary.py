@@ -189,6 +189,29 @@ def test_build_summary_metrics_completed_only() -> None:
     assert metrics["CPUEff"].mean == 55.0
 
 
+def test_build_summary_metrics_retain_raw_values() -> None:
+    """Each MetricStat retains the raw per-completed-task values, not just
+    the aggregate -- needed so --graph-format can graph any metric, not
+    only runtime.
+    """
+    tasks = [
+        _make_job("100_1", "COMPLETED", elapsed="00:10:00", total_cpu="00:09:00"),
+        _make_job("100_2", "COMPLETED", elapsed="00:05:00", total_cpu="00:01:00"),
+        _make_job("100_3", "FAILED", elapsed="00:00:30", total_cpu="00:00:10"),
+    ]
+    result = summ.build_array_summary("100", tasks, ["CPUEff"])
+    metrics = {m.title: m for m in result.metrics}
+    assert sorted(metrics["CPUEff"].values) == [20.0, 90.0]
+    # excludes the FAILED task -- completed-only, same as min/mean/max
+    assert len(metrics["CPUEff"].values) == 2
+
+
+def test_metric_stat_values_defaults_to_empty_list() -> None:
+    """Direct construction without values= still works (backward compatible)."""
+    stat = summ.MetricStat(title="CPUEff", minimum=1.0, mean=2.0, maximum=3.0)
+    assert stat.values == []
+
+
 def test_build_summary_total_and_per_state_runtime() -> None:
     """Total task seconds and per-state mean runtime are computed."""
     tasks = [
@@ -327,6 +350,28 @@ def test_render_histogram_unicode_and_ascii() -> None:
 def test_render_histogram_empty() -> None:
     """No values yields no lines."""
     assert summ.render_histogram([], bins=5) == []
+
+
+def test_render_histogram_default_label_is_runtime() -> None:
+    """Without label=, the header still says "Runtime" (backward compatible)."""
+    values = [float(i) for i in range(100)]
+    lines = summ.render_histogram(values, bins=5)
+    assert lines[0].startswith("Runtime (min)")
+
+
+def test_render_histogram_custom_label_and_unit() -> None:
+    """label= and unit= let any metric reuse the same histogram renderer."""
+    values = [float(i) for i in range(100)]
+    lines = summ.render_histogram(values, bins=5, unit="%", label="CPUEff")
+    assert lines[0].startswith("CPUEff (%)")
+
+
+def test_render_histogram_empty_unit_omits_parens() -> None:
+    """An empty unit (e.g. for a metric with no known unit) drops the parens."""
+    values = [float(i) for i in range(100)]
+    lines = summ.render_histogram(values, bins=5, unit="", label="Energy")
+    assert lines[0].startswith("Energy   n=")
+    assert "(" not in lines[0]
 
 
 def test_render_sparkline() -> None:

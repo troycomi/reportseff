@@ -85,6 +85,10 @@ class MetricStat:
     minimum: float
     mean: float
     maximum: float
+    #: Raw per-completed-task values, in task order. Retained (not just the
+    #: aggregate) so --graph-format can draw a distribution for any
+    #: summarized metric, not only the runtime special case.
+    values: list[float] = field(default_factory=list)
 
 
 @dataclass
@@ -284,6 +288,7 @@ def build_array_summary(
                     minimum=min(numeric),
                     mean=sum(numeric) / len(numeric),
                     maximum=max(numeric),
+                    values=numeric,
                 )
             )
             continue
@@ -502,15 +507,19 @@ def render_histogram(
     width: int = 24,
     ascii_only: bool = False,
     unit: str = "min",
+    label: str = "Runtime",
 ) -> list[str]:
-    """Render a runtime histogram as a list of text lines.
+    """Render a histogram of a metric's distribution as a list of text lines.
 
     Args:
         values: the values (e.g. task runtimes in minutes)
         bins: number of histogram bins
         width: maximum bar width in characters
         ascii_only: use ``#`` bars instead of Unicode block characters
-        unit: unit label shown in the header
+        unit: unit label shown in the header, e.g. ``"min"`` or ``"%"``.
+            Pass ``""`` when no unit is known; the parentheses are omitted.
+        label: the metric name shown in the header (default ``"Runtime"``,
+            matching this function's original single-purpose behavior)
 
     Returns:
         A list of strings (header + one line per bin).  Empty when no values.
@@ -521,11 +530,12 @@ def render_histogram(
 
     max_count = max(counts)
     label_width = max(len(f"{round(low)}-{round(high)}") for low, high in edges)
-    lines = [f"Runtime ({unit})   n={len(values)}"]
+    header = f"{label} ({unit})" if unit else label
+    lines = [f"{header}   n={len(values)}"]
     for (low, high), count in zip(edges, counts, strict=True):
-        label = f"{round(low)}-{round(high)}".rjust(label_width)
+        label_text = f"{round(low)}-{round(high)}".rjust(label_width)
         bar = _bar(count, max_count, width, ascii_only=ascii_only)
-        lines.append(f"{label}  {bar} {count}")
+        lines.append(f"{label_text}  {bar} {count}")
     return lines
 
 

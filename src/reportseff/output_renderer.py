@@ -399,34 +399,89 @@ class OutputRenderer:
         if summary.node_hostlist:
             lines.append(f"{indent}Nodes: {summary.node_hostlist}")
 
-        # runtime histogram/sparkline for large groups.
-        # Only "runtime" has a raw per-task series retained today; graphing
-        # the other --graph-format metrics is Phase 3 (see implementation
-        # plan). Requesting them is still validated (parse_graph_format),
-        # they just don't draw a graph yet.
-        if (
-            "runtime" in graphed
-            and graph_style != "none"
-            and summary.total_tasks > min_tasks
-            and summary.elapsed_minutes
-        ):
-            if graph_style == "sparkline":
-                spark = render_sparkline(summary.elapsed_minutes)
-                low = round(min(summary.elapsed_minutes))
-                high = round(max(summary.elapsed_minutes))
-                lines.append(
-                    f"{indent}Runtime dist: {spark}"
-                    f" (n={len(summary.elapsed_minutes)}, {low}-{high} min)"
-                )
-            else:  # histogram
+        # distribution graphs (sparkline/histogram) for each requested
+        # --graph-format metric, once the group is large enough. "runtime"
+        # graphs summary.elapsed_minutes (always retained, independent of
+        # --format); every other vocabulary entry graphs the matching
+        # MetricStat's raw per-task values.
+        if graph_style != "none" and summary.total_tasks > min_tasks:
+            if "runtime" in graphed and summary.elapsed_minutes:
                 lines.extend(
-                    indent + line
-                    for line in render_histogram(
-                        summary.elapsed_minutes, ascii_only=not use_unicode
+                    self._format_metric_graph(
+                        "Runtime",
+                        summary.elapsed_minutes,
+                        unit="min",
+                        graph_style=graph_style,
+                        use_unicode=use_unicode,
+                        indent=indent,
+                    )
+                )
+            for metric in summary.metrics:
+                if metric.title.casefold() not in graphed or not metric.values:
+                    continue
+                unit = (
+                    "%"
+                    if _summary_target_type(metric.title) in ("high", "mid")
+                    else "J"
+                    if metric.title.casefold() == "energy"
+                    else ""
+                )
+                lines.extend(
+                    self._format_metric_graph(
+                        metric.title,
+                        metric.values,
+                        unit=unit,
+                        graph_style=graph_style,
+                        use_unicode=use_unicode,
+                        indent=indent,
                     )
                 )
 
         return lines
+
+    def _format_metric_graph(  # noqa: PLR0913
+        self,
+        label: str,
+        values: list[float],
+        *,
+        unit: str,
+        graph_style: str,
+        use_unicode: bool,
+        indent: str,
+    ) -> list[str]:
+        """Render one metric's distribution as a sparkline or a histogram.
+
+        Args:
+            label: the metric name shown in the graph, e.g. "Runtime", "CPUEff"
+            values: the raw per-task values to bin
+            unit: unit suffix -- "min", "%", "J", or "" when none is known
+            graph_style: "sparkline" or "histogram" ("none" is filtered by
+                the caller before this is reached)
+            use_unicode: whether to use Unicode block characters
+            indent: leading whitespace applied to every line
+
+        Returns:
+            The rendered lines, or an empty list when there are no values.
+        """
+        if not values:
+            return []
+
+        if graph_style == "sparkline":
+            spark = render_sparkline(values)
+            low = round(min(values))
+            high = round(max(values))
+            suffix = unit if unit == "%" else (f" {unit}" if unit else "")
+            return [
+                f"{indent}{label} dist: {spark}"
+                f" (n={len(values)}, {low}-{high}{suffix})"
+            ]
+
+        return [
+            indent + line
+            for line in render_histogram(
+                values, ascii_only=not use_unicode, unit=unit, label=label
+            )
+        ]
 
     def _format_metrics_table(
         self, metrics: list[MetricStat], *, indent: str
