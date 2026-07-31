@@ -1786,3 +1786,34 @@ def test_summarize_singleton_job_gets_no_summary_block(
     assert "24418435" in result.output
     assert "Array" not in result.output
     assert "Group" not in result.output
+
+
+@pytest.mark.usefixtures("_mock_inquirer")
+def test_summarize_gpu_graph_format_without_jobstat_data(
+    mocker: MockerFixture, console_jobs: dict[str, str]
+) -> None:
+    """--graph-format gpueff on non-GPU jobs succeeds and draws nothing."""
+    mocker.patch("reportseff.console.which", return_value=True)
+    runner = CliRunner()
+    sub_result = mocker.MagicMock()
+    sub_result.returncode = 0
+    sub_result.stdout = console_jobs["24221219"] + console_jobs["24221220"]
+    mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
+
+    result = runner.invoke(
+        console.cli,
+        [
+            "summarize",
+            "--format",
+            _SUMMARIZE_FORMAT,
+            "--no-color",
+            "--graph-format",
+            "gpueff",
+            "--min-tasks",
+            "0",
+            "24220929",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert "GPUEff dist:" not in result.output

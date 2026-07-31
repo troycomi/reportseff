@@ -1254,3 +1254,40 @@ def test_energy_metric_graphs_with_joules_unit() -> None:
     # header (we don't assert a specific unit string, only that "%" isn't
     # incorrectly applied to it)
     assert "Energy (%)" not in output
+
+
+def test_gpu_metrics_graph_gracefully_without_jobstat_data() -> None:
+    """--graph-format gpueff,gpumem on non-GPU jobs draws nothing, doesn't error.
+
+    GPUEff/GPUMem come from jobstats' AdminComment field; on systems (or
+    jobs) without jobstat caching they're simply "---" for every task, same
+    as they already render in the plain table. There's no separate opt-in
+    or error path -- the metric just never accumulates a raw series to
+    graph, exactly like any other all-"---" numeric column.
+    """
+    jobs = [
+        _summary_job(f"100_{i}", "COMPLETED", elapsed=f"00:{i:02d}:00")
+        for i in range(1, 11)
+    ]
+    renderer = output_renderer.OutputRenderer(
+        min_required,
+        output_renderer.RenderOptions(),
+        format_str="JobID,State,Elapsed,CPUEff,GPUEff,GPUMem",
+    )
+
+    output = renderer.format_grouped_summary(
+        jobs,
+        group_by="array",
+        min_tasks=0,
+        graph_style="sparkline",
+        graph_format="gpueff,gpumem",
+        ascii_fallback=False,
+    )
+
+    assert "GPUEff dist:" not in output
+    assert "GPUMem dist:" not in output
+    # absent from the metrics table too -- same as any other all-"---" column
+    assert "GPUEff" not in output.split("Array")[-1]
+    assert "GPUMem" not in output.split("Array")[-1]
+    # the rest of the summary still renders normally
+    assert "CPUEff" in output

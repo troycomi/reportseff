@@ -229,6 +229,94 @@ directory to check for slurm outputs.
 - `--parsable/-p`: Ignore formatting and output as a `|` delimited table.  Useful
   for piping into more complex analyses.
 
+### The `summarize` Subcommand
+
+Large array jobs -- or many individually-submitted jobs that happen to share
+a name -- are tedious to eyeball one row at a time. `reportseff summarize`
+groups jobs and appends a compact statistical summary after each group:
+min/mean/max for the columns in `--format`, per-state task counters,
+completion progress, total accumulated task-time, and -- once a group is
+large enough -- a sparkline or histogram showing how a metric is
+distributed across all its tasks.
+
+`reportseff summarize` takes the same job-selection [arguments](#arguments)
+and most of the same [options](#options) as `reportseff` itself (`--format`,
+`--state`, `--since`, `--parsable`, etc.), plus:
+
+- `--group-by`: How to group tasks into summary blocks.  `array` (default)
+  groups by the array's base job id, exactly like the traditional array job
+  view above.  `name` groups by the sacct `JobName` field instead --
+  handy for workflow systems like Snakemake, where several
+  individually-submitted jobs sharing a name represent the same rule.
+- `--graph-style`: `sparkline` (default), `histogram`, or `none`.  Controls
+  how each graphed metric's distribution is drawn once a group is large
+  enough (see `--min-tasks`).
+- `--graph-format`: Comma-separated, case-insensitive list of metrics to
+  graph.  Default `runtime,cpueff,memeff`.  Recognized values: `runtime`,
+  `cpueff`, `memeff`, `energy`, `gpueff`, `gpumem`.  This only controls
+  which metrics get a *graph* -- the summary table always shows every
+  numeric column currently in `--format`, whether or not it's graphed.
+- `--min-tasks`: Minimum number of tasks in a group before a graph is drawn
+  (default 50).  The summary table itself has no such threshold.
+- `--ascii-fallback`: Force ASCII characters instead of Unicode block
+  glyphs in graphs, overriding automatic terminal detection.
+
+#### Summarizing an array
+
+```txt
+reportseff summarize 34473805
+
+34473805_1    COMPLETED       01:28:00    86.6%    34.4%
+34473805_2    COMPLETED       01:22:00    88.4%    30.7%
+34473805_3    COMPLETED       01:29:00    86.4%    34.4%
+...
+Array 34473805  •  60/60 completed (100%)  •  COMPLETED 60
+  Metric      Min   Mean    Max
+  CPUEff    85.4%  91.4%  98.6%
+  MemEff    29.8%  32.8%  35.8%
+  Total task-time (wall-clock): 85h40m across 60 tasks
+  Mean runtime: COMPLETED 1h25m
+  Runtime dist: ▅▃▄▃▄▄▃█▅▄ (n=60, 78-92 min)
+  CPUEff dist: █▅▇▆▂▆▅▅▃▆ (n=60, 85-99%)
+  MemEff dist: ▆▄█▄▆▄▅▆▆▆ (n=60, 30-36%)
+```
+
+#### Grouping by job name
+
+Useful when multiple individually-submitted jobs share a name instead of
+running as a strict array (e.g. one job per Snakemake rule invocation):
+
+```sh
+reportseff summarize --group-by name
+```
+
+Each block is labeled `Group <name>` instead of `Array <id>`, grouped by
+the sacct `JobName` field rather than the array's base job id.
+
+#### Histograms instead of sparklines
+
+```sh
+reportseff summarize --graph-style histogram --min-tasks 50
+```
+
+```txt
+Runtime (min)   n=60
+78-79  ████████████▉ 7
+79-81  █████▌ 3
+81-82  ███████████▏ 6
+82-84  ███████▍ 4
+84-85  █████████▎ 5
+85-86  █████████▎ 5
+86-88  █████▌ 3
+88-89  ████████████████████████ 13
+89-91  ██████████████▊ 8
+91-92  ███████████▏ 6
+```
+
+Job selection works exactly like the main command, so shell globbing and
+directory scanning apply the same way: `reportseff summarize myjob_*` or
+just `reportseff summarize` in a directory of slurm outputs.
+
 ## Status, Contributions, and Support
 
 `reportseff` is actively maintained but currently feature complete.  If there
@@ -244,6 +332,20 @@ poetry install
 poetry run pytest
 poetry run pre-commit install
 nox
+```
+
+If an AI coding assistant was used for a contribution, please say so in the
+commit message, along with what it was used for. Keeping commits small and
+scoped to one change makes them much easier to review and, if needed,
+cherry-pick or revert individually:
+
+```
+<area>: <short imperative summary>
+
+<1-3 sentences: what changed and why>
+
+<if applicable> Drafted with AI assistance (<tool/model name>) for
+<scope, e.g. "boilerplate/tests">; reviewed and edited by <your name>.
 ```
 
 ## Troubleshooting
