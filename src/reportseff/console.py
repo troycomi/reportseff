@@ -261,9 +261,7 @@ def main(**kwargs: Any) -> None:
     "--group-by",
     type=click.Choice(["array", "name"], case_sensitive=False),
     default="array",
-    help="Grouping strategy: array (base job id, default) or name "
-    "(sacct JobName -- useful for workflow systems like Snakemake, where "
-    "the name denotes a rule).",
+    help="Grouping strategy: array (base job id, default) or name.",
 )
 @click.option(
     "--graph-style",
@@ -276,9 +274,7 @@ def main(**kwargs: Any) -> None:
     default="runtime,cpueff,memeff",
     help="Comma-separated, case-insensitive list of metrics to additionally "
     "graph, of those already being summarized, once --min-tasks is met. "
-    "Recognized: runtime, cpueff, memeff, energy, gpueff, gpumem. Note: "
-    "only runtime currently draws a graph; the others are validated but "
-    "not yet wired up.",
+    "Recognized: runtime, cpueff, memeff, energy, gpueff, gpumem.",
 )
 @click.option(
     "--min-tasks",
