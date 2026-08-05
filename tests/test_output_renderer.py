@@ -999,7 +999,7 @@ def test_add_required_column_is_idempotent() -> None:
 
 
 def test_add_required_column_does_not_affect_report() -> None:
-    """report's renderer never calls add_required_column, so JobName is absent."""
+    """Report's renderer never calls add_required_column, so JobName is absent."""
     renderer = _summary_renderer()
     assert "JobName" not in renderer.query_columns
 

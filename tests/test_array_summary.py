@@ -190,9 +190,10 @@ def test_build_summary_metrics_completed_only() -> None:
 
 
 def test_build_summary_metrics_retain_raw_values() -> None:
-    """Each MetricStat retains the raw per-completed-task values, not just
-    the aggregate -- needed so --graph-format can graph any metric, not
-    only runtime.
+    """Each MetricStat retains the raw per-completed-task values.
+
+    Not just the aggregate -- needed so --graph-format can graph any
+    metric, not only runtime.
     """
     tasks = [
         _make_job("100_1", "COMPLETED", elapsed="00:10:00", total_cpu="00:09:00"),

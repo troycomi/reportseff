@@ -266,7 +266,7 @@ class OutputRenderer:
             )
         return delimiter.join(fmt.format_job(job) for fmt in self.formatters).rstrip()
 
-    def format_grouped_summary(
+    def format_grouped_summary(  # noqa: PLR0913
         self,
         jobs: list[Job],
         *,

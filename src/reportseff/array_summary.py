@@ -500,7 +500,7 @@ def _bar(count: int, max_count: int, width: int, *, ascii_only: bool) -> str:
     return "█" * full + (_EIGHTHS_H[remainder] if remainder else "")
 
 
-def render_histogram(
+def render_histogram(  # noqa: PLR0913
     values: list[float],
     *,
     bins: int = 10,

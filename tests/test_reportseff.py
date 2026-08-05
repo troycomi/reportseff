@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any
 import pytest
 from click.testing import CliRunner
 
-from reportseff import console
+from reportseff import __version__, console
 from reportseff.db_inquirer import SacctInquirer
 from reportseff.job_collection import JobCollection
 from reportseff.output_renderer import OutputRenderer
@@ -1453,8 +1453,6 @@ def test_default_group_explicit_report_subcommand(
 
 def test_default_group_version() -> None:
     """--version stays a group-level option and reports reportseff's version."""
-    from reportseff import __version__
-
     runner = CliRunner()
     result = runner.invoke(console.cli, ["--version"])
 
@@ -1500,7 +1498,7 @@ _NAMED_ARRAY_JOBS = (
 def test_summarize_group_by_array(
     mocker: MockerFixture, console_jobs: dict[str, str]
 ) -> None:
-    """summarize --group-by=array groups tasks by base id, default strategy."""
+    """Summarize --group-by=array groups tasks by base id, default strategy."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
     sub_result = mocker.MagicMock()
@@ -1542,7 +1540,7 @@ def test_summarize_group_by_is_array_by_default(
 
 @pytest.mark.usefixtures("_mock_inquirer")
 def test_summarize_group_by_name(mocker: MockerFixture) -> None:
-    """summarize --group-by=name groups by JobName and labels blocks 'Group'."""
+    """Summarize --group-by=name groups by JobName and labels blocks 'Group'."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
     sub_result = mocker.MagicMock()

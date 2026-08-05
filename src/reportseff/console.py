@@ -74,7 +74,7 @@ class DefaultGroup(click.Group):
 @click.group(cls=DefaultGroup, default_cmd_name=DEFAULT_COMMAND_NAME)
 @click.version_option(version=__version__)
 def cli() -> None:
-    """reportseff - Tabular seff output."""
+    """Reportseff - Tabular seff output."""
 
 
 def shared_query_options(func: Any) -> Any:
