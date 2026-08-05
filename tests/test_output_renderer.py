@@ -1291,3 +1291,38 @@ def test_gpu_metrics_graph_gracefully_without_jobstat_data() -> None:
     assert "GPUMem" not in output.split("Array")[-1]
     # the rest of the summary still renders normally
     assert "CPUEff" in output
+
+
+def test_format_metric_graph_empty_values_returns_nothing() -> None:
+    """_format_metric_graph's empty-values guard, exercised directly.
+
+    Both real call sites in _format_summary_block already skip calling
+    this with an empty series (the runtime branch checks
+    summary.elapsed_minutes first; the per-metric loop checks
+    metric.values first) -- this guard protects min()/max() in the
+    sparkline branch from a future caller that doesn't. Tested directly
+    since it's otherwise unreachable through format_grouped_summary.
+    """
+    renderer = _summary_renderer()
+    assert (
+        renderer._format_metric_graph(
+            "CPUEff",
+            [],
+            unit="%",
+            graph_style="sparkline",
+            use_unicode=True,
+            indent="  ",
+        )
+        == []
+    )
+    assert (
+        renderer._format_metric_graph(
+            "CPUEff",
+            [],
+            unit="%",
+            graph_style="histogram",
+            use_unicode=True,
+            indent="  ",
+        )
+        == []
+    )

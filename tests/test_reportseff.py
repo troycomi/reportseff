@@ -1414,6 +1414,25 @@ def test_default_group_bare_job_id_matches_report(
 
 
 @pytest.mark.usefixtures("_mock_inquirer")
+def test_default_group_no_args_still_dispatches_to_report(
+    mocker: MockerFixture,
+) -> None:
+    """Zero arguments still dispatches to `report`, not a click error.
+
+    Covers the `not args` half of DefaultGroup's dispatch check, distinct
+    from "first token isn't a subcommand name".
+    """
+    mocker.patch("reportseff.console.which", return_value=True)
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        result = runner.invoke(console.cli, [])
+    # reaches report's own directory-scan error, not a click dispatch
+    # error -- proves `not args` correctly routed to the default command
+    assert "no such command" not in result.output.lower()
+    assert "contains no files" in result.output.lower()
+
+
+@pytest.mark.usefixtures("_mock_inquirer")
 def test_default_group_option_first_still_dispatches(
     mocker: MockerFixture, console_jobs: dict[str, str]
 ) -> None:
