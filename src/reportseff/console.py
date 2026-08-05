@@ -12,7 +12,7 @@ from . import __version__
 from .db_inquirer import BaseInquirer, SacctInquirer
 from .job_collection import JobCollection
 from .output_renderer import OutputRenderer, RenderOptions
-from .parameters import ReportseffParameters, SummarizeParameters
+from .parameters import BaseQueryParameters, ReportseffParameters, SummarizeParameters
 
 MAX_ENTRIES_TO_ECHO = 20
 #: Name of the subcommand `reportseff <args>` dispatches to when the first
@@ -320,7 +320,7 @@ def summarize(**kwargs: Any) -> None:
 
 
 def fetch_job_collection(
-    args: ReportseffParameters,
+    args: BaseQueryParameters,
     inquirer: BaseInquirer,
     renderer: OutputRenderer,
 ) -> JobCollection:
@@ -330,6 +330,10 @@ def fetch_job_collection(
     both the default `report` command and `summarize`: everything up to and
     including sorting, before either command renders its own output shape.
 
+    Typed against BaseQueryParameters (not ReportseffParameters) since both
+    ReportseffParameters and SummarizeParameters are passed here, and only
+    share a common ancestor, not a subtype relationship.
+
     Args:
         args: parsed command-line parameters (job selection/filtering options)
         inquirer: the db inquirer to configure and query with
@@ -337,7 +341,7 @@ def fetch_job_collection(
 
     Returns:
         The populated JobCollection, with array-size filtering already
-        applied and jobs sorted per `args.sorting`.
+        applied. Sorting happens separately, in the caller.
 
     Raises:
         Exception: if there is an error processing entries
