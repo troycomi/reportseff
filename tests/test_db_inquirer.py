@@ -2,6 +2,7 @@
 
 import datetime
 import subprocess
+from collections.abc import Generator
 
 import pytest
 from pytest_mock import MockerFixture
@@ -906,7 +907,7 @@ def test_sacct_newline_jobs_issue_63(
 # ---------------------------------------------------------------------------
 
 @pytest.fixture(autouse=False)
-def reset_jobstats_cache():
+def reset_jobstats_cache() -> Generator[None, None, None]:
     """Reset the module-level availability cache before and after each test."""
     _dbi_mod._JOBSTATS_AVAILABLE = None
     yield
@@ -988,7 +989,7 @@ def _make_row(
     jobid: str,
     jobidraw: str,
     admin_comment: str = "",
-) -> dict:
+) -> dict[str, str]:
     return {"JobID": jobid, "JobIDRaw": jobidraw, "AdminComment": admin_comment}
 
 
