@@ -26,7 +26,8 @@ class ReportseffParameters:
     cluster: str = ""
     extra_args: str = ""
     array_min_size: int = 0  # Minimum size for job arrays to be reported
-    no_jobstats_fallback: bool = False # Do not fallback to jobstats if AdminComment field is missing
+    # Do not fallback to jobstats if AdminComment field is missing
+    no_jobstats_fallback: bool = False
 
     def __post_init__(self) -> None:
         """Post init method to handle prepending format string with +."""
