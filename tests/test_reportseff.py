@@ -133,6 +133,45 @@ def test_debug_option(mocker: MockerFixture, console_jobs: dict[str, str]) -> No
     ]
 
 
+@pytest.mark.parametrize("debug", [False, True])
+@pytest.mark.usefixtures("_mock_inquirer")
+def test_jobstats_fallback_wiring(
+    mocker: MockerFixture,
+    console_jobs: dict[str, str],
+    debug: bool,
+) -> None:
+    """Pass the expected debug callback to the jobstats fallback."""
+    mocker.patch("reportseff.console.which", return_value=True)
+    mocker.patch("reportseff.console._check_jobstats_available", return_value=True)
+    runner = CliRunner()
+    sub_result = mocker.MagicMock()
+    sub_result.returncode = 0
+    sub_result.stdout = console_jobs["23000233"]
+    mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
+
+    def augment(rows: list[dict[str, str]], *, debug_cmd: Any) -> list[dict[str, str]]:
+        if debug_cmd is not None:
+            debug_cmd("jobstats fallback invoked")
+        return rows
+
+    mock_augment = mocker.patch(
+        "reportseff.console.augment_with_jobstats", side_effect=augment
+    )
+    arguments = ["--no-color", "23000233"]
+    if debug:
+        arguments.insert(1, "--debug")
+
+    result = runner.invoke(console.main, arguments)
+
+    assert result.exit_code == 0
+    mock_augment.assert_called_once()
+    assert mock_augment.call_args.kwargs["debug_cmd"] is not None if debug else (
+        mock_augment.call_args.kwargs["debug_cmd"] is None
+    )
+    if debug:
+        assert "jobstats fallback invoked" in result.output
+
+
 @pytest.mark.usefixtures("_mock_inquirer")
 def test_process_failure(mocker: MockerFixture, console_jobs: dict[str, str]) -> None:
     """Catch exceptions in process_entry by printing the offending entry."""
