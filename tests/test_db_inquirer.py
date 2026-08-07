@@ -992,6 +992,18 @@ def _make_row(
     return {"JobID": jobid, "JobIDRaw": jobidraw, "AdminComment": admin_comment}
 
 
+def test_augment_jobstats_not_on_path(mocker: MockerFixture) -> None:
+    """Return rows unchanged when jobstats disappears before augmentation."""
+    mocker.patch("reportseff.db_inquirer.shutil.which", return_value=None)
+    mock_sub = mocker.patch("reportseff.db_inquirer.subprocess.run")
+    rows = [_make_row("654", "654")]
+
+    result = augment_with_jobstats(rows)
+
+    assert result == rows
+    mock_sub.assert_not_called()
+
+
 @pytest.mark.usefixtures("_mock_jobstats_path")
 def test_augment_no_missing_rows(mocker: MockerFixture) -> None:
     """Rows that already have AdminComment are not passed to jobstats."""
