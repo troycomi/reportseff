@@ -913,50 +913,55 @@ def reset_jobstats_cache():
     _dbi_mod._JOBSTATS_AVAILABLE = None
 
 
-def test_check_jobstats_not_on_path(mocker: MockerFixture, reset_jobstats_cache) -> None:
+@pytest.mark.usefixtures("reset_jobstats_cache")
+def test_check_jobstats_not_on_path(mocker: MockerFixture) -> None:
     """Return False when jobstats is not found on PATH."""
     mocker.patch("reportseff.db_inquirer.shutil.which", return_value=None)
     assert _check_jobstats_available() is False
 
 
-def test_check_jobstats_found_with_base64_flag(
-    mocker: MockerFixture, reset_jobstats_cache
-) -> None:
+@pytest.mark.usefixtures("reset_jobstats_cache")
+def test_check_jobstats_found_with_base64_flag(mocker: MockerFixture) -> None:
     """Return True when jobstats help text includes -b / --base64."""
-    mocker.patch("reportseff.db_inquirer.shutil.which", return_value="/usr/bin/jobstats")
+    mocker.patch(
+        "reportseff.db_inquirer.shutil.which", return_value="/usr/bin/jobstats"
+    )
     mock_result = mocker.MagicMock()
     mock_result.stdout = "usage: jobstats [-h] [-j] [-b] [--base64] jobid\n"
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=mock_result)
     assert _check_jobstats_available() is True
 
 
-def test_check_jobstats_found_without_base64_flag(
-    mocker: MockerFixture, reset_jobstats_cache
-) -> None:
+@pytest.mark.usefixtures("reset_jobstats_cache")
+def test_check_jobstats_found_without_base64_flag(mocker: MockerFixture) -> None:
     """Return False when jobstats exists but help text lacks -b / --base64."""
-    mocker.patch("reportseff.db_inquirer.shutil.which", return_value="/usr/bin/jobstats")
+    mocker.patch(
+        "reportseff.db_inquirer.shutil.which", return_value="/usr/bin/jobstats"
+    )
     mock_result = mocker.MagicMock()
     mock_result.stdout = "usage: jobstats [-h] [-j] jobid\n"
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=mock_result)
     assert _check_jobstats_available() is False
 
 
-def test_check_jobstats_subprocess_exception(
-    mocker: MockerFixture, reset_jobstats_cache
-) -> None:
+@pytest.mark.usefixtures("reset_jobstats_cache")
+def test_check_jobstats_subprocess_exception(mocker: MockerFixture) -> None:
     """Return False when the jobstats subprocess itself raises."""
-    mocker.patch("reportseff.db_inquirer.shutil.which", return_value="/usr/bin/jobstats")
+    mocker.patch(
+        "reportseff.db_inquirer.shutil.which", return_value="/usr/bin/jobstats"
+    )
     mocker.patch(
         "reportseff.db_inquirer.subprocess.run", side_effect=OSError("exec failed")
     )
     assert _check_jobstats_available() is False
 
 
-def test_check_jobstats_result_is_cached(
-    mocker: MockerFixture, reset_jobstats_cache
-) -> None:
+@pytest.mark.usefixtures("reset_jobstats_cache")
+def test_check_jobstats_result_is_cached(mocker: MockerFixture) -> None:
     """Availability check is cached; subprocess is only called once."""
-    mocker.patch("reportseff.db_inquirer.shutil.which", return_value="/usr/bin/jobstats")
+    mocker.patch(
+        "reportseff.db_inquirer.shutil.which", return_value="/usr/bin/jobstats"
+    )
     mock_result = mocker.MagicMock()
     mock_result.stdout = "usage: jobstats [-b] jobid\n"
     mock_sub = mocker.patch(
@@ -972,6 +977,13 @@ def test_check_jobstats_result_is_cached(
 # Tests for augment_with_jobstats
 # ---------------------------------------------------------------------------
 
+@pytest.fixture
+def _mock_jobstats_path(mocker: MockerFixture) -> None:
+    mocker.patch(
+        "reportseff.db_inquirer.shutil.which", return_value="/usr/bin/jobstats"
+    )
+
+
 def _make_row(
     jobid: str,
     jobidraw: str,
@@ -980,6 +992,7 @@ def _make_row(
     return {"JobID": jobid, "JobIDRaw": jobidraw, "AdminComment": admin_comment}
 
 
+@pytest.mark.usefixtures("_mock_jobstats_path")
 def test_augment_no_missing_rows(mocker: MockerFixture) -> None:
     """Rows that already have AdminComment are not passed to jobstats."""
     mock_sub = mocker.patch("reportseff.db_inquirer.subprocess.run")
@@ -989,6 +1002,7 @@ def test_augment_no_missing_rows(mocker: MockerFixture) -> None:
     mock_sub.assert_not_called()
 
 
+@pytest.mark.usefixtures("_mock_jobstats_path")
 def test_augment_injects_valid_payload(mocker: MockerFixture) -> None:
     """Valid base64 lines are prefixed with JS1: and injected."""
     fake_b64 = "YWJjZGVmZ2hpamtsbW5vcA=="  # arbitrary valid base64
@@ -1002,6 +1016,7 @@ def test_augment_injects_valid_payload(mocker: MockerFixture) -> None:
     assert result[0]["AdminComment"] == f"JS1:{fake_b64}"
 
 
+@pytest.mark.usefixtures("_mock_jobstats_path")
 def test_augment_skips_none_sentinel(mocker: MockerFixture) -> None:
     """Lines equal to 'None' (no Prometheus data) are silently skipped."""
     mock_result = mocker.MagicMock()
@@ -1014,6 +1029,7 @@ def test_augment_skips_none_sentinel(mocker: MockerFixture) -> None:
     assert result[0]["AdminComment"] == ""
 
 
+@pytest.mark.usefixtures("_mock_jobstats_path")
 def test_augment_skips_short_sentinel(mocker: MockerFixture) -> None:
     """Lines equal to 'Short' (job too brief) are silently skipped."""
     mock_result = mocker.MagicMock()
@@ -1026,6 +1042,7 @@ def test_augment_skips_short_sentinel(mocker: MockerFixture) -> None:
     assert result[0]["AdminComment"] == ""
 
 
+@pytest.mark.usefixtures("_mock_jobstats_path")
 def test_augment_partial_failure(mocker: MockerFixture) -> None:
     """On partial failure only the rows matching stdout lines are updated."""
     fake_b64 = "dGVzdHBheWxvYWQ="
@@ -1041,6 +1058,7 @@ def test_augment_partial_failure(mocker: MockerFixture) -> None:
     assert result[1]["AdminComment"] == ""  # not reached
 
 
+@pytest.mark.usefixtures("_mock_jobstats_path")
 def test_augment_skips_substep_rows(mocker: MockerFixture) -> None:
     """Rows with a '.' in JobID (.batch, .extern) are never sent to jobstats."""
     mock_sub = mocker.patch("reportseff.db_inquirer.subprocess.run")
@@ -1049,6 +1067,7 @@ def test_augment_skips_substep_rows(mocker: MockerFixture) -> None:
     mock_sub.assert_not_called()
 
 
+@pytest.mark.usefixtures("_mock_jobstats_path")
 def test_augment_subprocess_exception(mocker: MockerFixture) -> None:
     """If the subprocess itself raises, rows are returned unchanged."""
     mocker.patch(
@@ -1059,6 +1078,7 @@ def test_augment_subprocess_exception(mocker: MockerFixture) -> None:
     assert result[0]["AdminComment"] == ""
 
 
+@pytest.mark.usefixtures("_mock_jobstats_path")
 def test_augment_batch_array_job(mocker: MockerFixture) -> None:
     """All array task rows are batched into a single subprocess call."""
     b64_1 = "cGF5bG9hZDE="
@@ -1082,6 +1102,7 @@ def test_augment_batch_array_job(mocker: MockerFixture) -> None:
     assert "9002" in call_args
 
 
+@pytest.mark.usefixtures("_mock_jobstats_path")
 def test_augment_debug_message(mocker: MockerFixture) -> None:
     """debug_cmd is called with an informational message when rows are missing."""
     mock_result = mocker.MagicMock()

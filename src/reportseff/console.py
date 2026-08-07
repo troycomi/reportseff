@@ -9,7 +9,12 @@ from typing import Any
 import click
 
 from . import __version__
-from .db_inquirer import BaseInquirer, SacctInquirer, _check_jobstats_available, augment_with_jobstats
+from .db_inquirer import (
+    BaseInquirer,
+    SacctInquirer,
+    _check_jobstats_available,
+    augment_with_jobstats,
+)
 from .job_collection import JobCollection
 from .output_renderer import OutputRenderer, RenderOptions
 from .parameters import ReportseffParameters

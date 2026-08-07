@@ -43,17 +43,19 @@ def _check_jobstats_available() -> bool:
     if _JOBSTATS_AVAILABLE is not None:
         return _JOBSTATS_AVAILABLE
 
-    if shutil.which("jobstats") is None:
+    jobstats_path = shutil.which("jobstats")
+    if jobstats_path is None:
         _JOBSTATS_AVAILABLE = False
         return False
 
     try:
-        result = subprocess.run(
-            ["jobstats", "-h"],
+        result = subprocess.run(  # noqa: S603
+            [jobstats_path, "-h"],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             encoding="utf8",
             timeout=10,
+            check=False,
         )
         help_text = result.stdout
     except Exception:  # noqa: BLE001
@@ -67,7 +69,7 @@ def _check_jobstats_available() -> bool:
 def augment_with_jobstats(
     rows: list[dict[str, str]],
     *,
-    debug_cmd: "Callable[[str], Any] | None" = None,
+    debug_cmd: Callable[[str], Any] | None = None,
 ) -> list[dict[str, str]]:
     """Fill missing AdminComment values using `jobstats -b`.
 
@@ -114,12 +116,16 @@ def augment_with_jobstats(
             f"{len(missing_rawids)} job(s) via `jobstats -b`"
         )
 
+    jobstats_path = shutil.which("jobstats")
+    if jobstats_path is None:
+        return rows
+
     try:
-        proc = subprocess.run(
-            ["jobstats", *missing_rawids, "-b"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+        proc = subprocess.run(  # noqa: S603
+            [jobstats_path, *missing_rawids, "-b"],
+            capture_output=True,
             encoding="utf8",
+            check=False,
         )
     except Exception:  # noqa: BLE001
         # jobstats unavailable or crashed entirely — leave rows unchanged.

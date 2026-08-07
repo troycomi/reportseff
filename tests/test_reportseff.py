@@ -138,6 +138,7 @@ def test_debug_option(mocker: MockerFixture, console_jobs: dict[str, str]) -> No
 def test_jobstats_fallback_wiring(
     mocker: MockerFixture,
     console_jobs: dict[str, str],
+    *,
     debug: bool,
 ) -> None:
     """Pass the expected debug callback to the jobstats fallback."""
