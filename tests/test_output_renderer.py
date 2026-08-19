@@ -1326,3 +1326,122 @@ def test_format_metric_graph_empty_values_returns_nothing() -> None:
         )
         == []
     )
+
+
+# ---------------------------------------------------------------------------
+# _format_summary_block: remaining branches (found via the real coverage run)
+# ---------------------------------------------------------------------------
+
+
+def test_format_summary_block_no_state_counters_for_empty_group() -> None:
+    """An empty task list still renders a sane header.
+
+    Never produced through normal dispatch, since is_array_group always
+    gates on >=1 real task -- tested directly rather than left uncovered.
+    """
+    renderer = _summary_renderer()
+    lines = renderer._format_summary_block(
+        "999",
+        [],
+        ["CPUEff"],
+        label="Array",
+        min_tasks=50,
+        graph_style="sparkline",
+        graphed=set(),
+        use_unicode=True,
+    )
+    assert len(lines) == 1
+    assert "Array 999" in lines[0]
+    assert "0/0 completed (0%)" in lines[0]
+    # no trailing "  •  <counters>" segment when state_counts is empty
+    assert lines[0].count("\u2022") == 1
+
+
+def test_format_grouped_summary_all_unparseable_elapsed_omits_runtime_lines() -> None:
+    """No parseable Elapsed omits total task-time and mean runtime lines.
+
+    Rather than showing a misleading zero for either.
+    """
+    renderer = output_renderer.OutputRenderer(
+        min_required,
+        output_renderer.RenderOptions(),
+        format_str="JobID,State,CPUEff",
+    )
+    jobs = []
+    for i in (1, 2):
+        job = Job(f"100_{i}".split("_", 1)[0], f"100_{i}", None)
+        job.update(
+            {
+                "JobID": f"100_{i}",
+                "State": "COMPLETED",
+                "AllocCPUS": "1",
+                "ReqMem": "1Gn",
+                "TotalCPU": "00:01:00",
+                "Elapsed": "00:10:00",
+                "Timelimit": "00:20:00",
+                "MaxRSS": "",
+                "NNodes": "1",
+                "NTasks": "",
+            }
+        )
+        # simulate a missing/unparseable Elapsed after normal construction
+        job.other_entries["Elapsed"] = "---"
+        jobs.append(job)
+
+    output = renderer.format_grouped_summary(
+        jobs,
+        group_by="array",
+        min_tasks=50,
+        graph_style="sparkline",
+        graph_format="runtime,cpueff",
+        ascii_fallback=False,
+    )
+    assert "Total task-time" not in output
+    assert "Mean runtime" not in output
+    # the rest of the summary still renders
+    assert "Array 100" in output
+    assert "CPUEff" in output
+
+
+def test_format_grouped_summary_renders_shared_and_nodelist() -> None:
+    """A constant column renders Shared:; NodeList renders a Nodes: line.
+
+    Neither had rendering-level coverage before (only build_array_summary's
+    own computation did, in test_array_summary.py).
+    """
+    renderer = output_renderer.OutputRenderer(
+        [*min_required, "Partition", "NodeList"],
+        output_renderer.RenderOptions(),
+        format_str="JobID,State,Elapsed,CPUEff,Partition,NodeList",
+    )
+    jobs = []
+    for i, nodelist in ((1, "somacpu001"), (2, "somacpu002")):
+        job = Job(f"100_{i}".split("_", 1)[0], f"100_{i}", None)
+        job.update(
+            {
+                "JobID": f"100_{i}",
+                "State": "COMPLETED",
+                "AllocCPUS": "1",
+                "ReqMem": "1Gn",
+                "TotalCPU": "00:09:00",
+                "Elapsed": "00:10:00",
+                "Timelimit": "00:20:00",
+                "MaxRSS": "",
+                "NNodes": "1",
+                "NTasks": "",
+                "Partition": "CPU",
+                "NodeList": nodelist,
+            }
+        )
+        jobs.append(job)
+
+    output = renderer.format_grouped_summary(
+        jobs,
+        group_by="array",
+        min_tasks=50,
+        graph_style="sparkline",
+        graph_format="runtime",
+        ascii_fallback=False,
+    )
+    assert "Shared: Partition=CPU" in output
+    assert "Nodes: somacpu[001-002]" in output

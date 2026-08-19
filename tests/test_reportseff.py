@@ -200,6 +200,27 @@ def test_long_output(mocker: MockerFixture, console_jobs: dict[str, str]) -> Non
 
 
 @pytest.mark.usefixtures("_mock_inquirer")
+def test_summarize_long_output_uses_pager(
+    mocker: MockerFixture, console_jobs: dict[str, str]
+) -> None:
+    """Summarize also pages outputs with more than 20 entries."""
+    mocker.patch("reportseff.console.which", return_value=True)
+    runner = CliRunner()
+    sub_result = mocker.MagicMock()
+    sub_result.returncode = 0
+    sub_result.stdout = console_jobs["24418435"]
+    mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
+    mocker.patch("reportseff.console.len", return_value=21)
+    mocker.patch.object(OutputRenderer, "format_grouped_summary", return_value="output")
+    mock_click = mocker.patch("reportseff.console.click.echo_via_pager")
+
+    result = runner.invoke(console.summarize, ["24418435"])
+
+    assert result.exit_code == 0
+    mock_click.assert_called_once_with("output", color=None)
+
+
+@pytest.mark.usefixtures("_mock_inquirer")
 def test_simple_job(mocker: MockerFixture, console_jobs: dict[str, str]) -> None:
     """Can get efficiency from a single job."""
     mocker.patch("reportseff.console.which", return_value=True)

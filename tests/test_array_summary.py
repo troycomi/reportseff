@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from unittest import mock
+
 import pytest
 
 from reportseff import array_summary as summ
@@ -255,6 +257,45 @@ def test_build_summary_nodelist_compacted() -> None:
     assert result.node_hostlist == "somacpu[001-003]"
 
 
+def test_summarize_nodes_skips_invalid_entries() -> None:
+    """Non-string/empty/placeholder NodeList entries are skipped, not errored."""
+    tasks = [
+        _make_job("100_1", "COMPLETED", nodelist="somacpu001"),
+        _make_job("100_2", "COMPLETED", nodelist="---"),
+    ]
+    assert summ._summarize_nodes(tasks, "NodeList") == "somacpu001"
+
+
+def test_summarize_nodes_all_invalid_returns_none() -> None:
+    """When no task has a usable NodeList value, the summary is None."""
+    tasks = [
+        _make_job("100_1", "COMPLETED", nodelist="---"),
+        _make_job("100_2", "COMPLETED", nodelist=""),
+    ]
+    assert summ._summarize_nodes(tasks, "NodeList") is None
+
+
+def test_coerce_float_rejects_bool() -> None:
+    """`bool` is a subclass of `int` in Python; explicitly excluded from coercion."""
+    assert summ._coerce_float(True) is None
+    assert summ._coerce_float(False) is None
+
+
+def test_coerce_float_rejects_other_types() -> None:
+    """Values that are neither bool, numeric, nor string don't coerce."""
+    assert summ._coerce_float(None) is None
+    assert summ._coerce_float([1, 2, 3]) is None
+
+
+def test_elapsed_seconds_unparseable_returns_none() -> None:
+    """A malformed Elapsed value is treated as missing, not an error."""
+    job = _make_job("100_1", "COMPLETED", elapsed="00:10:00")
+    # bypass Job.update()'s own parsing (which would reject this outright)
+    # to test _elapsed_seconds' own defensive handling of a bad stored value
+    job.other_entries["Elapsed"] = "garbage"
+    assert summ._elapsed_seconds(job) is None
+
+
 # ---------------------------------------------------------------------------
 # hostlist expand / compact
 # ---------------------------------------------------------------------------
@@ -278,6 +319,21 @@ def test_expand_hostlist_plain_and_commas() -> None:
         "somacpu002",
         "somagpu003",
     ]
+
+
+def test_expand_hostlist_skips_empty_tokens() -> None:
+    """A stray double comma doesn't produce an empty node name."""
+    assert summ.expand_hostlist("nodeA,,nodeB") == ["nodeA", "nodeB"]
+
+
+def test_split_top_level_empty_string() -> None:
+    """An empty string splits to no tokens at all."""
+    assert summ._split_top_level("") == []
+
+
+def test_split_top_level_trailing_comma() -> None:
+    """A trailing comma doesn't produce a stray empty final token."""
+    assert summ._split_top_level("nodeA,nodeB,") == ["nodeA", "nodeB"]
 
 
 def test_compact_hostlist_multi_prefix() -> None:
@@ -386,6 +442,19 @@ def test_render_sparkline() -> None:
 def test_render_sparkline_empty() -> None:
     """No values yields an empty sparkline."""
     assert summ.render_sparkline([]) == ""
+
+
+def test_render_sparkline_zero_max_count_guard() -> None:
+    """Defensive guard against a zero/negative max bin count.
+
+    compute_histogram can't actually produce this for non-empty input --
+    every value lands in some bin, so the total across bins always equals
+    len(values) -- but the guard is worth keeping in case that contract
+    ever changes, so it's exercised directly here via a patched
+    compute_histogram rather than left untested.
+    """
+    with mock.patch.object(summ, "compute_histogram", return_value=([(0, 1)], [0])):
+        assert summ.render_sparkline([1.0, 2.0, 3.0]) == ""
 
 
 # ---------------------------------------------------------------------------
