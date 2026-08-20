@@ -11,7 +11,7 @@ readme = "README.md"
 keywords= ["slurm","seff"]
 requires-python = ">=3.10"
 dependencies = [
-    "click>=6.7",
+    "click>=8.3.3",
 ]
 
 [project.scripts]
