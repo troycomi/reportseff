@@ -277,8 +277,8 @@ def test_summarize_nodes_all_invalid_returns_none() -> None:
 
 def test_coerce_float_rejects_bool() -> None:
     """`bool` is a subclass of `int` in Python; explicitly excluded from coercion."""
-    assert summ._coerce_float(True) is None
-    assert summ._coerce_float(False) is None
+    assert summ._coerce_float(True) is None  # noqa: FBT003
+    assert summ._coerce_float(False) is None  # noqa: FBT003
 
 
 def test_coerce_float_rejects_other_types() -> None:
@@ -374,7 +374,7 @@ def test_hostlist_roundtrip() -> None:
 
 def test_compute_histogram_basic() -> None:
     """Values are binned; counts sum to the number of values."""
-    values = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    values = [float(i) for i in range(1, 11)]
     edges, counts = summ.compute_histogram(values, bins=5)
     assert len(edges) == 5
     assert sum(counts) == len(values)
