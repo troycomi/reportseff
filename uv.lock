@@ -875,7 +875,7 @@ dev = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "click", specifier = ">=6.7" }]
+requires-dist = [{ name = "click", specifier = ">=8.3.3" }]
 
 [package.metadata.requires-dev]
 dev = [
