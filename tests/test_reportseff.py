@@ -6,6 +6,7 @@ import shlex
 import subprocess
 from typing import TYPE_CHECKING, Any
 
+import click
 import pytest
 from click.testing import CliRunner
 
@@ -1451,6 +1452,52 @@ def test_default_group_no_args_still_dispatches_to_report(
     # error -- proves `not args` correctly routed to the default command
     assert "no such command" not in result.output.lower()
     assert "contains no files" in result.output.lower()
+
+
+def test_case_insensitive_choice_normalizes_every_case_variant() -> None:
+    """`_CaseInsensitiveChoice` matches on every click version this project supports.
+
+    Deliberately doesn't use click.Choice's own `case_sensitive`
+    constructor argument -- that doesn't exist in click 6.7, this
+    project's declared minimum, and is exercised directly by the
+    old-click-tests poe task.
+    """
+    choice = console._CaseInsensitiveChoice(["array", "name"])
+    for raw, expected in (
+        ("array", "array"),
+        ("Array", "array"),
+        ("ARRAY", "array"),
+        ("name", "name"),
+        ("NAME", "name"),
+        ("NaMe", "name"),
+    ):
+        assert choice.convert(raw, None, None) == expected
+
+
+def test_case_insensitive_choice_rejects_invalid_value() -> None:
+    """An unrecognized value is still rejected, same as a normal Choice."""
+    choice = console._CaseInsensitiveChoice(["array", "name"])
+    with pytest.raises(click.BadParameter):
+        choice.convert("bogus", None, None)
+
+
+@pytest.mark.usefixtures("_mock_inquirer")
+def test_summarize_graph_style_accepts_mixed_case(
+    mocker: MockerFixture, console_jobs: dict[str, str]
+) -> None:
+    """--graph-style accepts any case, end to end through the CLI."""
+    mocker.patch("reportseff.console.which", return_value=True)
+    runner = CliRunner()
+    sub_result = mocker.MagicMock()
+    sub_result.returncode = 0
+    sub_result.stdout = console_jobs["24418435"]
+    mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
+
+    for value in ("histogram", "Histogram", "HISTOGRAM"):
+        result = runner.invoke(
+            console.summarize, ["--graph-style", value, "24418435"]
+        )
+        assert result.exit_code == 0, (value, result.output)
 
 
 @pytest.mark.usefixtures("_mock_inquirer")
