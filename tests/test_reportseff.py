@@ -1481,6 +1481,19 @@ def test_case_insensitive_choice_rejects_invalid_value() -> None:
         choice.convert("bogus", None, None)
 
 
+def test_case_insensitive_choice_skips_lowering_non_string_input() -> None:
+    """A non-string value skips `.lower()` and still validates normally.
+
+    Real CLI usage always hands convert() a string -- click parses every
+    argument as one before type conversion runs. This exercises the
+    isinstance guard directly, protecting against a value arriving
+    pre-converted through some other click code path.
+    """
+    choice = console._CaseInsensitiveChoice(["array", "name"])
+    with pytest.raises(click.BadParameter):
+        choice.convert(None, None, None)
+
+
 @pytest.mark.usefixtures("_mock_inquirer")
 def test_summarize_graph_style_accepts_mixed_case(
     mocker: MockerFixture, console_jobs: dict[str, str]

@@ -71,7 +71,7 @@ class DefaultGroup(click.Group):
         return super().parse_args(ctx, args)
 
 
-class _CaseInsensitiveChoice(click.Choice):
+class _CaseInsensitiveChoice(click.Choice[str]):
     """A click.Choice that matches case-insensitively on every click version.
 
     click.Choice's own `case_sensitive` constructor argument doesn't exist
