@@ -11,11 +11,11 @@ readme = "README.md"
 keywords= ["slurm","seff"]
 requires-python = ">=3.10"
 dependencies = [
-    "click>=6.7",
+    "click>=8.3.3",
 ]
 
 [project.scripts]
-reportseff = "reportseff.console:main"
+reportseff = "reportseff.console:cli"
 
 [build-system]
 requires = ["uv_build>=0.9.25,<0.10.0"]

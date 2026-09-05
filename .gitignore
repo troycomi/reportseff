@@ -5,3 +5,7 @@ dist/
 *.swp
 .python-version
 .coverage
+# ignore .vscode settings
+.vscode/
+# ignore local work area
+work/

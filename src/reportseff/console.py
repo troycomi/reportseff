@@ -12,146 +12,259 @@ from . import __version__
 from .db_inquirer import BaseInquirer, SacctInquirer
 from .job_collection import JobCollection
 from .output_renderer import OutputRenderer, RenderOptions
-from .parameters import ReportseffParameters
+from .parameters import BaseQueryParameters, ReportseffParameters, SummarizeParameters
 
 MAX_ENTRIES_TO_ECHO = 20
+#: Name of the subcommand `reportseff <args>` dispatches to when the first
+#: token isn't a registered subcommand name. Keeps the pre-subcommand CLI
+#: surface working unchanged.
+DEFAULT_COMMAND_NAME = "report"
 
 
-@click.command()
-@click.option(
-    "--sorting",
-    default="jobid",
-    help=(
-        "One of mtime, filename or jobid.  Controls how jobs are reported."
-        "If mtime will sort by the modified time of the file or job number"
-        "If filename will sort by the if the file exists,"
-        "the length, then the content."
-        "If jobid [default] split the job name and cast all numerics to ints"
-    ),
-)
-@click.option(
-    "--color/--no-color",
-    default=None,
-    help="Force color output. No color will use click defaults",
-)
-@click.option(
-    "--format",
-    "format_str",
-    default="JobID%>,State,Elapsed%>,TimeEff,CPUEff,MemEff",
-    help="Comma-separated list of columns to include. Options "
-    "are any valid sacct input along with CPUEff, MemEff, Energy, "
-    "and TimeEff.  In systems with jobstat caching, GPU usage can be "
-    "added with GPUEff, GPUMem or GPU (for both). "
-    "A width and alignment may optionally be provided "
-    'after "%", e.g. JobID%>15 aligns job id right with max '
-    "width of 15 characters. Generally NAME[[%:][ALIGNMENT][WIDTH[e$]?]]. "
-    "When an `e` or `$` is present after a width argument, "
-    "the output will be truncated to the right."
-    "Prefix with a + to add to the defaults. "
-    "A single format token will suppress the header line. "
-    "Wrap in quotes to pass a string literal, "
-    "otherwise alignment may be misinterpreted.",
-)
-@click.option(
-    "--slurm-format",
-    default="",
-    help="Filename pattern passed to sbatch.  By default, will handle "
-    "patterns like slurm_%j.out, %x_%j, or slurm_%A_%a.  In particular, the "
-    "jobid is expected to start with '_'.  Setting this to the same entry "
-    "as used in sbatch will allow parsing slurm outputs like `1234.out`.  "
-    "Array jobs must have %A_%a to properly interface with sacct.",
-)
-@click.option(
-    "--debug", default=False, is_flag=True, help="Print raw db query to stderr"
-)
-@click.option(
-    "-u",
-    "--user",
-    default="",
-    help="Ignore jobs, return all jobs in last week from user",
-)
-@click.option(
-    "--partition",
-    default="",
-    help="Only include jobs with the specified partition",
-)
-@click.option(
-    "-M",
-    "--cluster",
-    default="",
-    help="Select specific cluster, for multi-cluster system only",
-)
-@click.option(
-    "--extra-args",
-    default="",
-    help="Extra arguments to forward to sacct",
-)
-@click.option(
-    "-s", "--state", default="", help="Only include jobs with the specified states"
-)
-@click.option(
-    "-S", "--not-state", default="", help="Include jobs without the specified states"
-)
-@click.option(
-    "--since",
-    default="",
-    help="Only include jobs after this time. Can be valid sacct "
-    "or as a comma separated list of time deltas, e.g. d=2,h=1 "
-    "means 2 days, 1 hour before current time. Weeks, days, "
-    "hours, and minutes can use case-insensitive abbreviations. "
-    "Minutes is the minimum resolution, while weeks is the coarsest.",
-)
-@click.option(
-    "--until",
-    default="",
-    help="Only include jobs before this time. Can be valid sacct "
-    "or as a comma separated list of time deltas, e.g. d=2,h=1 "
-    "means 2 days, 1 hour before current time. Weeks, days, "
-    "hours, and minutes can use case-insensitive abbreviations. "
-    "Minutes is the minimum resolution, while weeks is the coarsest.",
-)
-@click.option(
-    "--node/--no-node",
-    "-n/-N",
-    default=False,
-    help="Report node-level statistics. Adds `jobid` to format for proper display.",
-)
-@click.option(
-    "--node-and-gpu/--no-node-gpu",
-    "-g/-G",
-    default=False,
-    help=(
-        "Report each GPU for each node. "
-        "Sets `node` and adds `GPU` to format automatically."
-    ),
-)
-@click.option(
-    "--parsable",
-    "-p",
-    is_flag=True,
-    default=False,
-    help="Output will be delmited without a delimiter at the end. "
-    "Delimiter is by default '|', to change it see --delimiter flag.",
-)
-@click.option(
-    "--delimiter",
-    "-d",
-    default="|",
-    help="Delimiter used for parsable output. The default default "
-    "delimiter is '|' when --parsable is specified. "
-    "This option is ignored if --parsable or -p is not specified.",
-)
-@click.option(
-    "--array-min-size",
-    default=0,
-    type=int,
-    help="Only include array jobs with at least this many tasks. "
-    "Non-array jobs are always included. Set to 0 to include all jobs (default).",
-)
+class DefaultGroup(click.Group):
+    """A click.Group that falls back to a default subcommand.
+
+    Lets ``reportseff <args>`` keep behaving exactly as it did before this
+    project gained subcommands: any invocation whose first token isn't a
+    registered subcommand name (and isn't ``--help``/``--version``, which
+    stay at the group level so they list/identify the tool as a whole) is
+    treated as arguments to the default command instead.
+
+    Note: this means a bare positional argument that happens to exactly
+    match a subcommand name (e.g. a job file literally named ``report``)
+    would be interpreted as that subcommand. This mirrors the trade-off any
+    default-subcommand CLI makes and is not expected to matter in practice
+    for job ids or slurm output filenames.
+    """
+
+    def __init__(self, *args: Any, default_cmd_name: str, **kwargs: Any) -> None:
+        """Store the name of the subcommand to dispatch to by default.
+
+        Args:
+            args: forwarded to click.Group
+            default_cmd_name: name of the registered subcommand to use when
+                the first CLI token isn't itself a subcommand name
+            kwargs: forwarded to click.Group
+        """
+        self.default_cmd_name = default_cmd_name
+        super().__init__(*args, **kwargs)
+
+    def parse_args(self, ctx: click.Context, args: list[str]) -> list[str]:
+        """Prepend the default command name unless a real subcommand is named.
+
+        This has to happen before the group's own option parsing runs:
+        options that only exist on the default command (like ``--format``)
+        would otherwise make click fail with "no such option" before
+        dispatch ever got a chance to run.
+
+        Args:
+            ctx: the click context for the top-level group
+            args: the raw CLI arguments
+
+        Returns:
+            The (possibly unmodified) list of leftover args, per click.Group.
+        """
+        if not args or (
+            args[0] not in self.commands and args[0] not in ("--help", "--version")
+        ):
+            args = [self.default_cmd_name, *args]
+        return super().parse_args(ctx, args)
+
+
+class _CaseInsensitiveChoice(click.Choice):     # type: ignore[type-arg]
+    """A click.Choice that matches case-insensitively on every click version.
+
+    click.Choice's own `case_sensitive` constructor argument doesn't exist
+    in click 6.7 -- this project's declared minimum (`click>=6.7` in
+    pyproject.toml, exercised directly by the `old-click-tests` poe task)
+    -- it was added in a later release. Overriding `convert()` instead
+    works identically across every version this project supports, since
+    it's never relied on a constructor argument that not all of them have.
+    """
+
+    def convert(
+        self, value: Any, param: click.Parameter | None, ctx: click.Context | None
+    ) -> Any:
+        """Lower-case the input before the normal Choice validation runs."""
+        if isinstance(value, str):
+            value = value.lower()
+        return super().convert(value, param, ctx)
+
+
+@click.group(cls=DefaultGroup, default_cmd_name=DEFAULT_COMMAND_NAME)
 @click.version_option(version=__version__)
+def cli() -> None:
+    """Reportseff - Tabular seff output."""
+
+
+def shared_query_options(func: Any) -> Any:
+    """Attach the querying options shared between `report` and `summarize`.
+
+    This is the CLI-option-level counterpart to `fetch_job_collection`:
+    both commands need the same "which jobs, from where, since when" surface,
+    so it's defined once here rather than duplicated across two @click.option
+    chains.
+
+    Args:
+        func: the click command function to decorate
+
+    Returns:
+        The decorated function, with all shared options attached.
+    """
+    decorators = [
+        click.option(
+            "--sorting",
+            default="jobid",
+            help=(
+                "One of mtime, filename or jobid.  Controls how jobs are"
+                " reported. If mtime will sort by the modified time of the"
+                " file or job number If filename will sort by the if the"
+                " file exists, the length, then the content. If jobid"
+                " [default] split the job name and cast all numerics to ints"
+            ),
+        ),
+        click.option(
+            "--color/--no-color",
+            default=None,
+            help="Force color output. No color will use click defaults",
+        ),
+        click.option(
+            "--format",
+            "format_str",
+            default="JobID%>,State,Elapsed%>,TimeEff,CPUEff,MemEff",
+            help="Comma-separated list of columns to include. Options "
+            "are any valid sacct input along with CPUEff, MemEff, Energy, "
+            "and TimeEff.  In systems with jobstat caching, GPU usage can be "
+            "added with GPUEff, GPUMem or GPU (for both). "
+            "A width and alignment may optionally be provided "
+            'after "%", e.g. JobID%>15 aligns job id right with max '
+            "width of 15 characters. Generally NAME[[%:][ALIGNMENT][WIDTH[e$]?]]. "
+            "When an `e` or `$` is present after a width argument, "
+            "the output will be truncated to the right."
+            "Prefix with a + to add to the defaults. "
+            "A single format token will suppress the header line. "
+            "Wrap in quotes to pass a string literal, "
+            "otherwise alignment may be misinterpreted.",
+        ),
+        click.option(
+            "--slurm-format",
+            default="",
+            help="Filename pattern passed to sbatch.  By default, will handle "
+            "patterns like slurm_%j.out, %x_%j, or slurm_%A_%a.  In particular, the "
+            "jobid is expected to start with '_'.  Setting this to the same entry "
+            "as used in sbatch will allow parsing slurm outputs like `1234.out`.  "
+            "Array jobs must have %A_%a to properly interface with sacct.",
+        ),
+        click.option(
+            "--debug", default=False, is_flag=True, help="Print raw db query to stderr"
+        ),
+        click.option(
+            "-u",
+            "--user",
+            default="",
+            help="Ignore jobs, return all jobs in last week from user",
+        ),
+        click.option(
+            "--partition",
+            default="",
+            help="Only include jobs with the specified partition",
+        ),
+        click.option(
+            "-M",
+            "--cluster",
+            default="",
+            help="Select specific cluster, for multi-cluster system only",
+        ),
+        click.option(
+            "--extra-args",
+            default="",
+            help="Extra arguments to forward to sacct",
+        ),
+        click.option(
+            "-s",
+            "--state",
+            default="",
+            help="Only include jobs with the specified states",
+        ),
+        click.option(
+            "-S",
+            "--not-state",
+            default="",
+            help="Include jobs without the specified states",
+        ),
+        click.option(
+            "--since",
+            default="",
+            help="Only include jobs after this time. Can be valid sacct "
+            "or as a comma separated list of time deltas, e.g. d=2,h=1 "
+            "means 2 days, 1 hour before current time. Weeks, days, "
+            "hours, and minutes can use case-insensitive abbreviations. "
+            "Minutes is the minimum resolution, while weeks is the coarsest.",
+        ),
+        click.option(
+            "--until",
+            default="",
+            help="Only include jobs before this time. Can be valid sacct "
+            "or as a comma separated list of time deltas, e.g. d=2,h=1 "
+            "means 2 days, 1 hour before current time. Weeks, days, "
+            "hours, and minutes can use case-insensitive abbreviations. "
+            "Minutes is the minimum resolution, while weeks is the coarsest.",
+        ),
+        click.option(
+            "--node/--no-node",
+            "-n/-N",
+            default=False,
+            help="Report node-level statistics. "
+            "Adds `jobid` to format for proper display.",
+        ),
+        click.option(
+            "--node-and-gpu/--no-node-gpu",
+            "-g/-G",
+            default=False,
+            help=(
+                "Report each GPU for each node. "
+                "Sets `node` and adds `GPU` to format automatically."
+            ),
+        ),
+        click.option(
+            "--parsable",
+            "-p",
+            is_flag=True,
+            default=False,
+            help="Output will be delmited without a delimiter at the end. "
+            "Delimiter is by default '|', to change it see --delimiter flag.",
+        ),
+        click.option(
+            "--delimiter",
+            "-d",
+            default="|",
+            help="Delimiter used for parsable output. The default default "
+            "delimiter is '|' when --parsable is specified. "
+            "This option is ignored if --parsable or -p is not specified.",
+        ),
+        click.option(
+            "--array-min-size",
+            default=0,
+            type=int,
+            help="Only include array jobs with at least this many tasks. "
+            "Non-array jobs are always included. Set to 0 to include all "
+            "jobs (default).",
+        ),
+    ]
+    for decorator in reversed(decorators):
+        func = decorator(func)
+    return func
+
+
+@cli.command(DEFAULT_COMMAND_NAME)
+@shared_query_options
 @click.argument("jobs", nargs=-1)
 def main(**kwargs: Any) -> None:
-    """Main entry point for reportseff."""
+    """Report on jobs in a tabular format.
+
+    This is reportseff's default command: `reportseff <jobs>` is shorthand
+    for `reportseff report <jobs>`.
+    """
     args = ReportseffParameters(**kwargs)
 
     output, entries = get_jobs(args)
@@ -162,12 +275,89 @@ def main(**kwargs: Any) -> None:
         click.echo(output, color=args.color)
 
 
-def get_jobs(args: ReportseffParameters) -> tuple[str, int]:
-    """Helper method to get jobs from db_inquirer.
+@cli.command()
+@shared_query_options
+@click.option(
+    "--group-by",
+    type=_CaseInsensitiveChoice(["array", "name"]),
+    default="array",
+    help="Grouping strategy: array (base job id, default) or name.",
+)
+@click.option(
+    "--graph-style",
+    type=_CaseInsensitiveChoice(["sparkline", "histogram", "none"]),
+    default="sparkline",
+    help="Visualization style for the metrics selected by --graph-format.",
+)
+@click.option(
+    "--graph-format",
+    default="runtime,cpueff,memeff",
+    help="Comma-separated, case-insensitive list of metrics to additionally "
+    "graph, of those already being summarized, once --min-tasks is met. "
+    "Recognized: runtime, cpueff, memeff, energy, gpueff, gpumem.",
+)
+@click.option(
+    "--min-tasks",
+    default=50,
+    type=int,
+    help="Minimum number of tasks in a group before a graph is drawn "
+    "(default 50). Does not affect whether the min/mean/max summary itself "
+    "is shown.",
+)
+@click.option(
+    "--ascii-fallback",
+    is_flag=True,
+    default=False,
+    help="Force ASCII output, overriding the automatic Unicode-support "
+    "detection normally used for summary glyphs and graphs.",
+)
+@click.argument("jobs", nargs=-1)
+def summarize(**kwargs: Any) -> None:
+    """Summarize jobs grouped by array id or job name.
+
+    Prints each task's row (like `report`), followed by a summary block for
+    any group with more than one task: state counters, completion progress,
+    min/mean/max for the currently-displayed efficiency columns, total
+    task-time, and -- for large enough groups -- a runtime distribution
+    graph.
+    """
+    try:
+        args = SummarizeParameters(**kwargs)
+    except ValueError as error:
+        click.secho(str(error), fg="red", err=True)
+        sys.exit(1)
+
+    output, entries = get_summary(args)
+
+    if entries > MAX_ENTRIES_TO_ECHO:
+        click.echo_via_pager(output, color=args.color)
+    else:
+        click.echo(output, color=args.color)
+
+
+def fetch_job_collection(
+    args: BaseQueryParameters,
+    inquirer: BaseInquirer,
+    renderer: OutputRenderer,
+) -> JobCollection:
+    """Query the scheduler and build a populated, sorted JobCollection.
+
+    This is the "querying slurm, building the datatable" pipeline shared by
+    both the default `report` command and `summarize`: everything up to and
+    including sorting, before either command renders its own output shape.
+
+    Typed against BaseQueryParameters (not ReportseffParameters) since both
+    ReportseffParameters and SummarizeParameters are passed here, and only
+    share a common ancestor, not a subtype relationship.
+
+    Args:
+        args: parsed command-line parameters (job selection/filtering options)
+        inquirer: the db inquirer to configure and query with
+        renderer: the output renderer; used only for its `query_columns`
 
     Returns:
-        The string to display, tabulated and colored
-        The number of jobs found to use paging properly
+        The populated JobCollection, with array-size filtering already
+        applied. Sorting happens separately, in the caller.
 
     Raises:
         Exception: if there is an error processing entries
@@ -176,14 +366,6 @@ def get_jobs(args: ReportseffParameters) -> tuple[str, int]:
 
     if args.slurm_format:
         job_collection.set_custom_seff_format(args.slurm_format)
-
-    inquirer, renderer = get_implementation(
-        args.format_str,
-        node=args.node,
-        node_and_gpu=args.node_and_gpu,
-        parsable=args.parsable,
-        delimiter=args.delimiter,
-    )
 
     inquirer.set_state(args.state)
     inquirer.set_not_state(args.not_state)
@@ -231,28 +413,79 @@ def get_jobs(args: ReportseffParameters) -> tuple[str, int]:
     if args.array_min_size > 0:
         job_collection.filter_by_array_size(args.array_min_size)
 
+    return job_collection
+
+
+def get_jobs(args: ReportseffParameters) -> tuple[str, int]:
+    """Helper method to get jobs from db_inquirer and render the report table.
+
+    Returns:
+        The string to display, tabulated and colored
+        The number of jobs found to use paging properly
+    """
+    inquirer, renderer = get_implementation(
+        args.format_str,
+        RenderOptions(
+            node=args.node or args.node_and_gpu,
+            gpu=args.node_and_gpu,
+            parsable=args.parsable,
+            delimiter=args.delimiter,
+        ),
+    )
+
+    job_collection = fetch_job_collection(args, inquirer, renderer)
+
     found_jobs = job_collection.get_sorted_jobs(sorting=args.sorting)
     found_jobs = [j for j in found_jobs if j.state]
 
     return renderer.format_jobs(found_jobs), len(found_jobs)
 
 
+def get_summary(args: SummarizeParameters) -> tuple[str, int]:
+    """Helper method to get jobs from db_inquirer and render the summary.
+
+    Returns:
+        The string to display, tabulated and colored
+        The number of jobs found to use paging properly
+    """
+    inquirer, renderer = get_implementation(
+        args.format_str,
+        RenderOptions(
+            node=args.node or args.node_and_gpu,
+            gpu=args.node_and_gpu,
+            parsable=args.parsable,
+            delimiter=args.delimiter,
+        ),
+    )
+
+    if args.group_by == "name":
+        renderer.add_required_column("JobName")
+
+    job_collection = fetch_job_collection(args, inquirer, renderer)
+
+    found_jobs = job_collection.get_sorted_jobs(sorting=args.sorting)
+    found_jobs = [j for j in found_jobs if j.state]
+
+    output = renderer.format_grouped_summary(
+        found_jobs,
+        group_by=args.group_by,
+        min_tasks=args.min_tasks,
+        graph_style=args.graph_style,
+        graph_format=args.graph_format,
+        ascii_fallback=args.ascii_fallback,
+    )
+    return output, len(found_jobs)
+
+
 def get_implementation(
     format_str: str,
-    *,
-    node: bool = False,
-    node_and_gpu: bool = False,
-    parsable: bool = False,
-    delimiter: str = " ",
+    options: RenderOptions,
 ) -> tuple[BaseInquirer, OutputRenderer]:
     """Get system-specific objects.
 
     Args:
         format_str: the formatting options specified by user
-        node: control if node-level stats are displayed
-        node_and_gpu: control if node and gpu stats are displayed
-        parsable: produce output with a delimiter separating columns
-        delimiter: delimiter used for parsable output
+        options: rendering options controlling display behavior
 
     Returns:
         A db_inqurirer
@@ -262,12 +495,7 @@ def get_implementation(
         inquirer = SacctInquirer()
         renderer = OutputRenderer(
             inquirer.get_valid_formats(),
-            RenderOptions(
-                node=node or node_and_gpu,
-                gpu=node_and_gpu,
-                parsable=parsable,
-                delimiter=delimiter,
-            ),
+            options,
             format_str,
         )
     else:

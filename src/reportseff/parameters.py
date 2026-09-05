@@ -1,11 +1,20 @@
 """Command line parameter collection."""
 
+from __future__ import annotations
+
 from dataclasses import dataclass
+
+from .array_summary import parse_graph_format
 
 
 @dataclass
-class ReportseffParameters:
-    """Collection of parameters from the command line."""
+class BaseQueryParameters:
+    """Parameters shared by `report` and `summarize` for querying jobs.
+
+    This is the "common bits" (querying slurm, building the datatable)
+    referenced in the implementation plan: both commands' parameter classes
+    inherit from this rather than repeating the field list.
+    """
 
     color: bool
     jobs: tuple[str, ...]
@@ -33,3 +42,28 @@ class ReportseffParameters:
             self.format_str = (
                 "JobID%>,State,Elapsed%>,TimeEff,CPUEff,MemEff," + self.format_str[1:]
             )
+
+
+@dataclass
+class ReportseffParameters(BaseQueryParameters):
+    """Collection of parameters from the command line for `report`."""
+
+
+@dataclass
+class SummarizeParameters(BaseQueryParameters):
+    """Collection of parameters from the command line for `summarize`."""
+
+    group_by: str = "array"
+    graph_style: str = "sparkline"
+    graph_format: str = "runtime,cpueff,memeff"
+    min_tasks: int = 50
+    ascii_fallback: bool = False
+
+    def __post_init__(self) -> None:
+        """Apply the shared format_str convenience, then validate graph_format.
+
+        Raises:
+            ValueError: if --graph-format names an unrecognized metric.
+        """
+        super().__post_init__()
+        parse_graph_format(self.graph_format)
