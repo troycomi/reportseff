@@ -6,7 +6,6 @@ import shlex
 import subprocess
 from typing import TYPE_CHECKING, Any
 
-import click
 import pytest
 from click.testing import CliRunner
 
@@ -1480,46 +1479,6 @@ def test_default_group_no_args_still_dispatches_to_report(
     assert "contains no files" in result.output.lower()
 
 
-def test_case_insensitive_choice_normalizes_every_case_variant() -> None:
-    """`_CaseInsensitiveChoice` matches on every click version this project supports.
-
-    Deliberately doesn't use click.Choice's own `case_sensitive`
-    constructor argument -- that doesn't exist in click 6.7, this
-    project's declared minimum, and is exercised directly by the
-    old-click-tests poe task.
-    """
-    choice = console._CaseInsensitiveChoice(["array", "name"])
-    for raw, expected in (
-        ("array", "array"),
-        ("Array", "array"),
-        ("ARRAY", "array"),
-        ("name", "name"),
-        ("NAME", "name"),
-        ("NaMe", "name"),
-    ):
-        assert choice.convert(raw, None, None) == expected
-
-
-def test_case_insensitive_choice_rejects_invalid_value() -> None:
-    """An unrecognized value is still rejected, same as a normal Choice."""
-    choice = console._CaseInsensitiveChoice(["array", "name"])
-    with pytest.raises(click.BadParameter):
-        choice.convert("bogus", None, None)
-
-
-def test_case_insensitive_choice_skips_lowering_non_string_input() -> None:
-    """A non-string value skips `.lower()` and still validates normally.
-
-    Real CLI usage always hands convert() a string -- click parses every
-    argument as one before type conversion runs. This exercises the
-    isinstance guard directly, protecting against a value arriving
-    pre-converted through some other click code path.
-    """
-    choice = console._CaseInsensitiveChoice(["array", "name"])
-    with pytest.raises(click.BadParameter):
-        choice.convert(None, None, None)
-
-
 @pytest.mark.usefixtures("_mock_inquirer")
 def test_summarize_graph_style_accepts_mixed_case(
     mocker: MockerFixture, console_jobs: dict[str, str]
@@ -1537,6 +1496,59 @@ def test_summarize_graph_style_accepts_mixed_case(
             console.summarize, ["--graph-style", value, "24418435"]
         )
         assert result.exit_code == 0, (value, result.output)
+
+
+@pytest.mark.usefixtures("_mock_inquirer")
+@pytest.mark.parametrize("value", ["name", "NAME", "NaMe"])
+def test_summarize_group_by_name_accepts_mixed_case(
+    mocker: MockerFixture, value: str
+) -> None:
+    """--group-by name in any case is normalized and groups by JobName."""
+    mocker.patch("reportseff.console.which", return_value=True)
+    runner = CliRunner()
+    sub_result = mocker.MagicMock()
+    sub_result.returncode = 0
+    sub_result.stdout = _NAMED_ARRAY_JOBS
+    mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
+
+    result = runner.invoke(
+        console.summarize,
+        ["--format", _SUMMARIZE_FORMAT, "--group-by", value, "24220929"],
+    )
+
+    assert result.exit_code == 0, (value, result.output)
+    assert "Group myjob" in result.output
+
+
+@pytest.mark.usefixtures("_mock_inquirer")
+@pytest.mark.parametrize("value", ["array", "Array", "ARRAY"])
+def test_summarize_group_by_array_accepts_mixed_case(
+    mocker: MockerFixture, console_jobs: dict[str, str], value: str
+) -> None:
+    """--group-by array in any case is normalized and groups by base job id."""
+    mocker.patch("reportseff.console.which", return_value=True)
+    runner = CliRunner()
+    sub_result = mocker.MagicMock()
+    sub_result.returncode = 0
+    sub_result.stdout = console_jobs["24221219"] + console_jobs["24221220"]
+    mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
+
+    result = runner.invoke(
+        console.summarize,
+        ["--format", _SUMMARIZE_FORMAT, "--group-by", value, "24220929"],
+    )
+
+    assert result.exit_code == 0, (value, result.output)
+    assert "Group myjob" not in result.output
+
+
+@pytest.mark.parametrize("option", ["--group-by", "--graph-style"])
+def test_summarize_choice_options_reject_invalid_value(option: str) -> None:
+    """An unrecognized choice is still rejected, regardless of case."""
+    runner = CliRunner()
+    result = runner.invoke(console.summarize, [option, "bogus", "24418435"])
+    assert result.exit_code != 0
+    assert "invalid value" in result.output.lower()
 
 
 @pytest.mark.usefixtures("_mock_inquirer")

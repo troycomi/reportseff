@@ -43,8 +43,8 @@ Multi-node and GPU utilization is acquired from information contained in the
 
 ### Installation
 
-`reportseff` runs on python >= 3.6.
-The only external dependency is click (>= 6.7).
+`reportseff` runs on python >= 3.10.
+The only external dependency is click (>= 8.3.3).
 Calling
 
 ```sh

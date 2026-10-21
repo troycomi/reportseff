@@ -71,26 +71,6 @@ class DefaultGroup(click.Group):
         return super().parse_args(ctx, args)
 
 
-class _CaseInsensitiveChoice(click.Choice):     # type: ignore[type-arg]
-    """A click.Choice that matches case-insensitively on every click version.
-
-    click.Choice's own `case_sensitive` constructor argument doesn't exist
-    in click 6.7 -- this project's declared minimum (`click>=6.7` in
-    pyproject.toml, exercised directly by the `old-click-tests` poe task)
-    -- it was added in a later release. Overriding `convert()` instead
-    works identically across every version this project supports, since
-    it's never relied on a constructor argument that not all of them have.
-    """
-
-    def convert(
-        self, value: Any, param: click.Parameter | None, ctx: click.Context | None
-    ) -> Any:
-        """Lower-case the input before the normal Choice validation runs."""
-        if isinstance(value, str):
-            value = value.lower()
-        return super().convert(value, param, ctx)
-
-
 @click.group(cls=DefaultGroup, default_cmd_name=DEFAULT_COMMAND_NAME)
 @click.version_option(version=__version__)
 def cli() -> None:
@@ -279,13 +259,13 @@ def main(**kwargs: Any) -> None:
 @shared_query_options
 @click.option(
     "--group-by",
-    type=_CaseInsensitiveChoice(["array", "name"]),
+    type=click.Choice(["array", "name"], case_sensitive=False),
     default="array",
     help="Grouping strategy: array (base job id, default) or name.",
 )
 @click.option(
     "--graph-style",
-    type=_CaseInsensitiveChoice(["sparkline", "histogram", "none"]),
+    type=click.Choice(["sparkline", "histogram", "none"], case_sensitive=False),
     default="sparkline",
     help="Visualization style for the metrics selected by --graph-format.",
 )

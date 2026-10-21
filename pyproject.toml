@@ -1,6 +1,6 @@
 [project]
 name = "reportseff"
-version = "2.10.3"
+version = "3.0.0"
 description= "Tablular seff output"
 authors = [
   {name="Troy Comi", email="<troycomi@gmail.com>"}
@@ -49,11 +49,10 @@ audit = { cmd = "pip-audit", executor = {with = ["pip-audit"]}}
 mypy = "mypy ."
 pytype = "pytype ."
 
-tests = ["pytest", "typed-tests", "coverage-tests", "old-click-tests"]
+tests = ["pytest", "typed-tests", "coverage-tests"]
 pytest = "pytest"
 typed-tests = "pytest --typeguard-packages=reportseff"
 coverage-tests = "pytest --cov"
-old-click-tests = { cmd = "pytest", executor = {with = ["click==6.7"]}}
 
 coverage-xml = { cmd = "coverage xml --fail-under 0", executor = {with = ["coverage[toml]"]}}
 coverage-upload = { cmd = "codecov", executor = {with = ["codecov"]}}
