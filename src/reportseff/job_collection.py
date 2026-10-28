@@ -208,6 +208,10 @@ class JobCollection:
         # Group jobs by their base job number to count array tasks
         job_groups: dict[str, list[Job]] = {}
         for job in self.jobs.values():
+            # stateless entries are placeholders (e.g. the array id kept for
+            # later entries) and are not displayed
+            if not job.state:
+                continue
             base_job = job.job
             if base_job not in job_groups:
                 job_groups[base_job] = []

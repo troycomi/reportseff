@@ -641,15 +641,21 @@ def test_filter_by_array_size(jobs: JobCollection) -> None:
         "3_1": Job("3", "3_1", None),
         "3_2": Job("3", "3_2", None),
         "3_3": Job("3", "3_3", None),  # three jobs
+        "4": Job("4", "4", None),  # array id placeholder, never counted
+        "4_1": Job("4", "4_1", None),
+        "4_2": Job("4", "4_2", None),  # two jobs
     }
+    for job in jobs.jobs.values():
+        job.state = "COMPLETED"
+    jobs.jobs["4"].state = None
 
-    assert jobs.get_jobs() == ["1", "2", "3"]
+    assert jobs.get_jobs() == ["1", "2", "3", "4"]
 
     jobs.filter_by_array_size(0)
-    assert jobs.get_jobs() == ["1", "2", "3"]
+    assert jobs.get_jobs() == ["1", "2", "3", "4"]
 
     jobs.filter_by_array_size(1)
-    assert jobs.get_jobs() == ["1", "2", "3"]
+    assert jobs.get_jobs() == ["1", "2", "3", "4"]
 
     jobs.filter_by_array_size(3)
     assert jobs.get_jobs() == ["1", "3"]

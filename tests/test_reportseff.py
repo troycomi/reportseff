@@ -722,6 +722,42 @@ def test_array_job_requeued_after_master(
 
 
 @pytest.mark.usefixtures("_mock_inquirer")
+@pytest.mark.parametrize(
+    ("min_size", "expected_rows"),
+    [(4, 4), (5, 0)],
+)
+def test_array_min_size_ignores_array_placeholder(
+    mocker: MockerFixture,
+    console_jobs: dict[str, str],
+    min_size: int,
+    expected_rows: int,
+) -> None:
+    """The hidden array id entry does not count towards the array size."""
+    mocker.patch("reportseff.console.which", return_value=True)
+    runner = CliRunner()
+    sub_result = mocker.MagicMock()
+    sub_result.returncode = 0
+    sub_result.stdout = console_jobs["25867519"]
+    mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
+    result = runner.invoke(
+        console.main,
+        [
+            "--no-color",
+            "25867519",
+            "--format",
+            "JobID%>,State,Elapsed%>,CPUEff,MemEff",
+            "--array-min-size",
+            str(min_size),
+        ],
+    )
+
+    assert result.exit_code == 0
+    # remove header
+    output = result.output.split("\n")[1:-1]
+    assert len(output) == expected_rows
+
+
+@pytest.mark.usefixtures("_mock_inquirer")
 def test_sacct_error(mocker: MockerFixture) -> None:
     """Subprocess errors in sacct are reported."""
     mocker.patch("reportseff.console.which", return_value=True)
