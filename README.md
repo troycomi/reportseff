@@ -228,6 +228,12 @@ directory to check for slurm outputs.
   requires additional sacct fields from jobstats.
 - `--parsable/-p`: Ignore formatting and output as a `|` delimited table.  Useful
   for piping into more complex analyses.
+- `--no-jobstats-fallback`: Disable the fallback mechanism that recovers GPU metrics
+  from jobstats when they are not present in Slurm's AdminComment field. By default,
+  if `jobstats` is available on the system, reportseff will attempt to fetch GPU
+  metrics via `jobstats <jobid> -b` when the AdminComment field is empty. This flag
+  disables that behavior. Useful if jobstats queries cause excessive load or if you
+  prefer to rely only on cached AdminComment data.
 
 ## Status, Contributions, and Support
 
