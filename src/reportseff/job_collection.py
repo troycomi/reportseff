@@ -208,6 +208,10 @@ class JobCollection:
         # Group jobs by their base job number to count array tasks
         job_groups: dict[str, list[Job]] = {}
         for job in self.jobs.values():
+            # stateless entries are placeholders (e.g. the array id kept for
+            # later entries) and are not displayed
+            if not job.state:
+                continue
             base_job = job.job
             if base_job not in job_groups:
                 job_groups[base_job] = []
@@ -242,7 +246,10 @@ class JobCollection:
                 self.add_job(match.group("job"), job_id)
             # check if the job_id is an array job
             elif job_id_raw in self.jobs:
-                old_job = self.jobs.pop(job_id_raw)
+                # keep the raw entry in the collection as later entries can
+                # still reference it, e.g. requeued array elements can appear
+                # after the master pending entry in the inquirer output
+                old_job = self.jobs[job_id_raw]
                 self.add_job(old_job.job, job_id, old_job.filename)
             else:
                 return

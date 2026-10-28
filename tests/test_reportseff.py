@@ -684,6 +684,80 @@ def test_array_job_base(mocker: MockerFixture, console_jobs: dict[str, str]) -> 
 
 
 @pytest.mark.usefixtures("_mock_inquirer")
+def test_array_job_requeued_after_master(
+    mocker: MockerFixture,
+    console_jobs: dict[str, str],
+) -> None:
+    """Elements arriving after the master entry are reported, e.g. requeued.
+
+    sacct does not sort its output by JobID: when array elements are
+    requeued, their new records arrive after the master pending summary
+    row.  These elements must still be reported.
+    """
+    mocker.patch("reportseff.console.which", return_value=True)
+    runner = CliRunner()
+    sub_result = mocker.MagicMock()
+    sub_result.returncode = 0
+    sub_result.stdout = console_jobs["25867519"]
+    mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
+    result = runner.invoke(
+        console.main,
+        ["--no-color", "25867519", "--format", "JobID%>,State,Elapsed%>,CPUEff,MemEff"],
+    )
+
+    assert result.exit_code == 0
+    # remove header
+    output = result.output.split("\n")[1:-1]
+    assert output[0].split() == [
+        "25867519_[26-319%15]",
+        "PENDING",
+        "---",
+        "---",
+        "---",
+    ]
+    assert output[1].split() == ["25867519_0", "RUNNING", "01:00:00", "---", "---"]
+    assert output[2].split() == ["25867519_1", "RUNNING", "00:30:00", "---", "---"]
+    assert output[3].split() == ["25867519_25", "FAILED", "00:47:05", "12.5%", "36.6%"]
+    assert len(output) == 4
+
+
+@pytest.mark.usefixtures("_mock_inquirer")
+@pytest.mark.parametrize(
+    ("min_size", "expected_rows"),
+    [(4, 4), (5, 0)],
+)
+def test_array_min_size_ignores_array_placeholder(
+    mocker: MockerFixture,
+    console_jobs: dict[str, str],
+    min_size: int,
+    expected_rows: int,
+) -> None:
+    """The hidden array id entry does not count towards the array size."""
+    mocker.patch("reportseff.console.which", return_value=True)
+    runner = CliRunner()
+    sub_result = mocker.MagicMock()
+    sub_result.returncode = 0
+    sub_result.stdout = console_jobs["25867519"]
+    mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
+    result = runner.invoke(
+        console.main,
+        [
+            "--no-color",
+            "25867519",
+            "--format",
+            "JobID%>,State,Elapsed%>,CPUEff,MemEff",
+            "--array-min-size",
+            str(min_size),
+        ],
+    )
+
+    assert result.exit_code == 0
+    # remove header
+    output = result.output.split("\n")[1:-1]
+    assert len(output) == expected_rows
+
+
+@pytest.mark.usefixtures("_mock_inquirer")
 def test_sacct_error(mocker: MockerFixture) -> None:
     """Subprocess errors in sacct are reported."""
     mocker.patch("reportseff.console.which", return_value=True)
