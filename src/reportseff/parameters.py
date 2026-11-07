@@ -11,9 +11,8 @@ from .array_summary import parse_graph_format
 class BaseQueryParameters:
     """Parameters shared by `report` and `summarize` for querying jobs.
 
-    This is the "common bits" (querying slurm, building the datatable)
-    referenced in the implementation plan: both commands' parameter classes
-    inherit from this rather than repeating the field list.
+    Both commands' parameter classes inherit from this rather than
+    repeating the field list.
     """
 
     color: bool

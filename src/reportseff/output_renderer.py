@@ -334,8 +334,7 @@ class OutputRenderer:
             The rendered, colored output string. In `--parsable` mode, only
             the per-task rows are returned -- the decorative summary block
             (headers, bullets, colors) would corrupt a delimited consumer,
-            so it's suppressed there, same as the original array-summary
-            prototype did.
+            so it's suppressed there.
         """
         grouping = (
             group_jobs_by_name if options.group_by == "name" else group_jobs_by_array
@@ -432,7 +431,7 @@ class OutputRenderer:
         # graphs summary.elapsed_minutes (always retained, independent of
         # --format); every other vocabulary entry graphs the matching
         # MetricStat's raw per-task values.
-        if state.graph_style != "none" and summary.total_tasks > state.min_tasks:
+        if state.graph_style != "none" and summary.total_tasks >= state.min_tasks:
             if "runtime" in state.graphed and summary.elapsed_minutes:
                 lines.extend(
                     self._format_metric_graph(

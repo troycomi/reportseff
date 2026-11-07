@@ -31,10 +31,8 @@ _EXCLUDE_TITLES = {"jobid", "jobidraw", "state", "elapsed"}
 _MIN_ARRAY_TASKS = 2
 
 #: Recognized ``--graph-format`` metric names (case-insensitive).
-#: `runtime` is the elapsed-time distribution; the rest are real, already
-#: -implemented column titles. Note: only `runtime` currently has a raw
-#: per-task series retained for graphing -- graphing the others requires the
-#: generalization tracked separately (see the implementation plan, Phase 3).
+#: `runtime` is the elapsed-time distribution; the rest are column titles
+#: graphed from their per-task `MetricStat.values`.
 GRAPH_FORMAT_VOCABULARY = ("runtime", "cpueff", "memeff", "energy", "gpueff", "gpumem")
 
 
@@ -524,8 +522,7 @@ def render_histogram(  # noqa: PLR0913
         ascii_only: use ``#`` bars instead of Unicode block characters
         unit: unit label shown in the header, e.g. ``"min"`` or ``"%"``.
             Pass ``""`` when no unit is known; the parentheses are omitted.
-        label: the metric name shown in the header (default ``"Runtime"``,
-            matching this function's original single-purpose behavior)
+        label: the metric name shown in the header (default ``"Runtime"``)
 
     Returns:
         A list of strings (header + one line per bin).  Empty when no values.

@@ -751,7 +751,7 @@ def test_formatter_format_entry() -> None:
 
 
 # ---------------------------------------------------------------------------
-# summarize: grouped summary rendering (Phase 1)
+# summarize: grouped summary rendering
 # ---------------------------------------------------------------------------
 
 
@@ -912,7 +912,7 @@ def test_format_grouped_summary_suppressed_in_parsable() -> None:
 
 
 def test_format_grouped_summary_graph_min_tasks_threshold() -> None:
-    """A graph appears only once the group's task count exceeds min_tasks."""
+    """A graph appears once the group's task count reaches min_tasks."""
     jobs = [
         _summary_job(f"100_{i}", "COMPLETED", elapsed=f"00:{i % 60:02d}:00")
         for i in range(1, 11)
@@ -942,6 +942,18 @@ def test_format_grouped_summary_graph_min_tasks_threshold() -> None:
         ),
     )
     assert "Runtime (min)" in above
+
+    at_threshold = renderer.format_grouped_summary(
+        jobs,
+        _summary_options(
+            group_by="array",
+            min_tasks=10,
+            graph_style="histogram",
+            graph_format="runtime",
+            ascii_fallback=False,
+        ),
+    )
+    assert "Runtime (min)" in at_threshold
 
 
 def test_format_grouped_summary_graph_style_sparkline_vs_histogram() -> None:
@@ -1070,7 +1082,7 @@ def test_add_required_column_does_not_affect_report() -> None:
 
 
 # ---------------------------------------------------------------------------
-# summarize: metrics table rendering (Phase 2)
+# summarize: metrics table rendering
 # ---------------------------------------------------------------------------
 
 
@@ -1113,7 +1125,7 @@ def test_format_metrics_table_header_and_alignment() -> None:
 
 
 def test_format_metrics_table_no_bullet_separators() -> None:
-    """The table replaces the old bullet/middot-separated metric line."""
+    """The metrics table has no bullet/middot-separated inline metric lines."""
     jobs = [_summary_job("100_1", "COMPLETED"), _summary_job("100_2", "COMPLETED")]
     renderer = _summary_renderer()
     output = renderer.format_grouped_summary(
@@ -1126,8 +1138,8 @@ def test_format_metrics_table_no_bullet_separators() -> None:
             ascii_fallback=False,
         ),
     )
-    # the old prototype rendered lines like "CPUEff: min 90.0 · mean 90.0
-    # · max 90.0" -- none of that per-metric inline format survives
+    # no inline per-metric lines like "CPUEff: min 90.0 · mean 90.0
+    # · max 90.0"
     assert ": min " not in output
     assert "· mean" not in output
     assert "· max" not in output
@@ -1136,9 +1148,9 @@ def test_format_metrics_table_no_bullet_separators() -> None:
 def test_format_metrics_table_low_efficiency_uses_color_not_extra_text() -> None:
     """Out-of-range values are colored (via render_eff); no extra "low" marker.
 
-    Per feedback in the original design discussion, the color coding alone
-    (already used throughout the report table) communicates a value is out
-    of range; a redundant textual marker isn't added on top of it.
+    The color coding alone (already used throughout the report table)
+    communicates a value is out of range; a redundant textual marker isn't
+    added on top of it.
     """
     jobs = [
         _summary_job("100_1", "COMPLETED", elapsed="00:10:00", total_cpu="00:00:30"),
@@ -1166,7 +1178,7 @@ def test_format_metrics_table_empty_when_no_numeric_metrics() -> None:
 
 
 # ---------------------------------------------------------------------------
-# summarize: multi-metric graphing (Phase 3)
+# summarize: multi-metric graphing
 # ---------------------------------------------------------------------------
 
 

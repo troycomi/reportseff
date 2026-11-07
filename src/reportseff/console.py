@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import sys
-from shutil import which
+from shutil import get_terminal_size, which
 from typing import Any
 
 import click
@@ -313,9 +313,17 @@ def summarize(**kwargs: Any) -> None:
         click.secho(str(error), fg="red", err=True)
         sys.exit(1)
 
-    output, entries = get_summary(args)
+    if args.parsable and not args.tasks:
+        click.secho(
+            "Warning: --parsable suppresses summary blocks; "
+            "pass --tasks to print per-task rows.",
+            fg="yellow",
+            err=True,
+        )
 
-    if entries > MAX_ENTRIES_TO_ECHO:
+    output = get_summary(args)
+
+    if output.count("\n") + 1 > get_terminal_size().lines:
         click.echo_via_pager(output, color=args.color)
     else:
         click.echo(output, color=args.color)
@@ -423,12 +431,11 @@ def get_jobs(args: ReportseffParameters) -> tuple[str, int]:
     return renderer.format_jobs(found_jobs), len(found_jobs)
 
 
-def get_summary(args: SummarizeParameters) -> tuple[str, int]:
+def get_summary(args: SummarizeParameters) -> str:
     """Helper method to get jobs from db_inquirer and render the summary.
 
     Returns:
         The string to display, tabulated and colored
-        The number of jobs found to use paging properly
     """
     inquirer, renderer = get_implementation(
         args.format_str,
@@ -448,7 +455,7 @@ def get_summary(args: SummarizeParameters) -> tuple[str, int]:
     found_jobs = job_collection.get_sorted_jobs(sorting=args.sorting)
     found_jobs = [j for j in found_jobs if j.state]
 
-    output = renderer.format_grouped_summary(
+    return renderer.format_grouped_summary(
         found_jobs,
         SummaryOptions(
             group_by=args.group_by,
@@ -459,7 +466,6 @@ def get_summary(args: SummarizeParameters) -> tuple[str, int]:
             tasks=args.tasks,
         ),
     )
-    return output, len(found_jobs)
 
 
 def get_implementation(

@@ -203,21 +203,46 @@ def test_long_output(mocker: MockerFixture, console_jobs: dict[str, str]) -> Non
 def test_summarize_long_output_uses_pager(
     mocker: MockerFixture, console_jobs: dict[str, str]
 ) -> None:
-    """Summarize also pages outputs with more than 20 entries."""
+    """Summarize pages output taller than the terminal."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
     sub_result = mocker.MagicMock()
     sub_result.returncode = 0
     sub_result.stdout = console_jobs["24418435"]
     mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
-    mocker.patch("reportseff.console.len", return_value=21)
-    mocker.patch.object(OutputRenderer, "format_grouped_summary", return_value="output")
+    long_output = "\n".join(f"line {i}" for i in range(100))
+    mocker.patch.object(
+        OutputRenderer, "format_grouped_summary", return_value=long_output
+    )
     mock_click = mocker.patch("reportseff.console.click.echo_via_pager")
 
     result = runner.invoke(console.summarize, ["24418435"])
 
     assert result.exit_code == 0
-    mock_click.assert_called_once_with("output", color=None)
+    mock_click.assert_called_once_with(long_output, color=None)
+
+
+@pytest.mark.usefixtures("_mock_inquirer")
+def test_summarize_short_output_is_echoed_even_with_many_jobs(
+    mocker: MockerFixture, console_jobs: dict[str, str]
+) -> None:
+    """Summarize pages on output length, not on the number of jobs found."""
+    mocker.patch("reportseff.console.which", return_value=True)
+    runner = CliRunner()
+    sub_result = mocker.MagicMock()
+    sub_result.returncode = 0
+    sub_result.stdout = console_jobs["24418435"]
+    mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
+    mocker.patch("reportseff.console.len", return_value=500)
+    mocker.patch.object(OutputRenderer, "format_grouped_summary", return_value="output")
+    mock_pager = mocker.patch("reportseff.console.click.echo_via_pager")
+    mock_echo = mocker.patch("reportseff.console.click.echo")
+
+    result = runner.invoke(console.summarize, ["24418435"])
+
+    assert result.exit_code == 0
+    mock_pager.assert_not_called()
+    mock_echo.assert_called_once_with("output", color=None)
 
 
 @pytest.mark.usefixtures("_mock_inquirer")
@@ -734,7 +759,7 @@ def test_array_job_base(mocker: MockerFixture, console_jobs: dict[str, str]) -> 
 def test_array_summary_flags_removed(
     mocker: MockerFixture, console_jobs: dict[str, str]
 ) -> None:
-    """The legacy --array-summary* prototype flags no longer exist (hard cutover)."""
+    """The --array-summary* flags no longer exist on the default command."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
     sub_result = mocker.MagicMock()
@@ -756,7 +781,7 @@ def test_array_summary_flags_removed(
 def test_report_never_includes_array_summary_formatting(
     mocker: MockerFixture, console_jobs: dict[str, str]
 ) -> None:
-    """The default report output has no array-summary block (feature moved)."""
+    """The default report output has no array-summary block."""
     mocker.patch("reportseff.console.which", return_value=True)
     runner = CliRunner()
     sub_result = mocker.MagicMock()
@@ -1436,7 +1461,7 @@ def test_nonempty_used_memory(mocker: MockerFixture, strip_js: strip_js_func) ->
 
 
 # ---------------------------------------------------------------------------
-# top-level click.Group dispatch (Phase 0: click.group() migration)
+# top-level click.Group dispatch
 # ---------------------------------------------------------------------------
 
 
@@ -1608,7 +1633,7 @@ def test_default_group_help_lists_report_command() -> None:
 
 
 # ---------------------------------------------------------------------------
-# summarize subcommand (Phase 1)
+# summarize subcommand
 # ---------------------------------------------------------------------------
 
 #: --format matching console_jobs["24221219"]/["24221220"]'s field count
@@ -1941,6 +1966,56 @@ def test_summarize_parsable_suppresses_summary_block(
     assert result.exit_code == 0
     assert "Array 24220929" not in result.output
     assert "24220929_421" in result.output
+
+
+@pytest.mark.usefixtures("_mock_inquirer")
+def test_summarize_parsable_without_tasks_warns(
+    mocker: MockerFixture, console_jobs: dict[str, str]
+) -> None:
+    """--parsable without --tasks warns on stderr and prints nothing on stdout."""
+    mocker.patch("reportseff.console.which", return_value=True)
+    runner = CliRunner()
+    sub_result = mocker.MagicMock()
+    sub_result.returncode = 0
+    sub_result.stdout = console_jobs["24221219"] + console_jobs["24221220"]
+    mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
+
+    result = runner.invoke(
+        console.cli,
+        ["summarize", "--format", _SUMMARIZE_FORMAT, "--parsable", "24220929"],
+    )
+
+    assert result.exit_code == 0
+    assert "--tasks" in result.stderr
+    assert result.stdout.strip() == ""
+
+
+@pytest.mark.usefixtures("_mock_inquirer")
+def test_summarize_parsable_with_tasks_does_not_warn(
+    mocker: MockerFixture, console_jobs: dict[str, str]
+) -> None:
+    """--parsable --tasks prints no warning."""
+    mocker.patch("reportseff.console.which", return_value=True)
+    runner = CliRunner()
+    sub_result = mocker.MagicMock()
+    sub_result.returncode = 0
+    sub_result.stdout = console_jobs["24221219"] + console_jobs["24221220"]
+    mocker.patch("reportseff.db_inquirer.subprocess.run", return_value=sub_result)
+
+    result = runner.invoke(
+        console.cli,
+        [
+            "summarize",
+            "--format",
+            _SUMMARIZE_FORMAT,
+            "--parsable",
+            "--tasks",
+            "24220929",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert result.stderr == ""
 
 
 @pytest.mark.usefixtures("_mock_inquirer")

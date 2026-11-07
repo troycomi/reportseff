@@ -266,6 +266,9 @@ and most of the same [options](#options) as `reportseff` itself (`--format`,
   addition to the summary block.  Default is `--no-tasks`: only the summary
   blocks are printed, since running `summarize` for the per-task table
   alone would be redundant with the default command.
+- `--parsable/-p` on `summarize` only emits per-task rows (the summary
+  blocks are suppressed), so it needs `--tasks`; a warning is printed to
+  stderr otherwise.
 
 #### Summarizing an array
 
