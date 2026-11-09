@@ -421,6 +421,27 @@ def console_jobs() -> dict[str, str]:
             "^|^1^|^00:09:33^|^24220929_431.extern^|^24221220.extern"
             "^|^1400K^|^1^|^1^|^16000Mn^|^PENDING^|^00:00:00^|^\n"
         ),
+        # From job array 25867519 while running: sacct does not sort rows by
+        # JobID, the master pending summary row arrives before elements that
+        # were requeued, whose new records are reported afterwards
+        "25867519": (
+            "^|^8^|^00:47:05^|^25867519_25^|^26009364^|^^|^1^|^1^|^16000Mn^|^"
+            "FAILED^|^00:47:05^|^\n"
+            "^|^8^|^00:47:05^|^25867519_25.batch^|^26009364.batch^|^6000000K^|^"
+            "1^|^1^|^16000Mn^|^FAILED^|^00:47:05^|^\n"
+            "^|^8^|^00:47:05^|^25867519_25.extern^|^26009364.extern^|^1404K^|^"
+            "1^|^1^|^16000Mn^|^COMPLETED^|^00:47:05^|^\n"
+            # master/pending summary row, its JobIDRaw is the array id
+            "^|^8^|^00:00:00^|^25867519_[26-319%15]^|^25867519^|^^|^1^|^1^|^"
+            "16000Mn^|^PENDING^|^00:00:00^|^\n"
+            # requeued elements arrive after the master row
+            "^|^8^|^01:00:00^|^25867519_0^|^25867522^|^^|^1^|^1^|^16000Mn^|^"
+            "RUNNING^|^01:00:00^|^\n"
+            "^|^8^|^01:00:00^|^25867519_0.batch^|^25867522.batch^|^6000000K^|^"
+            "1^|^1^|^16000Mn^|^RUNNING^|^01:00:00^|^\n"
+            "^|^8^|^00:30:00^|^25867519_1^|^25867523^|^^|^1^|^1^|^16000Mn^|^"
+            "RUNNING^|^00:30:00^|^\n"
+        ),
         "23000381": (
             "^|^8^|^00:00:12^|^23000381^|^23000381^|^^|^1^|^1^|^4000Mc^|^FAILED"
             "^|^00:00:00^|^00:00:00^|^\n"
